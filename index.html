@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GVA • Sistema de Gestão V3</title>
+    <title>GVA • Sistema de Gestão Profissional</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -18,7 +18,7 @@
             <img src="logo GVA azul.png" alt="GVA" width="160">
             <input type="email" id="loginEmail" placeholder="E-mail">
             <input type="password" id="loginSenha" placeholder="Senha">
-            <button class="btn-gva" onclick="fazerLogin()">Entrar</button>
+            <button class="btn-gva" onclick="fazerLogin()">Acessar Painel</button>
         </div>
     </div>
 
@@ -35,7 +35,7 @@
                     <button id="btnAdmin" onclick="mudarAba('admin')"><i class="fa fa-cog"></i> Configurações</button>
                 </div>
             </nav>
-            <div class="sidebar-footer"><button onclick="fazerLogout()" class="btn-sair">Sair</button></div>
+            <div class="sidebar-footer"><button onclick="fazerLogout()" class="btn-sair">Sair do Sistema</button></div>
         </aside>
 
         <main class="main-content">
@@ -47,7 +47,9 @@
             <div class="content-wrapper">
                 
                 <section id="abaCliente" class="content active">
-                    <div class="search-container"><input type="text" id="buscaProduto" placeholder="Pesquisar..." oninput="filtrarProdutos()"></div>
+                    <div class="search-container">
+                        <input type="text" id="buscaProduto" placeholder="Pesquisar por nome ou SKU..." oninput="filtrarProdutos()">
+                    </div>
                     <div class="cat-nav" id="menuCategorias"></div>
                     <div class="zap-grid" id="gradeCliente"></div>
                 </section>
@@ -56,11 +58,11 @@
                     <div class="flex-row">
                         <div class="flex-main">
                             <div class="gva-card">
-                                <div class="card-header">Carrinho de Itens</div>
-                                <div id="listaCarrinho" class="card-body">Vazio.</div>
+                                <div class="card-header">Carrinho de Pedido</div>
+                                <div id="listaCarrinho" class="card-body">Aguardando itens do catálogo...</div>
                             </div>
                             <div class="gva-card">
-                                <div class="card-header">Dados do Cliente</div>
+                                <div class="card-header">Ficha do Cliente</div>
                                 <div class="card-body gva-form-large">
                                     <div class="form-row">
                                         <div class="form-group"><label>Tipo:</label><select id="tipoCliente"><option value="PF">Pessoa Física</option><option value="PJ">Pessoa Jurídica</option></select></div>
@@ -71,7 +73,7 @@
                                         <div class="form-group"><label>WhatsApp:</label><input type="tel" id="telCliente"></div>
                                     </div>
                                     <div class="form-row">
-                                        <div class="form-group" style="flex:2;"><label>Endereço:</label><input type="text" id="endCliente"></div>
+                                        <div class="form-group" style="flex:2;"><label>Endereço de Entrega:</label><input type="text" id="endCliente"></div>
                                         <div class="form-group"><label>CEP:</label><input type="text" id="cepCliente"></div>
                                     </div>
                                 </div>
@@ -79,50 +81,31 @@
                         </div>
                         <div class="flex-side">
                             <div class="gva-card">
-                                <div class="card-header">Pagamento e Entrega</div>
+                                <div class="card-header">Pagamento & Envio</div>
                                 <div class="card-body gva-form-large">
                                     <label>Forma de Pagamento:</label>
                                     <select id="formaPagamento" onchange="toggleCamposPagamento()">
-                                        <option value="Pix">Pix</option><option value="Dinheiro">Dinheiro</option><option value="Débito">Débito</option>
+                                        <option>Pix</option><option>Dinheiro</option><option>Débito</option>
                                         <option value="Credito">Crédito à Vista</option><option value="CreditoParc">Crédito Parcelado</option>
                                     </select>
                                     <div id="divParcelas" style="display:none; margin-top:10px;">
-                                        <label>Qtd de Parcelas:</label>
+                                        <label>Parcelas:</label>
                                         <select id="qtdParcelas"><option>2x</option><option>3x</option><option>4x</option><option>5x</option><option>6x</option><option>10x</option><option>12x</option></select>
                                     </div>
-                                    <label style="margin-top:15px; display:block;">Método de Entrega:</label>
+                                    <label style="margin-top:15px;">Tipo de Retirada:</label>
                                     <select id="metodoEntrega" onchange="toggleCamposEntrega()">
-                                        <option value="Retirada">Retirada na Loja</option><option value="Motoboy">Motoboy / Entrega</option>
+                                        <option value="Retirada">Retirada na Loja</option><option value="Motoboy">Entrega Motoboy</option>
                                     </select>
                                     <div id="divMotoboy" style="display:none; margin-top:10px;">
-                                        <label>Taxa de Entrega (R$):</label>
-                                        <input type="number" id="valorMotoboy" value="0" step="0.01" oninput="atualizarCarrinho()">
+                                        <label>Taxa de Entrega (R$):</label><input type="number" id="valorMotoboy" value="0" step="0.01" oninput="atualizarCarrinho()">
                                     </div>
                                     <hr>
-                                    <div class="summary-line">Total: <b>R$ <span id="totalCarrinho">0,00</span></b></div>
+                                    <p>Total Geral: <b>R$ <span id="totalCarrinho">0,00</span></b></p>
                                     <label>Sinal Pago (R$):</label><input type="number" id="valorSinal" value="0" step="0.01" oninput="atualizarCarrinho()">
-                                    <div class="summary-line" style="color:red;">Resta: <b>R$ <span id="restanteCarrinho">0,00</span></b></div>
+                                    <p style="color:red; font-weight:bold;">A Pagar: R$ <span id="restanteCarrinho">0,00</span></p>
                                     <label>Previsão:</label><input type="date" id="dataEntrega">
-                                    <button class="btn-success" onclick="enviarPedido()">Finalizar Pedido</button>
+                                    <button class="btn-success" onclick="enviarPedido()">Finalizar e Produzir</button>
                                 </div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                <section id="abaCaixa" class="content">
-                    <div class="gva-card">
-                        <div class="card-header">Fluxo de Caixa Mensal</div>
-                        <div class="card-body">
-                            <div class="financeiro-grid">
-                                <div class="fin-box entries"><h4>Faturamento</h4><p>R$ <span id="finFaturamento">0,00</span></p></div>
-                                <div class="fin-box extra-in"><h4>Entradas Avulsas</h4><p>R$ <span id="finEntradas">0,00</span></p></div>
-                                <div class="fin-box exits"><h4>Saídas/Custos</h4><p>R$ <span id="finSaidas">0,00</span></p></div>
-                                <div class="fin-box total"><h4>Saldo em Caixa</h4><p>R$ <span id="finSaldo">0,00</span></p></div>
-                            </div>
-                            <div style="display:flex; gap:10px; margin-top:20px;">
-                                <button class="btn-gva" onclick="abrirLancamento('entrada')" style="background:#28a745;">+ Lançar Entrada</button>
-                                <button class="btn-gva" onclick="abrirLancamento('saida')" style="background:#dc3545;">- Lançar Saída</button>
                             </div>
                         </div>
                     </div>
@@ -132,70 +115,78 @@
                     <div class="sub-nav-gva">
                         <button id="subBtnProdutos" class="sub-active" onclick="toggleAdminSub('produtos')">Produtos</button>
                         <button id="subBtnAcabamentos" onclick="toggleAdminSub('acabamentos')">Acabamentos</button>
-                        <button id="subBtnMenus" onclick="toggleAdminSub('menus')">Categorias / Menu</button>
+                        <button id="subBtnMenus" onclick="toggleAdminSub('menus')">Categorias</button>
                     </div>
 
                     <div id="subAdminProdutos" class="admin-panel">
-                        <div class="gva-card"><div class="card-header">Novo Produto</div>
+                        <div class="gva-card"><div class="card-header">Cadastro / Edição de Produto</div>
                             <div class="card-body gva-form-large">
                                 <input type="hidden" id="editId">
                                 <div class="form-row">
-                                    <input type="text" id="adminNome" placeholder="Nome do Produto">
-                                    <input type="number" id="adminPreco" placeholder="Preço Base (R$)" step="0.01">
+                                    <div class="form-group"><label>SKU (Cód.):</label><input type="text" id="adminSku" placeholder="Ex: BAN-01"></div>
+                                    <div class="form-group" style="flex:2;"><label>Nome:</label><input type="text" id="adminNome"></div>
+                                    <div class="form-group"><label>R$ Base:</label><input type="number" id="adminPreco" step="0.01"></div>
                                 </div>
                                 <div class="form-row">
-                                    <select id="adminCatSelect"><option>Geral</option></select>
-                                    <select id="adminTipo">
-                                        <option value="unidade">Unidade (Fixo)</option>
-                                        <option value="m_linear">Metro Linear (Máx 1.50m)</option>
-                                        <option value="m2">M² (Máx 3.10m)</option>
-                                        <option value="folha">Página (Apostila)</option>
-                                    </select>
+                                    <div class="form-group"><label>Categoria:</label><select id="adminCatSelect"></select></div>
+                                    <div class="form-group"><label>Tipo de Cálculo:</label>
+                                        <select id="adminTipo">
+                                            <option value="unidade">Unidade</option>
+                                            <option value="m_linear">Metro Linear (Banner)</option>
+                                            <option value="m2">Metro Quadrado (Lona)</option>
+                                            <option value="folha">Página (Apostila)</option>
+                                        </select>
+                                    </div>
                                 </div>
-                                <input type="text" id="adminImg" placeholder="URL da Imagem">
-                                <button class="btn-gva" onclick="salvarNovoProduto()">Cadastrar / Atualizar</button>
+                                <label>Link da Foto:</label><input type="text" id="adminImg">
+                                <div style="display:flex; gap:10px;">
+                                    <button class="btn-gva" onclick="salvarNovoProduto()">Salvar Produto</button>
+                                    <button class="btn-gva" style="background:#666;" onclick="limparFormAdmin()">Limpar</button>
+                                </div>
                             </div>
                         </div>
-                        <div id="listaGerenciarProdutos"></div>
+                        <div id="listaGerenciarProdutos" class="gva-card"></div>
                     </div>
 
                     <div id="subAdminAcabamentos" class="admin-panel" style="display:none;">
-                        <div class="gva-card"><div class="card-header">Gerenciar Acabamentos</div>
+                        <div class="gva-card"><div class="card-header">Configurar Acabamentos Adicionais</div>
                             <div class="card-body gva-form-large">
-                                <input type="text" id="acabNome" placeholder="Nome (Ex: Ilhós, Verniz)">
-                                <input type="number" id="acabPreco" placeholder="Preço Adicional (R$)" step="0.01">
-                                <button class="btn-gva" onclick="salvarAcabamento()">Salvar Acabamento</button>
+                                <input type="hidden" id="editAcabId">
+                                <div class="form-row">
+                                    <input type="text" id="acabNome" placeholder="Nome (Ex: Verniz Local)">
+                                    <input type="number" id="acabPreco" placeholder="R$ Adicional" step="0.01">
+                                    <button class="btn-gva" onclick="salvarAcabamento()">Salvar</button>
+                                </div>
                             </div>
                         </div>
-                        <div id="listaGerenciarAcabamentos"></div>
+                        <div id="listaGerenciarAcabamentos" class="gva-card"></div>
                     </div>
 
                     <div id="subAdminMenus" class="admin-panel" style="display:none;">
-                        <div class="gva-card"><div class="card-header">Gerenciar Categorias</div>
+                        <div class="gva-card"><div class="card-header">Menu de Categorias</div>
                             <div class="card-body gva-form-large">
-                                <input type="text" id="catNome" placeholder="Ex: Banner, Adesivo, Cartão">
-                                <button class="btn-gva" onclick="salvarCategoria()">Criar Categoria</button>
+                                <input type="hidden" id="editCatId">
+                                <div class="form-row">
+                                    <input type="text" id="catNome" placeholder="Nome da Categoria (Ex: Brindes)">
+                                    <button class="btn-gva" onclick="salvarCategoria()">Salvar Categoria</button>
+                                </div>
                             </div>
                         </div>
-                        <div id="listaGerenciarCategorias"></div>
+                        <div id="listaGerenciarCategorias" class="gva-card"></div>
                     </div>
+                </section>
+
+                <section id="abaCaixa" class="content">
+                    <div id="painelFinanceiroContainer"></div>
                 </section>
 
                 <section id="abaLoja" class="content"><div id="listaProducao" class="prod-grid"></div></section>
             </div>
-            
-            <footer class="main-footer">
-                <div class="footer-grid">
-                    <div class="footer-box"><b>GVA • Venom Arts</b><br>CNPJ: 17.184.159/0001-06<br>Icaraí - Niterói - RJ</div>
-                    <div class="footer-box text-center">21 99993-0190 | contato@graficava.com.br<br><b>@grafica.venomarts</b></div>
-                    <div class="footer-box text-right">Seg a Sex: 10h-16h | Sáb: 10h-14h</div>
-                </div>
-            </footer>
         </main>
     </div>
 
     <div id="modalFundo"><div id="modalConteudo" class="gva-card"></div></div>
-    <div id="alertaFundo"><div id="alertaCaixa"><h3>Aviso</h3><p id="alertaTexto"></p><button class="btn-gva" onclick="fecharAlerta()">Ok</button></div></div>
+    <div id="alertaFundo"><div id="alertaCaixa"><p id="alertaTexto"></p><button class="btn-gva" onclick="fecharAlerta()">Ok</button></div></div>
     <img id="logoGVA_Preto" src="logo GVA black.png" style="display:none;">
 
     <script src="script.js"></script>
