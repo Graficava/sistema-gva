@@ -1,55 +1,42 @@
-:root { --gva-azul: #3E3B9F; --radius: 12px; }
-body { margin: 0; font-family: 'Segoe UI', sans-serif; background: #F0F2F5; }
-.app-wrapper { display: flex; min-height: 100vh; }
-.sidebar { width: 220px; background: var(--gva-azul); color: white; position: fixed; height: 100vh; display: flex; flex-direction: column; }
-.sidebar-logo { padding: 30px 20px; text-align: center; }
-.sidebar-logo img { width: 140px; }
-.sidebar-nav button { width: 100%; background: none; border: none; color: rgba(255,255,255,0.7); padding: 15px; text-align: left; cursor: pointer; border-radius: 10px; font-size: 14px; }
-.sidebar-nav button.active { background: white; color: var(--gva-azul); font-weight: bold; }
-.main-content { flex: 1; margin-left: 220px; display: flex; flex-direction: column; }
-.top-header { background: white; padding: 15px 30px; border-bottom: 1px solid #ddd; }
-.content-wrapper { padding: 25px; flex: 1; }
-.gva-card { background: white; border-radius: var(--radius); box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 25px; overflow: hidden; }
-.card-header { padding: 15px 20px; background: #fafafa; border-bottom: 1px solid #eee; font-weight: bold; color: var(--gva-azul); }
-.card-body { padding: 20px; }
+/* ACABAMENTOS ESTILO BOTÃO (PRETTY CHECKBOXES) */
+.acabamento-seletor {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+}
 
-/* CATEGORIAS NAV */
-.cat-nav { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 15px; margin-bottom: 20px; }
-.cat-nav button { background: white; border: 1px solid #ddd; padding: 10px 20px; border-radius: 30px; white-space: nowrap; cursor: pointer; font-weight: bold; color: #666; }
-.cat-nav button.active { background: var(--gva-azul); color: white; }
+.acabamento-seletor label {
+    background: #f0f2f5;
+    border: 2px solid #ddd;
+    padding: 8px 15px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    transition: 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
 
-/* FINANCEIRO */
-.financeiro-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
-.fin-box { padding: 20px; border-radius: 12px; color: white; }
-.fin-box.entries { background: #28a745; }
-.fin-box.exits { background: #dc3545; }
-.fin-box.extra-in { background: #17a2b8; }
-.fin-box.total { background: var(--gva-azul); }
+.acabamento-seletor input[type="checkbox"] {
+    display: none; /* Esconde o check feio */
+}
 
-/* GRID ZAP STYLE */
-.zap-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 20px; }
-.zap-card { background: white; border-radius: var(--radius); overflow: hidden; border: 1px solid #eee; text-align: center; }
-.zap-img, .zap-color-bg { width: 100%; height: 160px; object-fit: cover; }
-.zap-color-bg { background: var(--gva-azul); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 22px; text-transform: uppercase; }
+.acabamento-seletor label:has(input:checked) {
+    background: var(--gva-azul);
+    color: white;
+    border-color: var(--gva-azul);
+    box-shadow: 0 3px 8px rgba(62, 59, 159, 0.3);
+}
 
-/* BOTOES E FORMS */
-.btn-gva { background: var(--gva-azul); color: white; border: none; padding: 12px 25px; border-radius: 30px; font-weight: bold; cursor: pointer; }
-.btn-success { background: #00a859; color: white; border: none; padding: 15px; border-radius: 10px; width: 100%; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 15px; }
-.gva-form-large input, .gva-form-large select, .gva-form-large textarea { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; margin-bottom: 15px; box-sizing: border-box; }
-.flex-row { display: flex; gap: 20px; }
-.flex-main { flex: 2; }
-.flex-side { flex: 1; }
+/* TABELAS DE GESTÃO ADMIN */
+.wp-table { width: 100%; border-collapse: collapse; }
+.wp-table th { background: #f8f9fa; padding: 12px; text-align: left; font-size: 13px; color: #666; }
+.wp-table td { padding: 12px; border-bottom: 1px solid #eee; font-size: 14px; }
+.btn-edit { background: none; border: none; color: #2271b1; cursor: pointer; font-weight: bold; margin-right: 10px; }
+.btn-del { background: none; border: none; color: #d63638; cursor: pointer; font-weight: bold; }
 
-/* SUB-NAV ADMIN */
-.sub-nav-gva { display: flex; gap: 10px; margin-bottom: 20px; }
-.sub-nav-gva button { background: white; border: 1px solid #ddd; padding: 10px 20px; border-radius: 30px; cursor: pointer; font-weight: bold; }
-.sub-nav-gva button.sub-active { background: var(--gva-azul); color: white; }
-
-.content { display: none; }
-.content.active { display: block; }
-#telaLogin { position: fixed; inset: 0; background: #f0f2f5; z-index: 10000; display: flex; align-items: center; justify-content: center; }
-.login-caixa { background: white; padding: 40px; border-radius: 20px; width: 320px; text-align: center; }
-#modalFundo { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 99999; align-items: center; justify-content: center; }
-#modalConteudo { width: 90%; max-width: 450px; }
-.main-footer { background: var(--gva-azul); color: white; padding: 30px; border-radius: 25px 25px 0 0; margin-top: auto; }
-.footer-grid { display: grid; grid-template-columns: 1.5fr 1fr 1fr; gap: 20px; font-size: 13px; }
+/* REVISÃO DE PRODUÇÃO */
+.status-wa { background: #25D366; color: white; border: none; padding: 6px 12px; border-radius: 20px; font-size: 11px; cursor: pointer; font-weight: bold; margin-top: 10px; }
