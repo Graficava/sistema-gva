@@ -5,20 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GVA • Gráfica Venom Arts</title>
     <link rel="stylesheet" href="style.css">
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-  import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-
-  // Aqui entrarão suas chaves secretas do Firebase em breve!
-</script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
 
     <header>
-        <img id="logoGVA" src="186287.jpg" alt="Logo GVA Gráfica Venom Arts" class="logo-img">
+        <img id="logoGVA" src="186287.jpg" alt="Logo GVA" class="logo-img">
     </header>
 
     <div class="tabs">
@@ -40,118 +37,76 @@
                 <option value="Serviços">Serviços</option>
             </select>
         </div>
-        <div class="grid" id="gradeCliente"></div>
+        <div class="grid" id="gradeCliente">Carregando catálogo das nuvens...</div>
     </div>
 
     <div id="abaCarrinho" class="content">
-        <div id="listaCarrinho">Nenhum item adicionado ainda.</div>
+        <div id="listaCarrinho">Vazio.</div>
         <hr style="margin: 20px 0; border: 0; border-top: 1px dashed #ccc;">
-        
-        <label style="font-weight: bold; color: #111;">Nome do Cliente:</label>
-        <input type="text" id="nomeDoCliente" placeholder="Ex: João Silva">
-        
-        <label style="font-weight: bold; color: #111;">WhatsApp:</label>
-        <input type="tel" id="telDoCliente" placeholder="(00) 90000-0000">
-
-        <div style="display: flex; gap: 10px;">
-            <div style="flex: 1;">
-                <label style="font-weight: bold; color: #111;">Previsão de Entrega:</label>
-                <input type="date" id="dataEntrega">
-            </div>
-        </div>
-
-        <label style="font-weight: bold; color: #111;">Observações do Pedido:</label>
-        <textarea id="obsPedido" rows="2" placeholder="Ex: Cliente quer a arte com fundo mais escuro, laminação fosca..."></textarea>
+        <label>Nome do Cliente:</label><input type="text" id="nomeDoCliente">
+        <label>WhatsApp:</label><input type="tel" id="telDoCliente">
+        <label>Previsão de Entrega:</label><input type="date" id="dataEntrega">
+        <label>Observações:</label><textarea id="obsPedido" rows="2"></textarea>
         
         <div style="display: flex; gap: 10px;">
-            <div style="flex: 1;">
-                <label style="font-weight: bold; color: #dc3545;">Desconto (R$):</label>
-                <input type="number" id="valorDesconto" value="0" step="0.01" oninput="atualizarCarrinho()">
-            </div>
-            <div style="flex: 1;">
-                <label style="font-weight: bold; color: #28a745;">Sinal Pago (R$):</label>
-                <input type="number" id="valorSinal" value="0" step="0.01" oninput="atualizarCarrinho()">
-            </div>
+            <div style="flex: 1;"><label>Desconto (R$):</label><input type="number" id="valorDesconto" value="0" step="0.01" oninput="atualizarCarrinho()"></div>
+            <div style="flex: 1;"><label>Sinal Pago (R$):</label><input type="number" id="valorSinal" value="0" step="0.01" oninput="atualizarCarrinho()"></div>
         </div>
         
-        <label style="font-weight: bold; color: #111;">Forma de Pagamento (Sinal/Total):</label>
-        <select id="formaPagamento">
-            <option value="Pix">Pix 🟩</option><option value="Cartão">Cartão 💳</option><option value="Dinheiro">Dinheiro 💵</option>
-        </select>
+        <label>Pagamento:</label>
+        <select id="formaPagamento"><option value="Pix">Pix</option><option value="Cartão">Cartão</option><option value="Dinheiro">Dinheiro</option></select>
         
-        <label style="font-weight: bold; color: #111;">Entrega:</label>
-        <select id="metodoEntrega" onchange="verificarEntrega()">
-            <option value="Retirada">Retirada na Loja 🏪</option>
-            <option value="Motoboy">Entrega / Motoboy 🏍️</option>
-        </select>
+        <label>Entrega:</label>
+        <select id="metodoEntrega" onchange="verificarEntrega()"><option value="Retirada">Retirada</option><option value="Motoboy">Motoboy</option></select>
 
-        <div id="dadosEntrega" style="display: none; background: #e9ecef; padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #17a2b8;">
-            <label style="font-weight: bold; color: #111; font-size: 14px;">Endereço de Entrega (Completo):</label>
-            <input type="text" id="enderecoCliente" placeholder="Rua, Número, Complemento, Bairro...">
-            <label style="font-weight: bold; color: #111; font-size: 14px;">Taxa do Motoboy (R$):</label>
-            <input type="number" id="taxaEntrega" value="0" step="0.01" oninput="atualizarCarrinho()">
+        <div id="dadosEntrega" style="display: none; background: #eee; padding: 10px; border-radius: 8px;">
+            <label>Endereço:</label><input type="text" id="enderecoCliente">
+            <label>Taxa (R$):</label><input type="number" id="taxaEntrega" value="0" oninput="atualizarCarrinho()">
         </div>
         
-        <h3 style="text-align: right; color: #555; font-size: 16px; margin-bottom: 5px;">Total do Pedido: R$ <span id="totalCarrinho">0,00</span></h3>
-        <h3 style="text-align: right; color: #dc3545; font-size: 22px; margin-top: 0;">Falta Pagar: <span style="color:#dc3545;">R$ <span id="restanteCarrinho">0,00</span></span></h3>
-        
-        <button class="acao" style="background-color: #28a745; font-size: 18px; padding: 15px; margin-top: 15px;" onclick="enviarPedido()">Concluir Orçamento</button>
+        <h3 style="text-align: right;">Falta Pagar: <span style="color:#dc3545;">R$ <span id="restanteCarrinho">0,00</span></span></h3>
+        <button class="acao" style="background:#28a745;" onclick="enviarPedido()">Enviar para Produção</button>
     </div>
 
     <div id="abaLoja" class="content">
         <div class="dashboard">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div><h3>Saldo Líquido (<span id="mesAtualTexto">...</span>)</h3><p>R$ <span id="faturamentoValor">0,00</span></p></div>
-                <button class="acao" style="background: rgba(255,255,255,0.2); width: auto;" onclick="abrirHistorico()">Relatório 📊</button>
-            </div>
-            <div style="display: flex; justify-content: space-between; margin-top: 15px; font-size: 14px; border-top: 1px solid rgba(255,255,255,0.3); padding-top: 10px;">
-                <div>Total Entradas: <b id="dashEntradas">R$ 0,00</b></div>
-                <div style="color: #ffeaea;">Despesas/Saídas: <b id="dashSaidas">R$ 0,00</b></div>
+            <h3>Saldo Líquido (<span id="mesAtualTexto">...</span>)</h3>
+            <p>R$ <span id="faturamentoValor">0,00</span></p>
+            <div style="display: flex; justify-content: space-between; margin-top: 10px;">
+                <small>Entradas: <b id="dashEntradas">0</b></small>
+                <small>Saídas: <b id="dashSaidas">0</b></small>
             </div>
         </div>
-        <h2 style="color: #111;">Produção em Andamento</h2>
-        <div id="listaProducao">Nenhum pedido no momento.</div>
+        <h2>Produção em Real-Time ⚡</h2>
+        <div id="listaProducao">Sincronizando...</div>
     </div>
 
     <div id="abaCaixa" class="content">
-        <div class="painel-admin" style="border-left: 5px solid #ffc107;">
-            <h2 style="color: #111; margin-top: 0;">📉 Lançamentos do Caixa</h2>
-            <label style="font-weight: bold;">Tipo de Lançamento:</label>
-            <select id="caixaTipo"><option value="saida">Saída (Despesas) 🔴</option><option value="entrada">Entrada Extra 🟢</option></select>
-            <label style="font-weight: bold;">Descrição:</label><input type="text" id="caixaDesc" placeholder="Ex: Compra de Bobina...">
-            <label style="font-weight: bold;">Valor (R$):</label><input type="number" id="caixaValor" step="0.01">
-            <button class="acao" style="background-color: #17a2b8; margin-top: 10px;" onclick="adicionarTransacao()">Salvar Lançamento</button>
+        <div class="painel-admin">
+            <h2>💰 Fluxo de Caixa</h2>
+            <select id="caixaTipo"><option value="saida">Saída 🔴</option><option value="entrada">Entrada Extra 🟢</option></select>
+            <input type="text" id="caixaDesc" placeholder="Descrição">
+            <input type="number" id="caixaValor" placeholder="Valor R$">
+            <button class="acao" onclick="adicionarTransacao()">Lançar</button>
         </div>
-        <h3 style="color: #111; margin-top: 20px;">Histórico de Lançamentos do Mês</h3>
-        <div id="listaCaixa"></div>
+        <div id="listaCaixa" style="margin-top:20px;"></div>
     </div>
 
     <div id="abaAdmin" class="content">
         <div class="painel-admin">
-            <h2 style="color: #111; margin-top: 0;">📦 Cadastrar Produto Novo</h2>
-            
-            <label style="font-weight: bold;">Categoria:</label>
-            <select id="adminCategoria">
-                <option value="Papelaria">Papelaria</option>
-                <option value="Comunicação Visual">Comunicação Visual</option>
-                <option value="Brindes">Brindes</option>
-                <option value="Serviços">Serviços</option>
-            </select>
-
-            <label style="font-weight: bold;">Como este produto é cobrado?</label>
-            <select id="adminTipo"><option value="unidade">Preço Fixo por Unidade</option><option value="m2">Por Metro Quadrado</option></select>
-            <label style="font-weight: bold;">Nome:</label><input type="text" id="adminNome">
-            <label style="font-weight: bold;">Descrição:</label><textarea id="adminDesc" rows="2"></textarea>
-            <label style="font-weight: bold;">Preço Base (R$):</label><input type="number" id="adminPreco" step="0.01">
-            <label style="font-weight: bold;">Link da Imagem (Opcional):</label><input type="text" id="adminImg">
-            <button class="acao" style="background-color: #0056b3; margin-top: 10px;" onclick="salvarNovoProduto()">Adicionar ao Catálogo</button>
+            <h2>📦 Novo Produto</h2>
+            <label>Categoria:</label>
+            <select id="adminCategoria"><option>Papelaria</option><option>Comunicação Visual</option><option>Brindes</option><option>Serviços</option></select>
+            <input type="text" id="adminNome" placeholder="Nome">
+            <textarea id="adminDesc" placeholder="Descrição"></textarea>
+            <input type="number" id="adminPreco" placeholder="Preço">
+            <button class="acao" onclick="salvarNovoProduto()">Cadastrar no Banco</button>
         </div>
     </div>
 
     <div id="modalFundo"><div id="modalConteudo"></div></div>
-    <div id="alertaFundo"><div id="alertaCaixa"><div id="alertaTexto" style="margin-bottom: 20px;"></div><button class="acao" onclick="fecharAlerta()">Entendi</button></div></div>
-    <div id="confirmFundo"><div id="confirmCaixa"><div id="confirmTexto" style="margin-bottom: 20px;"></div><div class="btn-grupo"><button class="acao" style="background: #6c757d;" onclick="fecharConfirmacao()">Cancelar</button><button class="acao" style="background: #dc3545;" onclick="executarExclusao()">Excluir</button></div></div></div>
-    <div id="historicoFundo"><div id="historicoCaixa"><h3 style="margin-top: 0; color: #17a2b8; border-bottom: 2px solid #17a2b8; padding-bottom: 10px;">📊 Relatório Mensal</h3><button class="acao" style="background:#28a745; margin-bottom:15px;" onclick="exportarRelatorioCSV()">📥 Exportar para Excel</button><div id="listaHistorico" style="text-align: left;"></div><button class="acao" onclick="fecharHistorico()" style="margin-top: 15px; background: #6c757d;">Fechar</button></div></div>
+    <div id="alertaFundo"><div id="alertaCaixa"><div id="alertaTexto"></div><button class="acao" onclick="fecharAlerta()">Ok</button></div></div>
+    <div id="confirmFundo"><div id="confirmCaixa"><div id="confirmTexto"></div><button onclick="executarExclusao()">Sim, Cancelar</button><button onclick="fecharConfirmacao()">Não</button></div></div>
 
     <script src="script.js"></script>
 </body>
