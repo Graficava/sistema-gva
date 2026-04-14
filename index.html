@@ -1,29 +1,214 @@
-:root { --gva-azul: #3E3B9F; --radius: 12px; }
-body { margin: 0; font-family: 'Segoe UI', sans-serif; background: #F0F2F5; }
-.app-wrapper { display: flex; min-height: 100vh; }
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GVA • Sistema de Gestão V3</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+</head>
+<body class="gva-body">
 
-/* SIDEBAR */
-.sidebar { width: 220px; background: var(--gva-azul); color: white; position: fixed; height: 100vh; display: flex; flex-direction: column; z-index: 1000; }
-.sidebar-logo { padding: 30px 20px; text-align: center; }
-.sidebar-logo img { width: 140px; }
-.sidebar-nav button { width: 100%; background: none; border: none; color: rgba(255,255,255,0.7); padding: 15px; text-align: left; cursor: pointer; border-radius: 10px; font-size: 14px; }
-.sidebar-nav button.active { background: white; color: var(--gva-azul); font-weight: bold; }
-.main-content { flex: 1; margin-left: 220px; display: flex; flex-direction: column; min-width: 0; }
+    <div id="telaLogin">
+        <div class="login-caixa">
+            <img src="logo GVA azul.png" alt="GVA" width="160">
+            <input type="email" id="loginEmail" placeholder="E-mail">
+            <input type="password" id="loginSenha" placeholder="Senha">
+            <button class="btn-gva" onclick="fazerLogin()">Entrar</button>
+        </div>
+    </div>
 
-/* GRID DO CATÁLOGO */
-.content-wrapper { padding: 25px; flex: 1; }
-.zap-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 25px; }
-.zap-card { background: white; border-radius: var(--radius); overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08); text-align: center; border: 1px solid #eee; }
-.zap-color-bg { width: 100%; height: 150px; background: var(--gva-azul); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 20px; text-transform: uppercase; padding: 10px; box-sizing: border-box; }
-.zap-info { padding: 20px; }
-.zap-info small { color: var(--gva-azul); font-weight: bold; text-transform: uppercase; font-size: 10px; }
-.zap-info h4 { margin: 10px 0; font-size: 18px; color: #333; }
-.zap-price { font-size: 22px; font-weight: 800; color: var(--gva-azul); margin-bottom: 15px; }
+    <div class="app-wrapper">
+        <aside class="sidebar">
+            <div class="sidebar-logo"><img src="logo GVA br.png" alt="GVA"></div>
+            <nav class="sidebar-nav">
+                <button id="btnCliente" class="active" onclick="mudarAba('cliente')"><i class="fa fa-th-large"></i> Catálogo</button>
+                <button id="btnCarrinho" onclick="mudarAba('carrinho')"><i class="fa fa-shopping-cart"></i> Orçamento</button>
+                <button id="btnLoja" onclick="mudarAba('loja')"><i class="fa fa-tasks"></i> Produção</button>
+                <div class="aba-restrita" style="display:none;">
+                    <div class="nav-divider">Gerenciamento</div>
+                    <button id="btnCaixa" onclick="mudarAba('caixa')"><i class="fa fa-chart-line"></i> Financeiro</button>
+                    <button id="btnAdmin" onclick="mudarAba('admin')"><i class="fa fa-cog"></i> Configurações</button>
+                </div>
+            </nav>
+            <div class="sidebar-footer"><button onclick="fazerLogout()" class="btn-sair">Sair</button></div>
+        </aside>
 
-/* BOTÕES */
-.btn-gva { background: var(--gva-azul); color: white; border: none; padding: 10px 20px; border-radius: 30px; font-weight: bold; cursor: pointer; }
-.btn-success { background: #00a859; color: white; border: none; padding: 18px; border-radius: 10px; width: 100%; font-size: 18px; font-weight: bold; cursor: pointer; }
+        <main class="main-content">
+            <header class="top-header">
+                <h1 id="tituloPagina">Catálogo</h1>
+                <div class="header-info">GVA • Gráfica Venom Arts</div>
+            </header>
 
-/* FOOTER GVA */
-.main-footer { background: var(--gva-azul); color: white; padding: 30px; border-radius: 25px 25px 0 0; margin-top: auto; }
-.footer-grid { display: grid; grid-template-columns: 1.5fr 1fr 1fr; gap: 20px; font-size: 12px; line-height: 1.6; }
+            <div class="content-wrapper">
+                
+                <section id="abaCliente" class="content active">
+                    <div class="search-container"><input type="text" id="buscaProduto" placeholder="Pesquisar por nome ou SKU..." oninput="filtrarProdutos()"></div>
+                    <div class="cat-nav" id="menuCategorias"></div>
+                    <div class="zap-grid" id="gradeCliente"></div>
+                </section>
+
+                <section id="abaCarrinho" class="content">
+                    <div class="flex-row">
+                        <div class="flex-main">
+                            <div class="gva-card">
+                                <div class="card-header">Carrinho de Itens</div>
+                                <div id="listaCarrinho" class="card-body">Selecione produtos no catálogo.</div>
+                            </div>
+                            <div class="gva-card">
+                                <div class="card-header">Dados do Cliente</div>
+                                <div class="card-body gva-form-large">
+                                    <div class="form-row">
+                                        <div class="form-group"><label>Tipo:</label><select id="tipoCliente"><option value="PF">Pessoa Física</option><option value="PJ">Pessoa Jurídica</option></select></div>
+                                        <div class="form-group" style="flex:2;"><label>Nome / Razão Social:</label><input type="text" id="nomeCliente"></div>
+                                    </div>
+                                    <div class="form-row">
+                                        <div class="form-group"><label>CPF / CNPJ:</label><input type="text" id="docCliente"></div>
+                                        <div class="form-group"><label>WhatsApp:</label><input type="tel" id="telCliente"></div>
+                                    </div>
+                                    <div class="form-row">
+                                        <div class="form-group" style="flex:2;"><label>Endereço:</label><input type="text" id="endCliente"></div>
+                                        <div class="form-group"><label>CEP:</label><input type="text" id="cepCliente"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex-side">
+                            <div class="gva-card">
+                                <div class="card-header">Pagamento e Entrega</div>
+                                <div class="card-body gva-form-large">
+                                    <label>Forma de Pagamento:</label>
+                                    <select id="formaPagamento" onchange="toggleCamposPagamento()">
+                                        <option value="Pix">Pix</option><option value="Dinheiro">Dinheiro</option><option value="Débito">Débito</option>
+                                        <option value="Credito">Crédito à Vista</option><option value="CreditoParc">Crédito Parcelado</option>
+                                    </select>
+                                    <div id="divParcelas" style="display:none; margin-top:10px;">
+                                        <label>Parcelas:</label>
+                                        <select id="qtdParcelas"><option>2x</option><option>3x</option><option>4x</option><option>5x</option><option>6x</option><option>10x</option><option>12x</option></select>
+                                    </div>
+                                    <label style="margin-top:15px;">Método de Entrega:</label>
+                                    <select id="metodoEntrega" onchange="toggleCamposEntrega()">
+                                        <option value="Retirada">Retirada na Loja</option><option value="Motoboy">Motoboy / Entrega</option>
+                                    </select>
+                                    <div id="divMotoboy" style="display:none; margin-top:10px;">
+                                        <label>Taxa Motoboy (R$):</label><input type="number" id="valorMotoboy" value="0" step="0.01" oninput="atualizarCarrinho()">
+                                    </div>
+                                    <hr>
+                                    <div class="summary-line">Total: <b>R$ <span id="totalCarrinho">0,00</span></b></div>
+                                    <label>Sinal Pago (R$):</label><input type="number" id="valorSinal" value="0" step="0.01" oninput="atualizarCarrinho()">
+                                    <div class="summary-line" style="color:red;">Resta: <b>R$ <span id="restanteCarrinho">0,00</span></b></div>
+                                    <label>Previsão:</label><input type="date" id="dataEntrega">
+                                    <button class="btn-success" onclick="enviarPedido()">Enviar para Produção</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="abaCaixa" class="content">
+                    <div class="gva-card">
+                        <div class="card-header">Fluxo de Caixa Mensal</div>
+                        <div class="card-body">
+                            <div class="financeiro-grid">
+                                <div class="fin-box entries"><h4>Faturamento</h4><p>R$ <span id="finFaturamento">0,00</span></p></div>
+                                <div class="fin-box extra-in"><h4>Entradas Avulsas</h4><p>R$ <span id="finEntradas">0,00</span></p></div>
+                                <div class="fin-box exits"><h4>Saídas/Custos</h4><p>R$ <span id="finSaidas">0,00</span></p></div>
+                                <div class="fin-box total"><h4>Saldo Líquido</h4><p>R$ <span id="finSaldo">0,00</span></p></div>
+                            </div>
+                            <div style="display:flex; gap:10px; margin-top:20px;">
+                                <button class="btn-gva" onclick="abrirLancamento('entrada')" style="background:#28a745;">+ Entrada Avulsa</button>
+                                <button class="btn-gva" onclick="abrirLancamento('saida')" style="background:#dc3545;">- Registrar Saída</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="abaAdmin" class="content">
+                    <div class="sub-nav-gva">
+                        <button id="subBtnProdutos" class="sub-active" onclick="toggleAdminSub('produtos')">Produtos</button>
+                        <button id="subBtnAcabamentos" onclick="toggleAdminSub('acabamentos')">Acabamentos</button>
+                        <button id="subBtnMenus" onclick="toggleAdminSub('menus')">Categorias</button>
+                    </div>
+
+                    <div id="subAdminProdutos" class="admin-panel">
+                        <div class="gva-card"><div class="card-header">Cadastro / Edição de Produto</div>
+                            <div class="card-body gva-form-large">
+                                <input type="hidden" id="editId">
+                                <div class="form-row">
+                                    <div class="form-group"><label>SKU (Cód):</label><input type="text" id="adminSku"></div>
+                                    <div class="form-group" style="flex:2;"><label>Nome do Produto:</label><input type="text" id="adminNome"></div>
+                                    <div class="form-group"><label>R$ Base:</label><input type="number" id="adminPreco" step="0.01"></div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group"><label>Categoria:</label><select id="adminCatSelect"></select></div>
+                                    <div class="form-group"><label>Cálculo:</label>
+                                        <select id="adminTipo">
+                                            <option value="unidade">Unidade</option>
+                                            <option value="m_linear">Metro Linear (Máx 1.50m)</option>
+                                            <option value="m2">Metro Quadrado (Máx 3.10m)</option>
+                                            <option value="folha">Página (Apostila)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <label>URL Imagem:</label><input type="text" id="adminImg">
+                                <div style="display:flex; gap:10px;">
+                                    <button class="btn-gva" onclick="salvarNovoProduto()">Salvar Produto</button>
+                                    <button class="btn-gva" style="background:#666;" onclick="limparFormAdmin()">Limpar</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="listaGerenciarProdutos" class="gva-card"></div>
+                    </div>
+
+                    <div id="subAdminAcabamentos" class="admin-panel" style="display:none;">
+                        <div class="gva-card"><div class="card-header">Novo Acabamento</div>
+                            <div class="card-body gva-form-large">
+                                <input type="hidden" id="editAcabId">
+                                <div class="form-row">
+                                    <input type="text" id="acabNome" placeholder="Nome do Acabamento">
+                                    <input type="number" id="acabPreco" placeholder="Preço Adicional" step="0.01">
+                                    <button class="btn-gva" onclick="salvarAcabamento()">Salvar</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="listaGerenciarAcabamentos" class="gva-card"></div>
+                    </div>
+
+                    <div id="subAdminMenus" class="admin-panel" style="display:none;">
+                        <div class="gva-card"><div class="card-header">Novo Menu / Categoria</div>
+                            <div class="card-body gva-form-large">
+                                <input type="hidden" id="editCatId">
+                                <div class="form-row">
+                                    <input type="text" id="catNome" placeholder="Ex: Banner, Lona, Panfletos">
+                                    <button class="btn-gva" onclick="salvarCategoria()">Salvar Categoria</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="listaGerenciarCategorias" class="gva-card"></div>
+                    </div>
+                </section>
+
+                <section id="abaLoja" class="content"><div id="listaProducao" class="prod-grid"></div></section>
+            </div>
+
+            <footer class="main-footer">
+                <div class="footer-grid">
+                    <div class="footer-box"><b>GVA • Venom Arts</b><br>CNPJ: 17.184.159/0001-06<br>Icaraí - Niterói - RJ</div>
+                    <div class="footer-box text-center">21 99993-0190 | contato@graficava.com.br<br><b>@grafica.venomarts</b></div>
+                    <div class="footer-box text-right">Seg a Sex: 10h-16h | Sáb: 10h-14h</div>
+                </div>
+            </footer>
+        </main>
+    </div>
+
+    <div id="modalFundo"><div id="modalConteudo" class="gva-card"></div></div>
+    <div id="alertaFundo"><div id="alertaCaixa"><h3>Aviso</h3><p id="alertaTexto"></p><button class="btn-gva" onclick="fecharAlerta()">Ok</button></div></div>
+    <img id="logoGVA_Preto" src="logo GVA black.png" style="display:none;">
+
+    <script src="script.js"></script>
+</body>
+</html>
