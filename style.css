@@ -1,0 +1,65 @@
+/* --- SISTEMA DE ESTILOS DA GVA --- */
+
+:root {
+    /* Cores da sua Marca */
+    --gva-blue-primary: #3E3B9F; /* Azul da sua logo */
+    --gva-text-primary: #FFFFFF;
+    --gva-accent-green: #00FFCC; /* Verde Neon para botões */
+    --gva-bg-light: #F0F2F5;
+    --gva-text-dark: #333333;
+}
+
+body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background-color: var(--gva-bg-light); color: var(--gva-text-dark); }
+
+/* CABEÇALHO */
+header, .header { 
+    background-color: var(--gva-blue-primary); 
+    color: var(--gva-text-primary); 
+    padding: 15px; 
+    text-align: center; 
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
+}
+header img, .logo-img { max-height: 60px; max-width: 100%; object-fit: contain; }
+
+/* ABAS (TABS) */
+.tabs { display: flex; background: #222; }
+.tabs button { flex: 1; padding: 15px; border: none; background: transparent; color: #aaa; cursor: pointer; font-weight: bold; transition: 0.3s; font-size: 14px; border-bottom: 4px solid transparent; }
+.tabs button.active { background: var(--gva-bg-light); color: var(--gva-blue-primary); border-bottom: 4px solid var(--gva-blue-primary); }
+
+/* CONTEÚDO (O SEGREDO PARA NÃO MOSTRAR TUDO JUNTO) */
+.content { padding: 20px; display: none; max-width: 1200px; margin: 0 auto; }
+.content.active { display: block; }
+
+/* CARTÕES DO CATÁLOGO */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 20px; }
+.card { background: white; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.06); overflow: hidden; display: flex; flex-direction: column; transition: transform 0.2s; border: 1px solid #eaeaea; }
+.card:hover { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(0,0,0,0.12); border-color: var(--gva-blue-primary); }
+.card-img-container { width: 100%; height: 140px; background-color: #f8f9fa; }
+.card-img-container img { width: 100%; height: 100%; object-fit: cover; }
+.card-body { padding: 15px; display: flex; flex-direction: column; flex-grow: 1; justify-content: space-between; }
+.card h4 { margin: 0 0 5px 0; font-size: 16px; color: #111; }
+.card .descricao { font-size: 12px; color: #666; margin-bottom: 12px; line-height: 1.4; flex-grow: 1; }
+.preco { color: var(--gva-blue-primary); font-weight: 800; font-size: 1.1em; margin: 0 0 10px 0; }
+
+/* BOTÕES GERAIS */
+button.acao { background-color: var(--gva-blue-primary); color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold; font-size: 14px; transition: 0.2s; }
+button.acao:hover { background-color: #2b296e; } /* Azul mais escuro no hover */
+
+/* INPUTS E LISTAS */
+input, select, textarea { width: 100%; padding: 12px; margin-bottom: 15px; margin-top: 5px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 6px; font-family: inherit; }
+.lista-item { background: white; padding: 15px; margin-bottom: 15px; border-radius: 10px; border-left: 5px solid var(--gva-blue-primary); box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+.lista-flex { display: flex; justify-content: space-between; align-items: center; }
+
+/* MODAIS (JANELAS POP-UP) */
+#modalFundo, #alertaFundo, #confirmFundo, #historicoFundo { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
+#modalConteudo, #historicoCaixa { background: white; padding: 25px; border-radius: 12px; width: 90%; max-width: 400px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); overflow-y: auto; max-height: 90vh; }
+#modalConteudo h3 { margin-top: 0; border-bottom: 2px solid var(--gva-blue-primary); padding-bottom: 10px; color: #111; }
+#alertaCaixa, #confirmCaixa { background: white; padding: 25px; border-radius: 12px; width: 80%; max-width: 300px; text-align: center; border-top: 5px solid var(--gva-blue-primary); }
+.btn-grupo { display: flex; gap: 10px; margin-top: 10px; }
+
+/* DASHBOARD DO PDV */
+.dashboard { background: linear-gradient(135deg, var(--gva-blue-primary), #635fd8); padding: 20px; border-radius: 12px; margin-bottom: 20px; color: white; }
+.dashboard h3 { margin: 0; font-size: 14px; text-transform: uppercase; color: rgba(255,255,255,0.8); }
+.dashboard p { font-size: 32px; font-weight: 800; margin: 5px 0 0 0; }
+.item-historico { background: #f9f9f9; padding: 12px; border-radius: 6px; border: 1px solid #eee; margin-bottom: 10px; font-size: 14px; border-left: 3px solid var(--gva-blue-primary); }
+.painel-admin { background: white; padding: 20px; border-radius: 12px; border: 1px solid #ddd; }
