@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GVA • Gestão Profissional</title>
+    <title>GVA • Sistema de Gestão V4</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -18,7 +18,7 @@
             <img src="logo GVA azul.png" alt="GVA" width="160">
             <input type="email" id="loginEmail" placeholder="E-mail">
             <input type="password" id="loginSenha" placeholder="Senha">
-            <button class="btn-gva" onclick="fazerLogin()">Entrar</button>
+            <button class="btn-gva" onclick="fazerLogin()">Acessar Painel</button>
         </div>
     </div>
 
@@ -47,7 +47,7 @@
             <div class="content-wrapper">
                 
                 <section id="abaCliente" class="content active">
-                    <div class="search-container"><input type="text" id="buscaProduto" placeholder="Pesquisar catálogo..." oninput="filtrarProdutos()"></div>
+                    <div class="search-container"><input type="text" id="buscaProduto" placeholder="Pesquisar..." oninput="filtrarProdutos()"></div>
                     <div class="cat-nav" id="menuCategorias"></div>
                     <div class="zap-grid" id="gradeCliente"></div>
                 </section>
@@ -56,11 +56,11 @@
                     <div class="flex-row">
                         <div class="flex-main">
                             <div class="gva-card">
-                                <div class="card-header">Carrinho de Itens</div>
-                                <div id="listaCarrinho" class="card-body">Aguardando produtos...</div>
+                                <div class="card-header">Carrinho</div>
+                                <div id="listaCarrinho" class="card-body">Vazio.</div>
                             </div>
                             <div class="gva-card">
-                                <div class="card-header">Dados do Cliente</div>
+                                <div class="card-header">Cliente</div>
                                 <div class="card-body gva-form-large">
                                     <div class="form-row">
                                         <div class="form-group"><label>Tipo:</label><select id="tipoCliente"><option value="PF">PF</option><option value="PJ">PJ</option></select></div>
@@ -70,57 +70,33 @@
                                         <div class="form-group"><label>CPF / CNPJ:</label><input type="text" id="docCliente"></div>
                                         <div class="form-group"><label>WhatsApp:</label><input type="tel" id="telCliente"></div>
                                     </div>
-                                    <div class="form-row">
-                                        <div class="form-group" style="flex:2;"><label>Endereço:</label><input type="text" id="endCliente"></div>
-                                        <div class="form-group"><label>CEP:</label><input type="text" id="cepCliente"></div>
-                                    </div>
+                                    <input type="text" id="endCliente" placeholder="Endereço">
+                                    <input type="text" id="cepCliente" placeholder="CEP">
                                 </div>
                             </div>
                         </div>
                         <div class="flex-side">
                             <div class="gva-card">
-                                <div class="card-header">Resumo do Pedido</div>
+                                <div class="card-header">Pagamento</div>
                                 <div class="card-body gva-form-large">
-                                    <label>Forma de Pagamento:</label>
+                                    <label>Forma:</label>
                                     <select id="formaPagamento" onchange="toggleCamposPagamento()">
                                         <option value="Pix">Pix</option><option value="Dinheiro">Dinheiro</option><option value="Débito">Débito</option>
                                         <option value="Credito">Crédito à Vista</option><option value="CreditoParc">Crédito Parcelado</option>
                                     </select>
-                                    <div id="divParcelas" style="display:none; margin-top:10px;">
-                                        <label>Parcelas:</label><select id="qtdParcelas"><option>2x</option><option>3x</option><option>4x</option><option>5x</option><option>6x</option><option>10x</option><option>12x</option></select>
-                                    </div>
-                                    <label style="margin-top:15px; display:block;">Método de Entrega:</label>
+                                    <div id="divParcelas" style="display:none;"><label>Parcelas:</label><select id="qtdParcelas"><option>2x</option><option>3x</option><option>4x</option><option>5x</option><option>6x</option><option>10x</option><option>12x</option></select></div>
+                                    <label style="margin-top:10px;">Entrega:</label>
                                     <select id="metodoEntrega" onchange="toggleCamposEntrega()">
-                                        <option value="Retirada">Retirada na Loja</option><option value="Motoboy">Motoboy / Entrega</option>
+                                        <option value="Retirada">Retirada na Loja</option><option value="Motoboy">Motoboy</option>
                                     </select>
-                                    <div id="divMotoboy" style="display:none; margin-top:10px;">
-                                        <label>Taxa Entrega (R$):</label><input type="number" id="valorMotoboy" value="0" step="0.01" oninput="atualizarCarrinho()">
-                                    </div>
+                                    <div id="divMotoboy" style="display:none;"><label>Taxa (R$):</label><input type="number" id="valorMotoboy" value="0" step="0.01" oninput="atualizarCarrinho()"></div>
                                     <hr>
-                                    <p>Total Geral: <b>R$ <span id="totalCarrinho">0,00</span></b></p>
-                                    <label>Sinal Pago (R$):</label><input type="number" id="valorSinal" value="0" step="0.01" oninput="atualizarCarrinho()">
-                                    <p style="color:red; font-weight:bold;">Resta: R$ <span id="restanteCarrinho">0,00</span></p>
+                                    <p>Total: <b>R$ <span id="totalCarrinho">0,00</span></b></p>
+                                    <label>Sinal:</label><input type="number" id="valorSinal" value="0" step="0.01" oninput="atualizarCarrinho()">
+                                    <p style="color:red; font-weight:bold;">Restante: R$ <span id="restanteCarrinho">0,00</span></p>
                                     <label>Previsão:</label><input type="date" id="dataEntrega">
-                                    <button class="btn-success" onclick="enviarPedido()">Finalizar e Produzir</button>
+                                    <button class="btn-success" onclick="enviarPedido()">Finalizar Pedido</button>
                                 </div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                <section id="abaCaixa" class="content">
-                    <div class="gva-card">
-                        <div class="card-header">Controle Financeiro</div>
-                        <div class="card-body">
-                            <div class="financeiro-grid">
-                                <div class="fin-box entries"><h4>Vendas</h4><p>R$ <span id="finFaturamento">0,00</span></p></div>
-                                <div class="fin-box extra-in"><h4>Entradas</h4><p>R$ <span id="finEntradas">0,00</span></p></div>
-                                <div class="fin-box exits"><h4>Saídas</h4><p>R$ <span id="finSaidas">0,00</span></p></div>
-                                <div class="fin-box total"><h4>Saldo</h4><p>R$ <span id="finSaldo">0,00</span></p></div>
-                            </div>
-                            <div style="display:flex; gap:10px; margin-top:20px;">
-                                <button class="btn-gva" onclick="abrirLancamento('entrada')" style="background:#28a745;">+ Entrada Avulsa</button>
-                                <button class="btn-gva" onclick="abrirLancamento('saida')" style="background:#dc3545;">- Registrar Saída</button>
                             </div>
                         </div>
                     </div>
@@ -139,13 +115,16 @@
                             <div class="form-row">
                                 <div class="form-group"><label>SKU:</label><input type="text" id="adminSku"></div>
                                 <div class="form-group" style="flex:2;"><label>Produto:</label><input type="text" id="adminNome"></div>
-                                <div class="form-group"><label>Preço:</label><input type="number" id="adminPreco" step="0.01"></div>
+                                <div class="form-group"><label>R$ Base:</label><input type="number" id="adminPreco" step="0.01"></div>
                             </div>
                             <div class="form-row">
                                 <div class="form-group"><label>Categoria:</label><select id="adminCatSelect"></select></div>
-                                <div class="form-group"><label>Tipo Cálculo:</label><select id="adminTipo"><option value="unidade">Unidade</option><option value="m_linear">Metro Linear</option><option value="m2">M²</option><option value="folha">Folha</option></select></div>
+                                <div class="form-group"><label>Quantidades Fixas (Opcional - Ex: 100,500,1000):</label><input type="text" id="adminQtdsFixas"></div>
                             </div>
-                            <input type="text" id="adminImg" placeholder="URL da Imagem">
+                            <div class="form-row">
+                                <div class="form-group"><label>Preço Escalonado (Ex: 10:8.50, 50:7.00):</label><input type="text" id="adminEscalonado" placeholder="Qtd:Valor"></div>
+                                <div class="form-group"><label>Cálculo:</label><select id="adminTipo"><option value="unidade">Unidade</option><option value="m_linear">Metro Linear</option><option value="m2">M²</option><option value="folha">Página</option></select></div>
+                            </div>
                             <button id="btnSalvarProd" class="btn-gva" onclick="salvarNovoProduto()">Salvar Produto</button>
                         </div></div>
                         <div id="listaGerenciarProdutos" class="gva-card"></div>
@@ -155,10 +134,11 @@
                         <div class="gva-card"><div class="card-body gva-form-large">
                             <input type="hidden" id="editAcabId">
                             <div class="form-row">
-                                <input type="text" id="acabNome" placeholder="Acabamento">
-                                <input type="number" id="acabPreco" placeholder="Preço Adicional">
-                                <button id="btnSalvarAcab" class="btn-gva" onclick="salvarAcabamento()">Salvar</button>
+                                <div class="form-group"><label>Nome Acabamento:</label><input type="text" id="acabNome"></div>
+                                <div class="form-group"><label>Preço Adicional:</label><input type="number" id="acabPreco" step="0.01"></div>
+                                <div class="form-group"><label>Vincular à Categoria:</label><select id="acabCatVinculo"></select></div>
                             </div>
+                            <button id="btnSalvarAcab" class="btn-gva" onclick="salvarAcabamento()">Salvar</button>
                         </div></div>
                         <div id="listaGerenciarAcabamentos" class="gva-card"></div>
                     </div>
@@ -166,12 +146,27 @@
                     <div id="subAdminMenus" class="admin-panel" style="display:none;">
                         <div class="gva-card"><div class="card-body gva-form-large">
                             <input type="hidden" id="editCatId">
-                            <div class="form-row">
-                                <input type="text" id="catNome" placeholder="Nome da Categoria">
-                                <button id="btnSalvarCat" class="btn-gva" onclick="salvarCategoria()">Salvar Categoria</button>
-                            </div>
+                            <input type="text" id="catNome" placeholder="Nome Categoria">
+                            <button id="btnSalvarCat" class="btn-gva" onclick="salvarCategoria()">Salvar Categoria</button>
                         </div></div>
                         <div id="listaGerenciarCategorias" class="gva-card"></div>
+                    </div>
+                </section>
+
+                <section id="abaCaixa" class="content">
+                    <div class="gva-card">
+                        <div class="card-header">Caixa</div>
+                        <div class="card-body">
+                            <div class="financeiro-grid">
+                                <div class="fin-box entries"><h4>Vendas</h4><p>R$ <span id="finFaturamento">0,00</span></p></div>
+                                <div class="fin-box exits"><h4>Saídas</h4><p>R$ <span id="finSaidas">0,00</span></p></div>
+                                <div class="fin-box total"><h4>Saldo</h4><p>R$ <span id="finSaldo">0,00</span></p></div>
+                            </div>
+                            <div style="display:flex; gap:10px; margin-top:20px;">
+                                <button class="btn-gva" onclick="abrirLancamento('entrada')" style="background:#28a745;">+ Entrada</button>
+                                <button class="btn-gva" onclick="abrirLancamento('saida')" style="background:#dc3545;">- Saída</button>
+                            </div>
+                        </div>
                     </div>
                 </section>
 
@@ -182,7 +177,6 @@
 
     <div id="modalFundo"><div id="modalConteudo" class="gva-card"></div></div>
     <div id="alertaFundo"><div id="alertaCaixa"><p id="alertaTexto"></p><button class="btn-gva" onclick="fecharAlerta()">Ok</button></div></div>
-    <img id="logoGVA_Preto" src="logo GVA black.png" style="display:none;">
 
     <script src="script.js"></script>
 </body>
