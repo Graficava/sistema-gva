@@ -97,5 +97,16 @@ input, select, textarea { width: 100%; padding: 12px; border: 1px solid #ccc; bo
     .footer-grid { grid-template-columns: 1fr; text-align: center; }
 }
 
+/* Adicione isso ao seu style.css */
+.cat-nav { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 15px; margin-bottom: 15px; border-bottom: 1px solid #eee; }
+.cat-nav button { background: white; border: 1px solid #ddd; padding: 8px 15px; border-radius: 20px; white-space: nowrap; cursor: pointer; font-size: 13px; font-weight: 600; color: #666; }
+.cat-nav button.active { background: var(--gva-azul); color: white; border-color: var(--gva-azul); }
+
+.admin-panel { margin-top: 20px; }
+.wp-table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; }
+.wp-table th, .wp-table td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; font-size: 13px; }
+
+.status-btn { background: #25D366; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 11px; margin-top: 5px; }
+
 .content { display: none; }
 .content.active { display: block; }
