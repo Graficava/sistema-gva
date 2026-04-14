@@ -1,71 +1,57 @@
 /* DESIGN SYSTEM: WORDPRESS + ZAP GRÁFICA */
 :root {
-    --wp-sidebar: #1d2327; /* Preto WP */
-    --wp-active: #2271b1;  /* Azul WP */
-    --bg-wp: #f0f0f1;      /* Cinza fundo WP */
-    --gva-azul: #3E3B9F;   /* Azul GVA */
-    --zap-green: #00a859;  /* Verde Zap Gráfica */
+    --wp-sidebar: #1d2327;
+    --wp-active: #2271b1;
+    --bg-wp: #f0f0f1;
+    --gva-azul: #3E3B9F;
+    --zap-green: #00a859;
     --border: #dcdcde;
 }
 
-body, html { margin: 0; padding: 0; font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; background: var(--bg-wp); color: #3c434a; }
-
+body, html { margin: 0; padding: 0; font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; background: var(--bg-wp); color: #3c434a; }
 .wp-wrapper { display: flex; min-height: 100vh; }
 
-/* SIDEBAR (WP STYLE) */
+/* SIDEBAR */
 .wp-sidebar { width: 190px; background: var(--wp-sidebar); color: #c3c4c7; position: fixed; height: 100vh; z-index: 1000; }
 .wp-branding { padding: 20px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05); }
 .wp-branding img { max-width: 110px; }
-
-.wp-menu { padding: 10px 0; }
-.wp-menu button { 
-    width: 100%; background: none; border: none; color: #c3c4c7; padding: 12px 20px; 
-    text-align: left; cursor: pointer; font-size: 14px; display: flex; align-items: center; gap: 10px;
-}
-.wp-menu button:hover { background: rgba(255,255,255,0.1); color: #72aee6; }
+.wp-menu button { width: 100%; background: none; border: none; color: #c3c4c7; padding: 12px 20px; text-align: left; cursor: pointer; font-size: 14px; display: flex; align-items: center; gap: 10px; }
 .wp-menu button.active { background: var(--wp-active); color: white; }
 .wp-separator { font-size: 11px; text-transform: uppercase; padding: 20px 20px 5px; opacity: 0.5; }
 
-.wp-logout-area { position: absolute; bottom: 0; width: 100%; padding: 20px; border-top: 1px solid rgba(255,255,255,0.05); }
-
-/* CONTEÚDO (WP STYLE) */
+/* MAIN */
 .wp-main { flex: 1; margin-left: 190px; display: flex; flex-direction: column; }
 .wp-topbar { background: #fff; border-bottom: 1px solid var(--border); padding: 10px 25px; display: flex; justify-content: space-between; align-items: center; }
-.wp-topbar h1 { font-size: 22px; font-weight: 400; margin: 0; }
 .wp-content { padding: 25px; flex: 1; }
 
-/* BOXES (WP STYLE) */
-.wp-box { background: #fff; border: 1px solid var(--border); box-shadow: 0 1px 1px rgba(0,0,0,.04); margin-bottom: 20px; }
-.wp-box-title { padding: 10px 15px; border-bottom: 1px solid var(--border); font-weight: 600; font-size: 14px; background: #fff; }
-.wp-box-content { padding: 15px; }
+/* SUB-NAV ADMIN */
+.wp-sub-nav { margin-bottom: 20px; display: flex; gap: 10px; }
+.wp-sub-nav button { background: none; border: none; padding: 10px; cursor: pointer; color: var(--wp-active); font-weight: 600; border-radius: 4px; }
+.wp-sub-nav button.sub-active { background: white; color: #000; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
 
-/* GRID DE PRODUTOS (ZAP STYLE) */
-.zap-search { margin-bottom: 25px; }
-.zap-search input { width: 100%; padding: 15px; border: 1px solid var(--border); border-radius: 4px; font-size: 16px; }
+/* TABELAS ADMIN */
+.wp-table { width: 100%; border-collapse: collapse; background: white; }
+.wp-table th { text-align: left; padding: 12px; border-bottom: 2px solid var(--bg-wp); font-size: 14px; }
+.wp-table td { padding: 12px; border-bottom: 1px solid var(--bg-wp); font-size: 13px; }
+.img-thumb { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; }
 
+/* ZAP CARDS */
 .zap-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px; }
-.zap-card { 
-    background: #fff; border-radius: 8px; border: 1px solid var(--border); 
-    overflow: hidden; text-align: center; transition: 0.2s;
-}
-.zap-card:hover { box-shadow: 0 8px 25px rgba(0,0,0,0.1); }
+.zap-card { background: #fff; border-radius: 8px; border: 1px solid var(--border); overflow: hidden; text-align: center; }
 .zap-img { width: 100%; height: 180px; object-fit: cover; border-bottom: 1px solid var(--border); }
-.zap-info { padding: 15px; }
-.zap-info h4 { margin: 0 0 10px; font-size: 16px; color: #1d2327; }
-.zap-price { font-size: 22px; font-weight: 800; color: var(--gva-azul); margin-bottom: 15px; }
+.zap-price { font-size: 22px; font-weight: 800; color: var(--gva-azul); }
 
-/* BOTÕES */
+/* BOTOES */
 .wp-btn-blue { background: var(--wp-active); color: #fff; border: none; padding: 10px 20px; border-radius: 3px; cursor: pointer; font-weight: 600; }
 .wp-btn-green { background: var(--zap-green); color: #fff; border: none; padding: 15px; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; font-size: 16px; }
 
-/* RODAPÉ GVA */
 .gva-footer { background: var(--gva-azul); color: white; padding: 25px; text-align: center; margin-top: 40px; }
-.gva-footer-content span { opacity: 0.7; font-size: 12px; }
-
-/* LOGIN */
 #telaLogin { position: fixed; inset: 0; background: var(--bg-wp); z-index: 9999; display: flex; align-items: center; justify-content: center; }
-.login-caixa { background: #fff; padding: 40px; border: 1px solid var(--border); box-shadow: 0 1px 10px rgba(0,0,0,0.1); width: 320px; border-radius: 4px; }
-input { width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid var(--border); border-radius: 4px; box-sizing: border-box; }
+.login-caixa { background: #fff; padding: 40px; border: 1px solid var(--border); width: 320px; }
 
 .content { display: none; }
 .content.active { display: block; }
+
+/* MODAIS */
+#modalFundo { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 2000; align-items: center; justify-content: center; }
+#modalConteudo { width: 90%; max-width: 400px; }
