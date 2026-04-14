@@ -45,7 +45,6 @@
             </header>
 
             <div class="content-wrapper">
-                
                 <section id="abaCliente" class="content active">
                     <div class="search-container"><input type="text" id="buscaProduto" placeholder="Pesquisar..." oninput="filtrarProdutos()"></div>
                     <div class="cat-nav" id="menuCategorias"></div>
@@ -60,7 +59,7 @@
                                 <div id="listaCarrinho" class="card-body">Vazio.</div>
                             </div>
                             <div class="gva-card">
-                                <div class="card-header">Cliente</div>
+                                <div class="card-header">Dados do Cliente</div>
                                 <div class="card-body gva-form-large">
                                     <div class="form-row">
                                         <div class="form-group"><label>Tipo:</label><select id="tipoCliente"><option value="PF">PF</option><option value="PJ">PJ</option></select></div>
@@ -77,7 +76,7 @@
                         </div>
                         <div class="flex-side">
                             <div class="gva-card">
-                                <div class="card-header">Pagamento</div>
+                                <div class="card-header">Resumo</div>
                                 <div class="card-body gva-form-large">
                                     <label>Forma:</label>
                                     <select id="formaPagamento" onchange="toggleCamposPagamento()">
@@ -93,10 +92,28 @@
                                     <hr>
                                     <p>Total: <b>R$ <span id="totalCarrinho">0,00</span></b></p>
                                     <label>Sinal:</label><input type="number" id="valorSinal" value="0" step="0.01" oninput="atualizarCarrinho()">
-                                    <p style="color:red; font-weight:bold;">Restante: R$ <span id="restanteCarrinho">0,00</span></p>
+                                    <p style="color:red; font-weight:bold;">A Pagar: R$ <span id="restanteCarrinho">0,00</span></p>
                                     <label>Previsão:</label><input type="date" id="dataEntrega">
-                                    <button class="btn-success" onclick="enviarPedido()">Finalizar Pedido</button>
+                                    <button class="btn-success" onclick="enviarPedido()">Enviar Produção</button>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="abaCaixa" class="content">
+                    <div class="gva-card">
+                        <div class="card-header">Financeiro</div>
+                        <div class="card-body">
+                            <div class="financeiro-grid">
+                                <div class="fin-box entries"><h4>Vendas</h4><p>R$ <span id="finFaturamento">0,00</span></p></div>
+                                <div class="fin-box extra-in"><h4>Entradas</h4><p>R$ <span id="finEntradas">0,00</span></p></div>
+                                <div class="fin-box exits"><h4>Saídas</h4><p>R$ <span id="finSaidas">0,00</span></p></div>
+                                <div class="fin-box total"><h4>Saldo</h4><p>R$ <span id="finSaldo">0,00</span></p></div>
+                            </div>
+                            <div style="display:flex; gap:10px; margin-top:20px;">
+                                <button class="btn-gva" onclick="abrirLancamento('entrada')" style="background:#28a745;">+ Entrada</button>
+                                <button class="btn-gva" onclick="abrirLancamento('saida')" style="background:#dc3545;">- Saída</button>
                             </div>
                         </div>
                     </div>
@@ -119,11 +136,11 @@
                             </div>
                             <div class="form-row">
                                 <div class="form-group"><label>Categoria:</label><select id="adminCatSelect"></select></div>
-                                <div class="form-group"><label>Quantidades Fixas (Opcional - Ex: 100,500,1000):</label><input type="text" id="adminQtdsFixas"></div>
+                                <div class="form-group"><label>Qtds Fixas (Ex: 100,500):</label><input type="text" id="adminQtdsFixas"></div>
                             </div>
                             <div class="form-row">
-                                <div class="form-group"><label>Preço Escalonado (Ex: 10:8.50, 50:7.00):</label><input type="text" id="adminEscalonado" placeholder="Qtd:Valor"></div>
-                                <div class="form-group"><label>Cálculo:</label><select id="adminTipo"><option value="unidade">Unidade</option><option value="m_linear">Metro Linear</option><option value="m2">M²</option><option value="folha">Página</option></select></div>
+                                <div class="form-group"><label>Escalonado (Ex: 10:8.50, 50:7.00):</label><input type="text" id="adminEscalonado"></div>
+                                <div class="form-group"><label>Cálculo:</label><select id="adminTipo"><option value="unidade">Unidade</option><option value="m_linear">Metro Linear</option><option value="m2">M²</option><option value="folha">Folha</option></select></div>
                             </div>
                             <button id="btnSalvarProd" class="btn-gva" onclick="salvarNovoProduto()">Salvar Produto</button>
                         </div></div>
@@ -134,9 +151,9 @@
                         <div class="gva-card"><div class="card-body gva-form-large">
                             <input type="hidden" id="editAcabId">
                             <div class="form-row">
-                                <div class="form-group"><label>Nome Acabamento:</label><input type="text" id="acabNome"></div>
-                                <div class="form-group"><label>Preço Adicional:</label><input type="number" id="acabPreco" step="0.01"></div>
-                                <div class="form-group"><label>Vincular à Categoria:</label><select id="acabCatVinculo"></select></div>
+                                <div class="form-group"><label>Nome:</label><input type="text" id="acabNome"></div>
+                                <div class="form-group"><label>R$ Adicional:</label><input type="number" id="acabPreco" step="0.01"></div>
+                                <div class="form-group"><label>Vínculo:</label><select id="acabCatVinculo"></select></div>
                             </div>
                             <button id="btnSalvarAcab" class="btn-gva" onclick="salvarAcabamento()">Salvar</button>
                         </div></div>
@@ -150,23 +167,6 @@
                             <button id="btnSalvarCat" class="btn-gva" onclick="salvarCategoria()">Salvar Categoria</button>
                         </div></div>
                         <div id="listaGerenciarCategorias" class="gva-card"></div>
-                    </div>
-                </section>
-
-                <section id="abaCaixa" class="content">
-                    <div class="gva-card">
-                        <div class="card-header">Caixa</div>
-                        <div class="card-body">
-                            <div class="financeiro-grid">
-                                <div class="fin-box entries"><h4>Vendas</h4><p>R$ <span id="finFaturamento">0,00</span></p></div>
-                                <div class="fin-box exits"><h4>Saídas</h4><p>R$ <span id="finSaidas">0,00</span></p></div>
-                                <div class="fin-box total"><h4>Saldo</h4><p>R$ <span id="finSaldo">0,00</span></p></div>
-                            </div>
-                            <div style="display:flex; gap:10px; margin-top:20px;">
-                                <button class="btn-gva" onclick="abrirLancamento('entrada')" style="background:#28a745;">+ Entrada</button>
-                                <button class="btn-gva" onclick="abrirLancamento('saida')" style="background:#dc3545;">- Saída</button>
-                            </div>
-                        </div>
                     </div>
                 </section>
 
