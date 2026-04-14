@@ -3,10 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GVA • Sistema de Gestão</title>
+    <title>GVA • Sistema de Gestão Profissional</title>
     <link rel="stylesheet" href="style.css">
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
@@ -25,6 +27,7 @@
     <header>
         <div class="container-header">
             <img id="logoGVA" src="logo GVA br.png" alt="GVA Venom Arts" class="logo-img">
+            <img id="logoGVA_Preto" src="logo GVA black.png" style="display:none;">
             <button onclick="fazerLogout()" class="btn-sair">Sair</button>
         </div>
     </header>
@@ -49,39 +52,54 @@
 
         <div id="abaCarrinho" class="content">
             <div class="card-orcamento">
-                <div id="listaCarrinho">Selecione produtos no catálogo.</div>
+                <div id="listaCarrinho">Selecione produtos no catálogo para começar.</div>
                 <hr>
                 <div class="form-cliente">
-                    <select id="tipoCliente" onchange="ajustarCamposCliente()">
+                    <label>Dados do Cliente:</label>
+                    <select id="tipoCliente">
                         <option value="PF">Pessoa Física</option>
                         <option value="PJ">Pessoa Jurídica</option>
                     </select>
                     <input type="text" id="nomeCliente" placeholder="Nome Completo / Razão Social">
                     <input type="text" id="docCliente" placeholder="CPF ou CNPJ">
                     <input type="tel" id="telCliente" placeholder="WhatsApp (com DDD)">
-                    <textarea id="obsPedido" placeholder="Detalhes técnicos (Ex: Laminação, tipo de corte, etc)"></textarea>
+                    <textarea id="obsPedido" placeholder="Observações Técnicas (Ex: Laminação, acabamento...)"></textarea>
+                    <label>Previsão de Entrega:</label>
                     <input type="date" id="dataEntrega">
                 </div>
                 <div class="financeiro-resumo">
                     <div>Total: <b>R$ <span id="totalCarrinho">0,00</span></b></div>
-                    <div>Sinal: <input type="number" id="valorSinal" value="0" oninput="atualizarCarrinho()"></div>
-                    <div class="restante">Resta: <b>R$ <span id="restanteCarrinho">0,00</span></b></div>
+                    <div>Sinal Pago: <input type="number" id="valorSinal" value="0" step="0.01" oninput="atualizarCarrinho()"></div>
+                    <div>Desconto: <input type="number" id="valorDesconto" value="0" step="0.01" oninput="atualizarCarrinho()"></div>
+                    <div class="restante">Resta Pagar: <b>R$ <span id="restanteCarrinho">0,00</span></b></div>
                 </div>
-                <button class="acao btn-finalizar" onclick="enviarPedido()">Gerar Pedido e Notificar</button>
+                <button class="acao btn-finalizar" onclick="enviarPedido()">Gerar Pedido na Produção</button>
+            </div>
+        </div>
+
+        <div id="abaLoja" class="content">
+            <h2>Fila de Produção</h2>
+            <div id="listaProducao">Nenhum pedido em andamento.</div>
+        </div>
+
+        <div id="abaCaixa" class="content">
+            <div class="painel-admin">
+                <h2>💰 Controle de Fluxo de Caixa</h2>
+                <div id="listaCaixa">Carregando movimentações...</div>
             </div>
         </div>
 
         <div id="abaAdmin" class="content">
             <div class="painel-admin">
-                <h2>📦 Gestão de Produtos</h2>
-                <label>Nome do Produto:</label>
-                <input type="text" id="adminNome" placeholder="Ex: Banner Lona 440g">
+                <h2>📦 Cadastro de Novos Produtos</h2>
+                <label>Nome:</label>
+                <input type="text" id="adminNome" placeholder="Ex: Panfleto Couchê 90g">
                 
-                <label>Tipo de Cobrança:</label>
+                <label>Tipo de Cálculo:</label>
                 <select id="adminTipo">
-                    <option value="unidade">Preço por Unidade (Fixo)</option>
-                    <option value="m2">Cálculo por Metro Quadrado ($m^2$)</option>
-                    <option value="folha">Cálculo por Folha/Página (Apostila)</option>
+                    <option value="unidade">Preço Fixo (Unidade)</option>
+                    <option value="m2">Por Metro Quadrado (m²)</option>
+                    <option value="folha">Por Página (Apostilas)</option>
                 </select>
 
                 <label>Preço Base (R$):</label>
@@ -95,10 +113,10 @@
                     <option>Papelaria</option>
                     <option>Comunicação Visual</option>
                     <option>Brindes</option>
-                    <option>Serviços Rapidos</option>
+                    <option>Serviços</option>
                 </select>
 
-                <button class="acao" onclick="salvarNovoProduto()">Cadastrar na Nuvem</button>
+                <button class="acao" onclick="salvarNovoProduto()">Salvar no Banco Cloud</button>
             </div>
         </div>
     </main>
@@ -107,16 +125,17 @@
         <div class="container-footer">
             <div class="footer-info">
                 <b>GVA • Venom Arts</b><br>
-                Rua Sua Rua, 123 - Bairro | (21) 98888-8888<br>
-                <span class="social">@graficavenomarts | graficavenomarts.com.br</span>
+                Rua Sua Rua, 123 - Centro | (21) 98888-8888<br>
+                <span class="social">@graficavenomarts | www.graficavenomarts.com.br</span>
             </div>
             <div class="footer-status">
-                <span class="status-bolinha"></span> Sistema Online
+                <span class="status-bolinha"></span> Sistema Conectado ao Firebase
             </div>
         </div>
     </footer>
 
-    <div id="alertaFundo"><div id="alertaCaixa"><div id="alertaTexto"></div><button class="acao" onclick="fecharAlerta()">Ok</button></div></div>
+    <div id="modalFundo"><div id="modalConteudo"></div></div>
+    <div id="alertaFundo"><div id="alertaCaixa"><div id="alertaTexto"></div><button class="acao" onclick="fecharAlerta()">Entendi</button></div></div>
 
     <script src="script.js"></script>
 </body>
