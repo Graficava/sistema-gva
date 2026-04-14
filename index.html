@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GVA • Gestão de Gráfica</title>
+    <title>GVA • Gestão de Gráfica Profissional</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
@@ -59,14 +59,14 @@
                                 <div id="listaCarrinho" class="card-body">Seu carrinho está vazio.</div>
                             </div>
                             <div class="gva-card">
-                                <div class="card-header">Cliente</div>
-                                <div class="card-body">
+                                <div class="card-header">Dados do Cliente</div>
+                                <div class="card-body gva-form-large">
                                     <div class="form-row">
-                                        <div class="form-group"><select id="tipoCliente"><option value="PF">PF</option><option value="PJ">PJ</option></select></div>
-                                        <div class="form-group" style="flex:3;"><input type="text" id="nomeCliente" placeholder="Nome do Cliente"></div>
+                                        <div class="form-group"><label>Tipo:</label><select id="tipoCliente"><option value="PF">PF</option><option value="PJ">PJ</option></select></div>
+                                        <div class="form-group" style="flex:3;"><label>Nome / Razão Social:</label><input type="text" id="nomeCliente"></div>
                                     </div>
                                     <input type="tel" id="telCliente" placeholder="WhatsApp (DDD + Número)">
-                                    <textarea id="obsPedido" placeholder="Notas técnicas, acabamento..."></textarea>
+                                    <textarea id="obsPedido" placeholder="Observações Gerais do Pedido..."></textarea>
                                 </div>
                             </div>
                         </div>
@@ -80,7 +80,7 @@
                                     <p style="color:red; font-weight:bold;">Resta: R$ <span id="restanteCarrinho">0,00</span></p>
                                     <label>Previsão:</label>
                                     <input type="date" id="dataEntrega">
-                                    <button class="btn-success" onclick="enviarPedido()">Salvar e Enviar</button>
+                                    <button class="btn-success" onclick="enviarPedido()">Salvar e Enviar Produção</button>
                                 </div>
                             </div>
                         </div>
@@ -93,17 +93,24 @@
 
                 <section id="abaAdmin" class="content">
                     <div class="sub-nav-gva">
-                        <button id="subBtnNovo" class="sub-active" onclick="toggleAdminSub('novo')">Novo</button>
-                        <button id="subBtnLista" onclick="toggleAdminSub('lista')">Lista</button>
+                        <button id="subBtnNovo" class="sub-active" onclick="toggleAdminSub('novo')">Novo Produto</button>
+                        <button id="subBtnLista" onclick="toggleAdminSub('lista')">Lista de Produtos</button>
                     </div>
-                    <div id="subAdminNovo" class="gva-card">
-                        <div class="card-body">
+                    <div id="subAdminNovo" class="gva-card" style="max-width: 800px;">
+                        <div class="card-body gva-form-large">
                             <input type="hidden" id="editId">
-                            <input type="text" id="adminNome" placeholder="Nome do Produto">
-                            <input type="number" id="adminPreco" placeholder="Preço" step="0.01">
-                            <input type="text" id="adminImg" placeholder="Link da Imagem">
-                            <select id="adminTipo"><option value="unidade">Unidade</option><option value="m2">M²</option><option value="folha">Página</option></select>
-                            <button id="btnSalvarProduto" class="btn-gva" onclick="salvarNovoProduto()">Cadastrar</button>
+                            <div class="form-row">
+                                <div class="form-group" style="flex:2;"><label>Nome do Produto:</label><input type="text" id="adminNome"></div>
+                                <div class="form-group"><label>Preço Base (R$):</label><input type="number" id="adminPreco" step="0.01"></div>
+                            </div>
+                            <label>Link da Imagem:</label><input type="text" id="adminImg" placeholder="https://...">
+                            <label>Acabamentos (Separe por vírgula):</label>
+                            <input type="text" id="adminAcabamentos" placeholder="Ex: Laminação Fosca, Verniz Local, Corte Especial">
+                            <div class="form-row">
+                                <div class="form-group"><label>Cálculo:</label><select id="adminTipo"><option value="unidade">Unidade</option><option value="m2">M²</option><option value="folha">Página</option></select></div>
+                                <div class="form-group"><label>Categoria:</label><select id="adminCategoria"><option>Papelaria</option><option>Comunicação Visual</option><option>Serviços</option></select></div>
+                            </div>
+                            <button id="btnSalvarProduto" class="btn-gva" onclick="salvarNovoProduto()">Cadastrar Produto</button>
                         </div>
                     </div>
                     <div id="subAdminLista" style="display:none;"><div id="listaGerenciarAdmin"></div></div>
