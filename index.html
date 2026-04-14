@@ -15,129 +15,147 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
 </head>
-<body class="wp-body">
+<body class="gva-body">
 
     <div id="telaLogin">
         <div class="login-caixa">
-            <img src="logo GVA azul.png" alt="GVA" width="160">
+            <img src="logo GVA azul.png" alt="GVA" width="180">
             <input type="email" id="loginEmail" placeholder="Usuário">
             <input type="password" id="loginSenha" placeholder="Senha">
-            <button class="wp-btn-blue" onclick="fazerLogin()">Entrar</button>
+            <button class="btn-gva" onclick="fazerLogin()">Entrar no Sistema</button>
         </div>
     </div>
 
-    <div class="wp-wrapper">
-        <aside class="wp-sidebar">
-            <div class="wp-branding"><img src="logo GVA br.png" alt="GVA"></div>
-            <nav class="wp-menu">
+    <div class="app-wrapper">
+        <aside class="sidebar">
+            <div class="sidebar-logo">
+                <img src="logo GVA br.png" alt="GVA">
+            </div>
+            <nav class="sidebar-nav">
                 <button id="btnCliente" class="active" onclick="mudarAba('cliente')"><i class="fa fa-th-large"></i> Produtos</button>
                 <button id="btnCarrinho" onclick="mudarAba('carrinho')"><i class="fa fa-shopping-cart"></i> Novo Orçamento</button>
                 <button id="btnLoja" onclick="mudarAba('loja')"><i class="fa fa-tasks"></i> Produção</button>
+                
                 <div class="aba-restrita" style="display:none;">
-                    <div class="wp-separator">Gerenciamento</div>
+                    <div class="nav-divider">Gerenciamento</div>
                     <button id="btnCaixa" onclick="mudarAba('caixa')"><i class="fa fa-chart-line"></i> Financeiro</button>
                     <button id="btnAdmin" onclick="mudarAba('admin')"><i class="fa fa-cog"></i> Configurações</button>
                 </div>
             </nav>
-            <div class="wp-logout-area"><button onclick="fazerLogout()"><i class="fa fa-power-off"></i> Sair</button></div>
+            <div class="sidebar-footer">
+                <button onclick="fazerLogout()"><i class="fa fa-power-off"></i> Sair</button>
+            </div>
         </aside>
 
-        <main class="wp-main">
-            <header class="wp-topbar">
+        <main class="main-content">
+            <header class="top-header">
                 <h1 id="tituloPagina">Produtos</h1>
-                <div class="wp-topbar-right"><span>GVA Venom Arts | <b>Admin</b></span></div>
+                <div class="top-status">
+                    <span>GVA • Gráfica Venom Arts</span>
+                </div>
             </header>
 
-            <div class="wp-content">
+            <div class="content-wrapper">
                 <section id="abaCliente" class="content active">
-                    <div class="zap-search"><input type="text" id="buscaProduto" placeholder="O que vamos produzir hoje?" oninput="filtrarProdutos()"></div>
+                    <div class="search-container">
+                        <input type="text" id="buscaProduto" placeholder="O que vamos produzir hoje?" oninput="filtrarProdutos()">
+                    </div>
                     <div class="zap-grid" id="gradeCliente"></div>
                 </section>
 
                 <section id="abaCarrinho" class="content">
-                    <div class="wp-columns">
-                        <div class="wp-col-main">
-                            <div class="wp-box">
-                                <div class="wp-box-title">Itens do Pedido</div>
-                                <div id="listaCarrinho" class="wp-box-content">Selecione produtos no catálogo.</div>
+                    <div class="flex-row">
+                        <div class="flex-main">
+                            <div class="gva-card">
+                                <div class="card-header">Itens Selecionados</div>
+                                <div id="listaCarrinho" class="card-body">Selecione produtos no catálogo.</div>
                             </div>
-                            <div class="wp-box">
-                                <div class="wp-box-title">Informações do Cliente</div>
-                                <div class="wp-box-content wp-form">
+                            <div class="gva-card">
+                                <div class="card-header">Dados do Cliente</div>
+                                <div class="card-body gva-form">
                                     <select id="tipoCliente"><option value="PF">Pessoa Física</option><option value="PJ">Pessoa Jurídica</option></select>
                                     <input type="text" id="nomeCliente" placeholder="Nome / Razão Social">
                                     <input type="text" id="docCliente" placeholder="CPF / CNPJ">
-                                    <input type="tel" id="telCliente" placeholder="WhatsApp">
-                                    <textarea id="obsPedido" placeholder="Notas técnicas e acabamento..."></textarea>
+                                    <input type="tel" id="telCliente" placeholder="WhatsApp (com DDD)">
+                                    <textarea id="obsPedido" placeholder="Notas técnicas, acabamento e detalhes..."></textarea>
                                 </div>
                             </div>
                         </div>
-                        <div class="wp-col-side">
-                            <div class="wp-box">
-                                <div class="wp-box-title">Finalização</div>
-                                <div class="wp-box-content wp-summary">
-                                    <p>Total: <b>R$ <span id="totalCarrinho">0,00</span></b></p>
-                                    <p>Sinal: <input type="number" id="valorSinal" value="0" oninput="atualizarCarrinho()"></p>
+                        <div class="flex-side">
+                            <div class="gva-card summary-card">
+                                <div class="card-header">Resumo do Pedido</div>
+                                <div class="card-body">
+                                    <div class="summary-line">Total: <b>R$ <span id="totalCarrinho">0,00</span></b></div>
+                                    <div class="summary-line">Sinal Pago: <input type="number" id="valorSinal" value="0" oninput="atualizarCarrinho()"></div>
                                     <hr>
-                                    <p class="wp-restante">Resta: <b>R$ <span id="restanteCarrinho">0,00</span></b></p>
-                                    <button class="wp-btn-green" onclick="enviarPedido()">Criar Pedido</button>
+                                    <div class="summary-line highlight">Resta: <b>R$ <span id="restanteCarrinho">0,00</span></b></div>
+                                    <input type="date" id="dataEntrega" class="date-input">
+                                    <button class="btn-success" onclick="enviarPedido()">Finalizar e Enviar</button>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </section>
 
+                <section id="abaLoja" class="content">
+                    <div id="listaProducao" class="prod-grid"></div>
+                </section>
+
                 <section id="abaAdmin" class="content">
-                    <div class="wp-sub-nav">
-                        <button class="sub-active" onclick="toggleAdminSub('novo')">Cadastrar Novo Produto</button>
-                        <button onclick="toggleAdminSub('lista')">Gerenciar Catálogo (Editar/Excluir)</button>
+                    <div class="sub-nav-gva">
+                        <button id="subBtnNovo" class="sub-active" onclick="toggleAdminSub('novo')">Cadastrar Novo Produto</button>
+                        <button id="subBtnLista" onclick="toggleAdminSub('lista')">Gerenciar Catálogo</button>
                     </div>
 
-                    <div id="subAdminNovo" class="wp-box" style="max-width: 600px;">
-                        <div class="wp-box-title">Formulário de Produto</div>
-                        <div class="wp-box-content wp-form">
+                    <div id="subAdminNovo" class="gva-card" style="max-width: 600px;">
+                        <div class="card-body gva-form">
                             <input type="hidden" id="editId">
-                            <label>Nome do Produto:</label><input type="text" id="adminNome">
-                            <label>Preço Base (R$):</label><input type="number" id="adminPreco" step="0.01">
-                            <label>Foto do Produto (Upload):</label>
-                            <input type="file" id="adminFile" accept="image/*" style="border:none; padding:10px 0;">
-                            <label>Tipo de Cálculo:</label>
+                            <label>Nome do Produto</label><input type="text" id="adminNome">
+                            <label>Preço Base (R$)</label><input type="number" id="adminPreco" step="0.01">
+                            <label>Upload da Foto</label><input type="file" id="adminFile" accept="image/*">
+                            <label>Cálculo por:</label>
                             <select id="adminTipo">
                                 <option value="unidade">Unidade (Fixo)</option>
                                 <option value="m2">Metro Quadrado (Área)</option>
-                                <option value="folha">Por Página (Apostila)</option>
+                                <option value="folha">Página (Apostila)</option>
                             </select>
-                            <label>Categoria:</label>
+                            <label>Categoria</label>
                             <select id="adminCategoria">
                                 <option>Papelaria</option><option>Comunicação Visual</option><option>Brindes</option><option>Serviços</option>
                             </select>
-                            <button id="btnSalvarProduto" class="wp-btn-blue" onclick="salvarNovoProduto()">Cadastrar Produto</button>
+                            <button id="btnSalvarProduto" class="btn-gva" onclick="salvarNovoProduto()">Cadastrar Produto</button>
                         </div>
                     </div>
 
-                    <div id="subAdminLista" class="wp-box" style="display:none;">
-                        <div class="wp-box-title">Produtos Cadastrados</div>
-                        <div class="wp-box-content">
-                            <table class="wp-table">
-                                <thead><tr><th>Imagem</th><th>Nome</th><th>Preço</th><th>Ações</th></tr></thead>
-                                <tbody id="tabelaProdutosAdmin"></tbody>
-                            </table>
-                        </div>
+                    <div id="subAdminLista" style="display:none;">
+                        <div id="listaGerenciarAdmin" class="admin-table-container"></div>
                     </div>
                 </section>
             </div>
 
-            <footer class="gva-footer">
-                <div class="gva-footer-content">
-                    <b>GVA • Venom Arts</b> | CNPJ 00.000.000/0000-00 | (21) 98888-8888
-                    <br><span>@graficavenomarts | www.graficavenomarts.com.br</span>
+            <footer class="main-footer">
+                <div class="footer-grid">
+                    <div class="footer-box">
+                        <b>GVA • Gráfica Venom Arts LTDA</b><br>
+                        CNPJ: 17.184.159/0001-06<br>
+                        Rua Lopes Trovão, 474 - Lojas 201/202 - Icaraí, Niterói - RJ
+                    </div>
+                    <div class="footer-box text-center">
+                        <i class="fab fa-whatsapp"></i> 21 99993-0190<br>
+                        <i class="far fa-envelope"></i> contato@graficava.com.br
+                    </div>
+                    <div class="footer-box text-right">
+                        Seg a Sex: 10h às 16h<br>Sáb: 10h às 14h<br>
+                        <b>@grafica.venomarts</b>
+                    </div>
                 </div>
             </footer>
         </main>
     </div>
 
-    <div id="modalFundo"><div id="modalConteudo" class="wp-box"></div></div>
-    <div id="alertaFundo"><div id="alertaCaixa"><h3>Aviso</h3><p id="alertaTexto"></p><button class="wp-btn-blue" onclick="fecharAlerta()">Entendi</button></div></div>
+    <div id="modalFundo"><div id="modalConteudo" class="gva-card"></div></div>
+    <div id="alertaFundo"><div id="alertaCaixa"><h3>GVA Alerta</h3><p id="alertaTexto"></p><button class="btn-gva" onclick="fecharAlerta()">Entendi</button></div></div>
+    <img id="logoGVA_Preto" src="logo GVA black.png" style="display:none;">
 
     <script src="script.js"></script>
 </body>
