@@ -1,8 +1,6 @@
 :root {
     --gva-azul: #3E3B9F;
-    --gva-azul-escuro: #2b296e;
-    --gva-cinza-claro: #f4f4f4;
-    --gva-accent: #00FFCC;
+    --gva-cinza-claro: #f0f0f0; /* Tom de cinza para aba ativa */
     --white: #FFFFFF;
 }
 
@@ -15,64 +13,54 @@ body {
     min-height: 100vh;
 }
 
-/* CONTAINER E ESPAÇAMENTO */
 .container {
     width: 95%;
     max-width: 1200px;
     margin: 0 auto;
     flex: 1;
-    padding-bottom: 80px; /* Espaço para não colar no rodapé */
+    padding: 20px 0 100px 0; /* Espaço no fundo para o rodapé */
 }
 
-header { background: var(--gva-azul); padding: 20px 0; color: white; }
+/* HEADER */
+header { background: var(--gva-azul); padding: 15px 0; color: white; }
 .container-header { width: 95%; max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; }
 .logo-img { max-height: 55px; }
 
-/* ABAS COM FUNDO CINZA AO SELECIONAR */
-.tabs { background: white; border-bottom: 1px solid #ddd; sticky; top: 0; z-index: 100; }
+/* NAVEGAÇÃO */
+.tabs { background: white; border-bottom: 1px solid #ddd; position: sticky; top: 0; z-index: 100; }
 .container-nav { width: 95%; max-width: 1200px; margin: 0 auto; display: flex; }
 .tabs button { 
     padding: 18px 25px; border: none; background: none; font-weight: bold; 
-    color: #555; cursor: pointer; transition: 0.2s;
+    color: #555; cursor: pointer; transition: 0.2s; border-bottom: 4px solid transparent;
 }
+
+/* ESTÉTICA DAS ABAS PEDIDA */
 .tabs button.active { 
-    background: var(--gva-cinza-claro); /* Cinza claro ao selecionar */
+    background: var(--gva-cinza-claro); /* Fundo cinza na aba selecionada */
     color: var(--gva-azul);
-    border-bottom: 4px solid var(--gva-azul);
+    border-bottom-color: var(--gva-azul);
 }
 
-/* CATÁLOGO E CARDS */
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 25px; padding: 20px 0; }
-.card { 
-    background: white; border-radius: 15px; overflow: hidden; 
-    box-shadow: 0 4px 12px rgba(0,0,0,0.08); display: flex; flex-direction: column;
-    border: 1px solid #eee;
+/* O SEGREDO DAS ABAS (CORREÇÃO DO EMPILHAMENTO) */
+.content { 
+    display: none; /* Esconde todas as abas por padrão */
 }
-.card-img { width: 100%; height: 160px; object-fit: cover; background: #f9f9f9; }
-.card-info { padding: 15px; text-align: center; }
-.card-info h4 { margin: 5px 0; font-size: 16px; height: 40px; overflow: hidden; }
-
-/* BOTÕES AJUSTADOS (NÃO MAIS IMENSOS) */
-.acao { 
-    background: var(--gva-azul); color: white; border: none; padding: 10px 20px; 
-    border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.3s;
-    width: auto; min-width: 120px; margin: 0 auto; display: block;
-}
-.btn-finalizar { width: 100%; padding: 15px; font-size: 16px; margin-top: 20px; }
-
-/* PRODUÇÃO (ITENS EM CARDS TAMBÉM) */
-.lista-producao-item {
-    background: white; border-radius: 10px; padding: 20px; margin-bottom: 15px;
-    border-left: 6px solid var(--gva-azul); box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+.content.active { 
+    display: block; /* Só mostra a aba que estiver com a classe .active */
 }
 
-/* RODAPÉ AZUL */
+/* RODAPÉ AZUL GVA */
 footer { 
-    background: var(--gva-azul); color: white; padding: 25px 0; text-align: center;
+    background: var(--gva-azul); 
+    color: white; 
+    padding: 25px 0; 
+    text-align: center;
+    margin-top: auto;
 }
-.footer-info b { font-size: 18px; color: var(--gva-accent); }
+.footer-info b { font-size: 18px; color: #00FFCC; }
 .social { display: block; margin-top: 5px; opacity: 0.9; font-size: 13px; }
 
-/* LOGIN */
-#telaLogin { position: fixed; inset: 0; background: var(--gva-azul); z-index: 9999; display: flex; align-items: center; justify-content: center; }
-.login-caixa { background: white; padding: 40px; border-radius: 15px; width: 320px; text-align: center; }
+/* AJUSTE DOS BOTÕES NO CATÁLOGO */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; }
+.card { background: white; border-radius: 12px; padding: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); text-align: center; border: 1px solid #eee; }
+.acao { background: var(--gva-azul); color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; }
