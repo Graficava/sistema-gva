@@ -11,103 +11,97 @@
 
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 </head>
 <body>
 
+    <div id="telaLogin">
+        <div class="login-caixa">
+            <img src="logo GVA azul.png" alt="Logo GVA" style="width: 200px; margin-bottom: 20px;">
+            <input type="email" id="loginEmail" placeholder="E-mail">
+            <input type="password" id="loginSenha" placeholder="Senha">
+            <button class="acao" onclick="fazerLogin()">Entrar no Sistema</button>
+        </div>
+    </div>
+
     <header>
-        <img id="logoGVA" src="logo GVA br.png" alt="GVA Venom Arts" class="logo-img">
-<img id="logoGVA_Preto" src="logo GVA black.png" style="display:none;">
+        <img id="logoGVA" src="logo GVA br.png" alt="Logo GVA" class="logo-img">
+        <img id="logoGVA_Preto" src="logo GVA black.png" style="display:none;">
+        <button onclick="fazerLogout()" style="position: absolute; right: 10px; top: 10px; background: none; border: 1px solid white; color: white; border-radius: 4px; padding: 5px; cursor: pointer;">Sair</button>
     </header>
 
     <div class="tabs">
         <button id="btnCliente" class="active" onclick="mudarAba('cliente')">Catálogo</button>
         <button id="btnCarrinho" onclick="mudarAba('carrinho')">Orçamento</button>
         <button id="btnLoja" onclick="mudarAba('loja')">Painel (PDV)</button>
-        <button id="btnCaixa" onclick="mudarAba('caixa')" style="color: #28a745;">💰 Caixa</button>
-        <button id="btnAdmin" onclick="mudarAba('admin')" style="color: #ffc107;">⚙️ Admin</button>
+        <button id="btnCaixa" class="aba-restrita" onclick="mudarAba('caixa')" style="color: #28a745; display: none;">💰 Caixa</button>
+        <button id="btnAdmin" class="aba-restrita" onclick="mudarAba('admin')" style="color: #ffc107; display: none;">⚙️ Admin</button>
     </div>
 
     <div id="abaCliente" class="content active">
-        <div style="display: flex; gap: 10px; margin-bottom: 20px;">
-            <input type="text" id="buscaProduto" placeholder="🔍 Buscar produto..." oninput="filtrarProdutos()" style="flex: 2; margin-bottom: 0;">
-            <select id="filtroCategoria" onchange="filtrarProdutos()" style="flex: 1; margin-bottom: 0;">
-                <option value="Todos">Todas Categorias</option>
-                <option value="Papelaria">Papelaria</option>
-                <option value="Comunicação Visual">Comunicação Visual</option>
-                <option value="Brindes">Brindes</option>
-                <option value="Serviços">Serviços</option>
-            </select>
+        <div class="barra-busca">
+            <input type="text" id="buscaProduto" placeholder="🔍 Buscar produto..." oninput="filtrarProdutos()">
         </div>
-        <div class="grid" id="gradeCliente">Carregando catálogo das nuvens...</div>
+        <div class="grid" id="gradeCliente">Sincronizando produtos...</div>
     </div>
 
     <div id="abaCarrinho" class="content">
-        <div id="listaCarrinho">Vazio.</div>
-        <hr style="margin: 20px 0; border: 0; border-top: 1px dashed #ccc;">
-        <label>Nome do Cliente:</label><input type="text" id="nomeDoCliente">
-        <label>WhatsApp:</label><input type="tel" id="telDoCliente">
-        <label>Previsão de Entrega:</label><input type="date" id="dataEntrega">
-        <label>Observações:</label><textarea id="obsPedido" rows="2"></textarea>
-        
-        <div style="display: flex; gap: 10px;">
-            <div style="flex: 1;"><label>Desconto (R$):</label><input type="number" id="valorDesconto" value="0" step="0.01" oninput="atualizarCarrinho()"></div>
-            <div style="flex: 1;"><label>Sinal Pago (R$):</label><input type="number" id="valorSinal" value="0" step="0.01" oninput="atualizarCarrinho()"></div>
-        </div>
-        
-        <label>Pagamento:</label>
-        <select id="formaPagamento"><option value="Pix">Pix</option><option value="Cartão">Cartão</option><option value="Dinheiro">Dinheiro</option></select>
-        
-        <label>Entrega:</label>
-        <select id="metodoEntrega" onchange="verificarEntrega()"><option value="Retirada">Retirada</option><option value="Motoboy">Motoboy</option></select>
+        <div id="listaCarrinho">Nenhum item adicionado.</div>
+        <hr>
+        <label>Tipo de Cliente:</label>
+        <select id="tipoCliente" onchange="ajustarCamposCliente()">
+            <option value="PF">Pessoa Física (PF)</option>
+            <option value="PJ">Pessoa Jurídica (PJ)</option>
+        </select>
 
-        <div id="dadosEntrega" style="display: none; background: #eee; padding: 10px; border-radius: 8px;">
-            <label>Endereço:</label><input type="text" id="enderecoCliente">
-            <label>Taxa (R$):</label><input type="number" id="taxaEntrega" value="0" oninput="atualizarCarrinho()">
+        <div id="camposCliente">
+            <input type="text" id="nomeCliente" placeholder="Nome / Razão Social">
+            <input type="text" id="docCliente" placeholder="CPF / CNPJ">
+            <input type="tel" id="telCliente" placeholder="WhatsApp">
+            <input type="text" id="endCliente" placeholder="Endereço Completo">
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+            <div style="flex: 1;"><label>Desconto:</label><input type="number" id="valorDesconto" value="0" oninput="atualizarCarrinho()"></div>
+            <div style="flex: 1;"><label>Sinal:</label><input type="number" id="valorSinal" value="0" oninput="atualizarCarrinho()"></div>
         </div>
         
-        <h3 style="text-align: right;">Falta Pagar: <span style="color:#dc3545;">R$ <span id="restanteCarrinho">0,00</span></span></h3>
-        <button class="acao" style="background:#28a745;" onclick="enviarPedido()">Enviar para Produção</button>
+        <h3 style="text-align: right;">Total: R$ <span id="totalCarrinho">0,00</span></h3>
+        <h3 style="text-align: right; color: #dc3545;">Resta: R$ <span id="restanteCarrinho">0,00</span></h3>
+        <button class="acao" style="background:#28a745;" onclick="enviarPedido()">Salvar Orçamento</button>
     </div>
 
     <div id="abaLoja" class="content">
         <div class="dashboard">
-            <h3>Saldo Líquido (<span id="mesAtualTexto">...</span>)</h3>
+            <h3>Faturamento Mensal</h3>
             <p>R$ <span id="faturamentoValor">0,00</span></p>
-            <div style="display: flex; justify-content: space-between; margin-top: 10px;">
-                <small>Entradas: <b id="dashEntradas">0</b></small>
-                <small>Saídas: <b id="dashSaidas">0</b></small>
-            </div>
         </div>
-        <h2>Produção em Real-Time ⚡</h2>
-        <div id="listaProducao">Sincronizando...</div>
+        <h2>Produção em Tempo Real</h2>
+        <div id="listaProducao"></div>
     </div>
 
     <div id="abaCaixa" class="content">
         <div class="painel-admin">
-            <h2>💰 Fluxo de Caixa</h2>
-            <select id="caixaTipo"><option value="saida">Saída 🔴</option><option value="entrada">Entrada Extra 🟢</option></select>
-            <input type="text" id="caixaDesc" placeholder="Descrição">
-            <input type="number" id="caixaValor" placeholder="Valor R$">
-            <button class="acao" onclick="adicionarTransacao()">Lançar</button>
+            <h2>💰 Controle de Caixa</h2>
+            <div id="resumoCaixa">Sincronizando...</div>
         </div>
-        <div id="listaCaixa" style="margin-top:20px;"></div>
     </div>
 
     <div id="abaAdmin" class="content">
         <div class="painel-admin">
-            <h2>📦 Novo Produto</h2>
-            <label>Categoria:</label>
-            <select id="adminCategoria"><option>Papelaria</option><option>Comunicação Visual</option><option>Brindes</option><option>Serviços</option></select>
-            <input type="text" id="adminNome" placeholder="Nome">
-            <textarea id="adminDesc" placeholder="Descrição"></textarea>
-            <input type="number" id="adminPreco" placeholder="Preço">
+            <h2>📦 Cadastrar Produto</h2>
+            <input type="text" id="adminNome" placeholder="Nome do Produto">
+            <input type="number" id="adminPreco" placeholder="Preço Unitário">
+            <select id="adminCategoria">
+                <option>Papelaria</option>
+                <option>Comunicação Visual</option>
+                <option>Serviços</option>
+            </select>
             <button class="acao" onclick="salvarNovoProduto()">Cadastrar no Banco</button>
         </div>
     </div>
 
-    <div id="modalFundo"><div id="modalConteudo"></div></div>
     <div id="alertaFundo"><div id="alertaCaixa"><div id="alertaTexto"></div><button class="acao" onclick="fecharAlerta()">Ok</button></div></div>
-    <div id="confirmFundo"><div id="confirmCaixa"><div id="confirmTexto"></div><button onclick="executarExclusao()">Sim, Cancelar</button><button onclick="fecharConfirmacao()">Não</button></div></div>
 
     <script src="script.js"></script>
 </body>
