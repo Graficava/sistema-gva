@@ -12,7 +12,7 @@ const db = firebase.firestore();
 const auth = firebase.auth();
 
 // === COLOQUE SEU E-MAIL DE ADMIN AQUI ===
-const EMAIL_ADMIN = "seu-email-aqui@exemplo.com"; 
+const EMAIL_ADMIN = "contato@graficava.com.br"; 
 // ========================================
 
 auth.onAuthStateChanged(user => {
