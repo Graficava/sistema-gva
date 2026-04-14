@@ -12,7 +12,7 @@ body { margin: 0; font-family: 'Segoe UI', sans-serif; background: #F0F2F5; colo
 .top-header { background: white; padding: 20px 30px; border-bottom: 1px solid #ddd; }
 .content-wrapper { padding: 25px; flex: 1; }
 
-.gva-card { background: white; border-radius: var(--radius); box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 25px; overflow: hidden; border: 1px solid #eee; }
+.gva-card { background: white; border-radius: var(--radius); box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 25px; border: 1px solid #eee; overflow: hidden; }
 .card-header { padding: 15px 20px; background: #fafafa; border-bottom: 1px solid #eee; font-weight: bold; color: var(--gva-azul); }
 .card-body { padding: 20px; }
 
@@ -20,42 +20,38 @@ body { margin: 0; font-family: 'Segoe UI', sans-serif; background: #F0F2F5; colo
 .cat-nav button { background: white; border: 1px solid #ddd; padding: 10px 22px; border-radius: 30px; white-space: nowrap; cursor: pointer; font-weight: 600; }
 .cat-nav button.active { background: var(--gva-azul); color: white; }
 
-.zap-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 20px; }
+.zap-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 20px; }
 .zap-card { background: white; border-radius: var(--radius); border: 1px solid #eee; text-align: center; overflow: hidden; }
-.zap-color-bg { width: 100%; height: 150px; background: var(--gva-azul); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 20px; padding: 15px; box-sizing: border-box; }
+.zap-color-bg { width: 100%; height: 120px; background: var(--gva-azul); color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; }
 .zap-info { padding: 15px; }
+
+.qty-btns { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; }
+.btn-qty { border: 1px solid #ddd; background: white; padding: 8px 15px; border-radius: 10px; cursor: pointer; }
+.btn-qty.active { background: var(--gva-azul); color: white; border-color: var(--gva-azul); }
 
 .acabamento-seletor { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .acabamento-seletor label { background: #f0f2f5; border: 2px solid #ddd; padding: 8px 15px; border-radius: 20px; cursor: pointer; font-size: 12px; font-weight: 600; }
 .acabamento-seletor input { display: none; }
 .acabamento-seletor label:has(input:checked) { background: var(--gva-azul); color: white; border-color: var(--gva-azul); }
 
-.wp-table { width: 100%; border-collapse: collapse; }
-.wp-table th { text-align: left; padding: 12px; background: #f8f9fa; font-size: 13px; }
-.wp-table td { padding: 12px; border-bottom: 1px solid #eee; font-size: 14px; }
-
 .btn-gva { background: var(--gva-azul); color: white; border: none; padding: 12px 25px; border-radius: 30px; font-weight: bold; cursor: pointer; }
 .btn-success { background: #00a859; color: white; border: none; padding: 18px; border-radius: 12px; width: 100%; font-size: 18px; font-weight: bold; cursor: pointer; }
-
-.financeiro-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
-.fin-box { padding: 20px; border-radius: 12px; color: white; }
-.fin-box.entries { background: #28a745; }
-.fin-box.exits { background: #dc3545; }
-.fin-box.total { background: var(--gva-azul); }
 
 #modalFundo { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 10000; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
 #modalConteudo { width: 90%; max-width: 450px; }
 
-@media (max-width: 768px) {
-    .sidebar { width: 100%; height: auto; position: relative; }
-    .sidebar-nav { display: flex; overflow-x: auto; }
-    .main-content { margin-left: 0; }
-    .sidebar-logo, .nav-divider { display: none; }
-}
-.content { display: none; }
-.content.active { display: block; }
 .form-row { display: flex; gap: 15px; }
 .form-group { flex: 1; }
 .flex-row { display: flex; gap: 20px; }
 .flex-main { flex: 2; }
 .flex-side { flex: 1; }
+.content { display: none; }
+.content.active { display: block; }
+.wp-table { width: 100%; border-collapse: collapse; }
+.wp-table td { padding: 10px; border-bottom: 1px solid #eee; }
+
+.financeiro-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; }
+.fin-box { padding: 15px; border-radius: 10px; color: white; }
+.fin-box.entries { background: #28a745; }
+.fin-box.exits { background: #dc3545; }
+.fin-box.total { background: var(--gva-azul); }
