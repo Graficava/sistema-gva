@@ -13,14 +13,13 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
 </head>
 <body class="gva-body">
 
     <div id="telaLogin">
         <div class="login-caixa">
             <img src="logo GVA azul.png" alt="GVA" width="180">
-            <input type="email" id="loginEmail" placeholder="Usuário">
+            <input type="email" id="loginEmail" placeholder="E-mail">
             <input type="password" id="loginSenha" placeholder="Senha">
             <button class="btn-gva" onclick="fazerLogin()">Entrar no Sistema</button>
         </div>
@@ -43,7 +42,7 @@
                 </div>
             </nav>
             <div class="sidebar-footer">
-                <button onclick="fazerLogout()"><i class="fa fa-power-off"></i> Sair</button>
+                <button onclick="fazerLogout()" class="btn-sair"><i class="fa fa-power-off"></i> Sair</button>
             </div>
         </aside>
 
@@ -58,7 +57,7 @@
             <div class="content-wrapper">
                 <section id="abaCliente" class="content active">
                     <div class="search-container">
-                        <input type="text" id="buscaProduto" placeholder="O que vamos produzir hoje?" oninput="filtrarProdutos()">
+                        <input type="text" id="buscaProduto" placeholder="Pesquisar no catálogo..." oninput="filtrarProdutos()">
                     </div>
                     <div class="zap-grid" id="gradeCliente"></div>
                 </section>
@@ -83,22 +82,18 @@
                         </div>
                         <div class="flex-side">
                             <div class="gva-card summary-card">
-                                <div class="card-header">Resumo do Pedido</div>
+                                <div class="card-header">Resumo</div>
                                 <div class="card-body">
                                     <div class="summary-line">Total: <b>R$ <span id="totalCarrinho">0,00</span></b></div>
-                                    <div class="summary-line">Sinal Pago: <input type="number" id="valorSinal" value="0" oninput="atualizarCarrinho()"></div>
+                                    <div class="summary-line">Sinal: <input type="number" id="valorSinal" value="0" oninput="atualizarCarrinho()"></div>
                                     <hr>
                                     <div class="summary-line highlight">Resta: <b>R$ <span id="restanteCarrinho">0,00</span></b></div>
                                     <input type="date" id="dataEntrega" class="date-input">
-                                    <button class="btn-success" onclick="enviarPedido()">Finalizar e Enviar</button>
+                                    <button class="btn-success" onclick="enviarPedido()">Finalizar Pedido</button>
                                 </div>
                             </div>
                         </div>
                     </div>
-                </section>
-
-                <section id="abaLoja" class="content">
-                    <div id="listaProducao" class="prod-grid"></div>
                 </section>
 
                 <section id="abaAdmin" class="content">
@@ -112,7 +107,7 @@
                             <input type="hidden" id="editId">
                             <label>Nome do Produto</label><input type="text" id="adminNome">
                             <label>Preço Base (R$)</label><input type="number" id="adminPreco" step="0.01">
-                            <label>Upload da Foto</label><input type="file" id="adminFile" accept="image/*">
+                            <label>Link da Imagem</label><input type="text" id="adminImg" placeholder="https://exemplo.com/foto.jpg">
                             <label>Cálculo por:</label>
                             <select id="adminTipo">
                                 <option value="unidade">Unidade (Fixo)</option>
@@ -138,15 +133,18 @@
                     <div class="footer-box">
                         <b>GVA • Gráfica Venom Arts LTDA</b><br>
                         CNPJ: 17.184.159/0001-06<br>
-                        Rua Lopes Trovão, 474 - Lojas 201/202 - Icaraí, Niterói - RJ
+                        Rua Lopes Trovão, nº 474 - Lojas 201 e 202<br>
+                        Icaraí - Niterói - RJ | CEP 24220-071
                     </div>
                     <div class="footer-box text-center">
                         <i class="fab fa-whatsapp"></i> 21 99993-0190<br>
-                        <i class="far fa-envelope"></i> contato@graficava.com.br
+                        <i class="far fa-envelope"></i> contato@graficava.com.br<br>
+                        <b>@grafica.venomarts</b> | <b>@graficava</b>
                     </div>
                     <div class="footer-box text-right">
-                        Seg a Sex: 10h às 16h<br>Sáb: 10h às 14h<br>
-                        <b>@grafica.venomarts</b>
+                        <b>Horário de Funcionamento:</b><br>
+                        Segunda a Sexta: 10h às 16h<br>
+                        Sábado: 10h às 14h
                     </div>
                 </div>
             </footer>
@@ -154,7 +152,7 @@
     </div>
 
     <div id="modalFundo"><div id="modalConteudo" class="gva-card"></div></div>
-    <div id="alertaFundo"><div id="alertaCaixa"><h3>GVA Alerta</h3><p id="alertaTexto"></p><button class="btn-gva" onclick="fecharAlerta()">Entendi</button></div></div>
+    <div id="alertaFundo"><div id="alertaCaixa"><h3>Aviso</h3><p id="alertaTexto"></p><button class="btn-gva" onclick="fecharAlerta()">Entendi</button></div></div>
     <img id="logoGVA_Preto" src="logo GVA black.png" style="display:none;">
 
     <script src="script.js"></script>
