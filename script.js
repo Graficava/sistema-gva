@@ -12,7 +12,7 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const auth = firebase.auth();
 
-const EMAIL_ADMIN = "contato@graficava.com.br"; // E-mail oficial do Bruno
+const EMAIL_ADMIN = "contato@graficava.com.br"; 
 
 let bancoDeDados = [];
 let pedidosGVA = [];
@@ -42,13 +42,17 @@ function fazerLogin() {
 function fazerLogout() { auth.signOut().then(() => window.location.reload()); }
 
 // ==========================================
-// SINCRONIZAÇÃO
+// SINCRONIZAÇÃO E PRÉ-CADASTRO
 // ==========================================
 function iniciarSincronizacao() {
     db.collection("catalogo").onSnapshot(snap => {
-        bancoDeDados = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        carregarProdutos();
-        renderizarListaAdmin();
+        if (snap.empty) {
+            preCadastrarProdutos(); // Se o banco estiver vazio, cadastra o básico
+        } else {
+            bancoDeDados = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            carregarProdutos();
+            renderizarListaAdmin();
+        }
     });
     db.collection("pedidos").orderBy("dataCriacao", "desc").onSnapshot(snap => {
         pedidosGVA = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -56,14 +60,24 @@ function iniciarSincronizacao() {
     });
 }
 
+async function preCadastrarProdutos() {
+    const iniciais = [
+        { nome: "Cartão de Visita", preco: 95.00, img: "", tipo: "unidade", categoria: "Papelaria", vendas: 50 },
+        { nome: "Panfleto 10x15", preco: 180.00, img: "", tipo: "unidade", categoria: "Papelaria", vendas: 40 },
+        { nome: "Banner em Lona", preco: 65.00, img: "", tipo: "m2", categoria: "Comunicação Visual", vendas: 30 },
+        { nome: "Apostila / Encadernação", preco: 0.15, img: "", tipo: "folha", categoria: "Serviços", vendas: 20 }
+    ];
+    for (let p of iniciais) {
+        await db.collection("catalogo").add(p);
+    }
+}
+
 // ==========================================
-// CATALOGO (ZAP STYLE COM CORES FALLBACK)
+// CATALOGO (ZAP STYLE)
 // ==========================================
 function carregarProdutos(lista = bancoDeDados) {
     const grade = document.getElementById('gradeCliente');
     grade.innerHTML = '';
-    
-    // Cores para quando não houver imagem
     const cores = ['#3E3B9F', '#00a859', '#dc3545', '#17a2b8', '#ffc107', '#6f42c1'];
 
     lista.sort((a,b) => (b.vendas || 0) - (a.vendas || 0)).forEach((p, idx) => {
@@ -76,8 +90,8 @@ function carregarProdutos(lista = bancoDeDados) {
                 <div class="zap-info">
                     <small style="color:var(--gva-azul); font-weight:bold;">${p.categoria || 'Geral'}</small>
                     <h4>${p.nome}</h4>
-                    <p class="zap-price">R$ ${p.preco.toFixed(2)}</p>
-                    <button class="btn-gva" onclick="abrirConfigurador('${p.id}')">Configurar</button>
+                    <p class="zap-price">R$ ${p.preco.toFixed(2)} <span style="font-size:10px; font-weight:normal;">${p.tipo === 'm2' ? '/ m²' : (p.tipo === 'folha' ? '/ pág' : '/ un')}</span></p>
+                    <button class="btn-gva" onclick="abrirConfigurador('${p.id}')">Adicionar</button>
                 </div>
             </div>`;
     });
@@ -90,7 +104,7 @@ function filtrarProdutos() {
 }
 
 // ==========================================
-// ADMIN: CADASTRO VIA LINK (FIXED)
+// ADMIN: CADASTRO CORRIGIDO
 // ==========================================
 function salvarNovoProduto() {
     const btn = document.getElementById('btnSalvarProduto');
@@ -101,7 +115,7 @@ function salvarNovoProduto() {
     const tipo = document.getElementById('adminTipo').value;
     const cat = document.getElementById('adminCategoria').value;
 
-    if(!nome || isNaN(preco)) return mostrarAlerta("Preencha o nome e o preço.");
+    if(!nome || isNaN(preco)) return mostrarAlerta("Preencha o nome e o preço do produto.");
 
     btn.innerText = "⏳ Gravando...";
     btn.disabled = true;
@@ -121,7 +135,7 @@ function salvarNovoProduto() {
         mostrarAlerta(id ? "Produto Atualizado!" : "Produto Cadastrado!");
         limparFormAdmin();
     }).catch(err => {
-        mostrarAlerta("Erro ao salvar.");
+        mostrarAlerta("Erro ao salvar no banco de dados.");
         console.error(err);
     }).finally(() => {
         btn.innerText = "Cadastrar Produto";
@@ -131,16 +145,16 @@ function salvarNovoProduto() {
 
 function renderizarListaAdmin() {
     const container = document.getElementById('listaGerenciarAdmin');
-    container.innerHTML = `<table style="width:100%; border-collapse: collapse; background:white; border-radius:10px; overflow:hidden;">
+    container.innerHTML = `<table style="width:100%; border-collapse: collapse; background:white; border-radius:12px; overflow:hidden; box-shadow:0 2px 10px rgba(0,0,0,0.05);">
         <thead style="background:#eee; text-align:left;">
-            <tr><th style="padding:12px;">Produto</th><th style="padding:12px;">Preço</th><th style="padding:12px;">Ações</th></tr>
+            <tr><th style="padding:15px;">Produto</th><th style="padding:15px;">Preço</th><th style="padding:15px;">Ações</th></tr>
         </thead>
         <tbody>
             ${bancoDeDados.map(p => `
                 <tr style="border-bottom:1px solid #eee;">
-                    <td style="padding:12px;">${p.nome}</td>
-                    <td style="padding:12px;">R$ ${p.preco.toFixed(2)}</td>
-                    <td style="padding:12px;">
+                    <td style="padding:15px; font-weight:bold;">${p.nome}</td>
+                    <td style="padding:15px;">R$ ${p.preco.toFixed(2)}</td>
+                    <td style="padding:15px;">
                         <button onclick="editarProduto('${p.id}')" style="cursor:pointer; border:none; background:none; color:blue; font-weight:bold;">Editar</button>
                         <button onclick="excluirProduto('${p.id}')" style="cursor:pointer; border:none; background:none; color:red; margin-left:15px; font-weight:bold;">Excluir</button>
                     </td>
@@ -179,14 +193,16 @@ function limparFormAdmin() {
 // ==========================================
 function abrirConfigurador(id) {
     const p = bancoDeDados.find(i => i.id === id);
-    let html = `<div class="card-header">Configurar: ${p.nome}</div><div class="card-body gva-form">`;
+    let html = `<div class="card-header">Configurar: ${p.nome}</div><div class="card-body gva-form-spacious">`;
     if(p.tipo === 'm2') {
         html += `<label>Largura (m):</label><input type="number" id="cfgL" value="1.00" step="0.01">
                  <label>Altura (m):</label><input type="number" id="cfgA" value="1.00" step="0.01">`;
+    } else if(p.tipo === 'folha') {
+        html += `<label>Quantidade de Páginas:</label><input type="number" id="cfgF" value="10">`;
     } else {
-        html += `<label>Quantidade:</label><input type="number" id="cfgQ" value="1">`;
+        html += `<label>Quantidade de Unidades:</label><input type="number" id="cfgQ" value="1">`;
     }
-    html += `<button class="btn-gva" style="width:100%" onclick="confirmarCarrinho('${p.id}')">Adicionar</button></div>`;
+    html += `<button class="btn-gva" style="width:100%" onclick="confirmarCarrinho('${p.id}')">Adicionar ao Orçamento</button></div>`;
     document.getElementById('modalConteudo').innerHTML = html;
     document.getElementById('modalFundo').style.display = 'flex';
 }
@@ -197,7 +213,10 @@ function confirmarCarrinho(id) {
     if(p.tipo === 'm2') {
         const l = parseFloat(document.getElementById('cfgL').value);
         const a = parseFloat(document.getElementById('cfgA').value);
-        total = (l * a) * p.preco; det = `${l}x${a}m (Área)`;
+        total = (l * a) * p.preco; det = `${l}x${a}m (m²)`;
+    } else if(p.tipo === 'folha') {
+        const f = parseInt(document.getElementById('cfgF').value);
+        total = f * p.preco; det = `${f} páginas`;
     } else {
         const q = parseInt(document.getElementById('cfgQ').value);
         total = q * p.preco; det = `${q} un`;
@@ -210,27 +229,38 @@ function confirmarCarrinho(id) {
 function atualizarCarrinho() {
     const div = document.getElementById('listaCarrinho');
     let totalGeral = 0;
-    div.innerHTML = carrinho.map(i => {
+    div.innerHTML = carrinho.map((i, index) => {
         totalGeral += i.total;
-        return `<div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:13px;">
-                    <span>${i.nome} (${i.detalhes})</span>
-                    <b>R$ ${i.total.toFixed(2)}</b>
+        return `<div style="display:flex; justify-content:space-between; margin-bottom:10px; font-size:14px; background:#f9f9f9; padding:10px; border-radius:6px;">
+                    <span><b>${i.nome}</b> (${i.detalhes})</span>
+                    <b>R$ ${i.total.toFixed(2)} <i class="fa fa-trash" style="color:red; cursor:pointer; margin-left:10px;" onclick="removerItem(${index})"></i></b>
                 </div>`;
-    }).join('') || "Selecione produtos.";
+    }).join('') || "Selecione produtos no catálogo.";
     
     const sinal = parseFloat(document.getElementById('valorSinal').value) || 0;
-    document.getElementById('totalCarrinho').innerText = totalGeral.toFixed(2);
-    document.getElementById('restanteCarrinho').innerText = (totalGeral - sinal).toFixed(2);
+    document.getElementById('totalCarrinho').innerText = totalGeral.toFixed(2).replace('.', ',');
+    document.getElementById('restanteCarrinho').innerText = (totalGeral - sinal).toFixed(2).replace('.', ',');
+}
+
+function removerItem(index) {
+    carrinho.splice(index, 1);
+    atualizarCarrinho();
 }
 
 function enviarPedido() {
     const nome = document.getElementById('nomeCliente').value;
-    if(carrinho.length === 0 || !nome) return mostrarAlerta("Carrinho vazio ou cliente sem nome!");
-    const total = parseFloat(document.getElementById('totalCarrinho').innerText);
+    const tel = document.getElementById('telCliente').value;
+    if(carrinho.length === 0 || !nome) return mostrarAlerta("O carrinho está vazio ou o nome do cliente não foi preenchido.");
+
+    const total = parseFloat(document.getElementById('totalCarrinho').innerText.replace(',', '.'));
     const sinal = parseFloat(document.getElementById('valorSinal').value) || 0;
 
     const pedido = {
         cliente: nome,
+        telefone: tel,
+        documento: document.getElementById('docCliente').value,
+        obs: document.getElementById('obsPedido').value,
+        previsao: document.getElementById('dataEntrega').value || "A definir",
         itens: [...carrinho],
         total: total,
         sinal: sinal,
@@ -240,8 +270,8 @@ function enviarPedido() {
     };
 
     db.collection("pedidos").add(pedido).then(() => {
-        carrinho = []; document.getElementById('nomeCliente').value = "";
-        atualizarCarrinho(); mudarAba('loja');
+        carrinho = []; document.getElementById('nomeCliente').value = ""; document.getElementById('docCliente').value = ""; document.getElementById('obsPedido').value = "";
+        atualizarCarrinho(); mostrarAlerta("Orçamento salvo na Produção!"); mudarAba('loja');
     });
 }
 
@@ -251,69 +281,77 @@ function atualizarProducao() {
         <div class="gva-card">
             <div class="card-header" style="display:flex; justify-content:space-between;">
                 <span>👤 ${p.cliente}</span>
-                <span style="font-size:10px; background:var(--gva-azul); color:white; padding:2px 6px; border-radius:4px;">${p.status}</span>
+                <span style="font-size:11px; background:var(--gva-azul); color:white; padding:4px 10px; border-radius:20px;">${p.status}</span>
             </div>
             <div class="card-body">
-                <p style="font-size:12px; margin:0;">${p.itens.map(i => i.nome).join(', ')}</p>
-                <div style="margin-top:10px; display:flex; gap:10px;">
-                    <button class="btn-gva" style="padding:5px 15px; font-size:12px;" onclick="imprimirCupom(${index})">Cupom</button>
-                    <button class="btn-gva" style="background:#00a859; padding:5px 15px; font-size:12px;" onclick="concluirPedido('${p.id}')">Concluir</button>
+                <p style="font-size:13px; margin:0; line-height:1.4;">${p.itens.map(i => `<b>${i.nome}</b>`).join(', ')}</p>
+                <div style="margin-top:15px; display:flex; gap:10px;">
+                    <button class="btn-gva" style="padding:8px 20px; font-size:12px;" onclick="imprimirCupom(${index})"><i class="fa fa-print"></i> Cupom</button>
+                    <button class="btn-gva" style="background:#00a859; padding:8px 20px; font-size:12px;" onclick="concluirPedido('${p.id}')">Concluir ✅</button>
                 </div>
             </div>
         </div>
-    `).join('');
+    `).join('') || "Sem pedidos em produção.";
 }
 
 function concluirPedido(id) {
     const p = pedidosGVA.find(item => item.id === id);
-    db.collection("pedidos_concluidos").add({ ...p, status: "Concluído ✅", dataFinal: new Date().toLocaleDateString('pt-BR') })
+    db.collection("pedidos_concluidos").add({ ...p, status: "Concluído ✅", dataFinal: new Date().toLocaleDateString('pt-BR'), mes: new Date().getMonth() + 1 })
     .then(() => db.collection("pedidos").doc(id).delete());
 }
 
+// ==========================================
+// IMPRESSÃO DE CUPOM (DADOS GVA OFICIAIS)
+// ==========================================
 function imprimirCupom(index) {
     const { jsPDF } = window.jspdf;
     const p = pedidosGVA[index];
-    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [80, 150] });
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [80, 160] });
 
-    try {
-        const logo = document.getElementById('logoGVA_Preto');
-        doc.addImage(logo, 'PNG', 20, 5, 40, 12);
-    } catch(e) {}
+    try { const logo = document.getElementById('logoGVA_Preto'); doc.addImage(logo, 'PNG', 20, 5, 40, 12); } catch(e) {}
 
     doc.setFontSize(8); doc.setFont("helvetica", "bold");
     doc.text("GVA • GRÁFICA VENOM ARTS LTDA", 40, 22, null, null, "center");
     doc.setFontSize(6); doc.setFont("helvetica", "normal");
     doc.text("CNPJ: 17.184.159/0001-06", 40, 25, null, null, "center");
-    doc.text("Rua Lopes Trovão, nº 474 - Icaraí - Niterói - RJ", 40, 28, null, null, "center");
-    doc.text("Tel/Zap: 21 99993-0190", 40, 31, null, null, "center");
+    doc.text("Rua Lopes Trovão, nº 474 - Lojas 201/202", 40, 28, null, null, "center");
+    doc.text("Icaraí - Niterói - RJ | CEP: 24220-071", 40, 31, null, null, "center");
+    doc.text("Tel/Zap: 21 99993-0190", 40, 34, null, null, "center");
     
-    doc.line(5, 33, 75, 33);
-    doc.text(`CLIENTE: ${p.cliente.toUpperCase()}`, 5, 37);
-    doc.text(`DATA: ${p.dataCriacao}`, 5, 41);
-    doc.line(5, 43, 75, 43);
+    doc.line(5, 36, 75, 36);
+    doc.text(`CLIENTE: ${p.cliente.toUpperCase()}`, 5, 40);
+    doc.text(`DOC: ${p.documento || 'N/A'}`, 5, 43);
+    doc.text(`DATA: ${p.dataCriacao} | PREV: ${p.previsao}`, 5, 46);
+    doc.line(5, 48, 75, 48);
 
-    let y = 47;
+    let y = 52;
     p.itens.forEach(item => {
-        doc.text(`- ${item.nome}`, 5, y);
+        doc.text(`- ${item.nome} (${item.detalhes})`, 5, y);
         doc.text(`R$ ${item.total.toFixed(2)}`, 75, y, null, null, "right");
         y += 4;
     });
 
     y += 5; doc.line(5, y, 75, y); y += 5;
-    doc.text("TOTAL: R$ " + p.total.toFixed(2), 75, y, null, null, "right");
+    doc.setFontSize(7);
+    doc.text("TOTAL DO PEDIDO:", 5, y); doc.text(`R$ ${p.total.toFixed(2)}`, 75, y, null, null, "right");
     y += 4;
-    doc.text("SINAL: R$ " + p.sinal.toFixed(2), 75, y, null, null, "right");
-    y += 5;
-    doc.setFontSize(8); doc.text("RESTA: R$ " + p.restante.toFixed(2), 75, y, null, null, "right");
+    doc.text("SINAL PAGO:", 5, y); doc.text(`R$ ${p.sinal.toFixed(2)}`, 75, y, null, null, "right");
+    y += 5; doc.setFontSize(8); doc.setFont("helvetica", "bold");
+    doc.text("RESTA PAGAR:", 5, y); doc.text(`R$ ${p.restante.toFixed(2)}`, 75, y, null, null, "right");
 
-    doc.save(`GVA_Cupom_${p.cliente}.pdf`);
+    doc.save(`GVA_Cupom_${p.cliente.replace(/ /g, '_')}.pdf`);
 }
 
+// ==========================================
+// INTERFACE
+// ==========================================
 function mudarAba(aba) {
     document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
     document.querySelectorAll('.sidebar-nav button').forEach(b => b.classList.remove('active'));
     document.getElementById('aba' + aba.charAt(0).toUpperCase() + aba.slice(1)).classList.add('active');
     document.getElementById('btn' + aba.charAt(0).toUpperCase() + aba.slice(1)).classList.add('active');
+    const titulos = { 'cliente': 'Produtos', 'carrinho': 'Novo Orçamento', 'loja': 'Produção', 'caixa': 'Financeiro', 'admin': 'Configurações' };
+    document.getElementById('tituloPagina').innerText = titulos[aba] || 'Painel GVA';
 }
 
 function toggleAdminSub(sub) {
