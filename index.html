@@ -3,13 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GVA • Sistema de Gestão Profissional</title>
+    <title>GVA • Gráfica Venom Arts</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
@@ -19,47 +17,38 @@
     <div id="telaLogin">
         <div class="login-caixa">
             <img src="logo GVA azul.png" alt="GVA" width="180">
-            <input type="email" id="loginEmail" placeholder="Usuário (E-mail)">
+            <input type="email" id="loginEmail" placeholder="E-mail">
             <input type="password" id="loginSenha" placeholder="Senha">
-            <button class="btn-gva" onclick="fazerLogin()">Entrar no Sistema</button>
+            <button class="btn-gva" onclick="fazerLogin()">Entrar</button>
         </div>
     </div>
 
     <div class="app-wrapper">
         <aside class="sidebar">
-            <div class="sidebar-logo">
-                <img src="logo GVA br.png" alt="GVA">
-            </div>
+            <div class="sidebar-logo"><img src="logo GVA br.png" alt="GVA"></div>
             <nav class="sidebar-nav">
                 <button id="btnCliente" class="active" onclick="mudarAba('cliente')"><i class="fa fa-th-large"></i> Produtos</button>
                 <button id="btnCarrinho" onclick="mudarAba('carrinho')"><i class="fa fa-shopping-cart"></i> Novo Orçamento</button>
                 <button id="btnLoja" onclick="mudarAba('loja')"><i class="fa fa-tasks"></i> Produção</button>
-                
                 <div class="aba-restrita" style="display:none;">
                     <div class="nav-divider">Gerenciamento</div>
                     <button id="btnCaixa" onclick="mudarAba('caixa')"><i class="fa fa-chart-line"></i> Financeiro</button>
                     <button id="btnAdmin" onclick="mudarAba('admin')"><i class="fa fa-cog"></i> Configurações</button>
                 </div>
             </nav>
-            <div class="sidebar-footer">
-                <button onclick="fazerLogout()" class="btn-sair"><i class="fa fa-power-off"></i> Sair</button>
-            </div>
+            <div class="sidebar-footer"><button onclick="fazerLogout()" class="btn-sair">Sair</button></div>
         </aside>
 
         <main class="main-content">
             <header class="top-header">
                 <h1 id="tituloPagina">Produtos</h1>
-                <div class="top-status">
-                    <span>GVA • Gráfica Venom Arts</span>
-                </div>
+                <span>GVA • Gráfica Venom Arts</span>
             </header>
 
             <div class="content-wrapper">
                 <section id="abaCliente" class="content active">
-                    <div class="search-container">
-                        <input type="text" id="buscaProduto" placeholder="Pesquisar no catálogo..." oninput="filtrarProdutos()">
-                    </div>
-                    <div class="zap-grid" id="gradeCliente">Carregando catálogo...</div>
+                    <div class="search-container"><input type="text" id="buscaProduto" placeholder="Pesquisar catálogo..." oninput="filtrarProdutos()"></div>
+                    <div class="zap-grid" id="gradeCliente"></div>
                 </section>
 
                 <section id="abaCarrinho" class="content">
@@ -80,22 +69,20 @@
                                         <div class="form-group"><label>CPF / CNPJ:</label><input type="text" id="docCliente"></div>
                                         <div class="form-group"><label>WhatsApp:</label><input type="tel" id="telCliente"></div>
                                     </div>
-                                    <label>Notas Técnicas e Acabamento:</label>
-                                    <textarea id="obsPedido" rows="4"></textarea>
+                                    <label>Notas Técnicas:</label><textarea id="obsPedido" rows="3"></textarea>
                                 </div>
                             </div>
                         </div>
                         <div class="flex-side">
                             <div class="gva-card summary-card">
-                                <div class="card-header">Resumo do Pedido</div>
+                                <div class="card-header">Resumo</div>
                                 <div class="card-body">
                                     <div class="summary-line">Total: <b>R$ <span id="totalCarrinho">0,00</span></b></div>
-                                    <div class="summary-line">Sinal Pago: <input type="number" id="valorSinal" value="0" oninput="atualizarCarrinho()"></div>
+                                    <div class="summary-line">Sinal: <input type="number" id="valorSinal" value="0" oninput="atualizarCarrinho()"></div>
                                     <hr>
                                     <div class="summary-line highlight">Resta: <b>R$ <span id="restanteCarrinho">0,00</span></b></div>
-                                    <label>Previsão de Entrega:</label>
-                                    <input type="date" id="dataEntrega" class="date-input">
-                                    <button class="btn-success" onclick="enviarPedido()">Finalizar e Enviar</button>
+                                    <label>Previsão:</label><input type="date" id="dataEntrega" class="date-input">
+                                    <button class="btn-success" onclick="enviarPedido()">Criar Pedido</button>
                                 </div>
                             </div>
                         </div>
@@ -103,7 +90,7 @@
                 </section>
 
                 <section id="abaLoja" class="content">
-                    <div id="listaProducao" class="prod-grid">Sincronizando produção...</div>
+                    <div id="listaProducao" class="prod-grid"></div>
                 </section>
 
                 <section id="abaAdmin" class="content">
@@ -111,40 +98,22 @@
                         <button id="subBtnNovo" class="sub-active" onclick="toggleAdminSub('novo')">Cadastrar Novo Produto</button>
                         <button id="subBtnLista" onclick="toggleAdminSub('lista')">Gerenciar Catálogo</button>
                     </div>
-
                     <div id="subAdminNovo" class="gva-card" style="max-width: 800px;">
-                        <div class="card-header">Formulário de Produto</div>
                         <div class="card-body gva-form-spacious">
                             <input type="hidden" id="editId">
                             <div class="form-row">
                                 <div class="form-group" style="flex:2;"><label>Nome do Produto:</label><input type="text" id="adminNome"></div>
                                 <div class="form-group"><label>Preço Base (R$):</label><input type="number" id="adminPreco" step="0.01"></div>
                             </div>
-                            <label>Link da Imagem (ou deixe vazio para cor sólida):</label>
-                            <input type="text" id="adminImg" placeholder="https://exemplo.com/foto.jpg">
+                            <label>Link da Imagem:</label><input type="text" id="adminImg" placeholder="https://...">
                             <div class="form-row">
-                                <div class="form-group">
-                                    <label>Tipo de Cálculo:</label>
-                                    <select id="adminTipo">
-                                        <option value="unidade">Unidade (Fixo)</option>
-                                        <option value="m2">Metro Quadrado (Área)</option>
-                                        <option value="folha">Página (Apostila)</option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label>Categoria:</label>
-                                    <select id="adminCategoria">
-                                        <option>Papelaria</option><option>Comunicação Visual</option><option>Brindes</option><option>Serviços</option>
-                                    </select>
-                                </div>
+                                <div class="form-group"><label>Cálculo:</label><select id="adminTipo"><option value="unidade">Unidade</option><option value="m2">M²</option><option value="folha">Página</option></select></div>
+                                <div class="form-group"><label>Categoria:</label><select id="adminCategoria"><option>Papelaria</option><option>Comunicação Visual</option><option>Brindes</option><option>Serviços</option></select></div>
                             </div>
-                            <button id="btnSalvarProduto" class="btn-gva" style="width:200px; margin-top:20px;" onclick="salvarNovoProduto()">Cadastrar Produto</button>
+                            <button id="btnSalvarProduto" class="btn-gva" onclick="salvarNovoProduto()">Cadastrar Produto</button>
                         </div>
                     </div>
-
-                    <div id="subAdminLista" style="display:none;">
-                        <div id="listaGerenciarAdmin" class="admin-table-container"></div>
-                    </div>
+                    <div id="subAdminLista" style="display:none;"><div id="listaGerenciarAdmin"></div></div>
                 </section>
             </div>
 
@@ -153,18 +122,15 @@
                     <div class="footer-box">
                         <b>GVA • Gráfica Venom Arts LTDA</b><br>
                         CNPJ: 17.184.159/0001-06<br>
-                        Rua Lopes Trovão, nº 474 - Lojas 201 e 202<br>
+                        Rua Lopes Trovão, nº 474 - Lojas 201/202<br>
                         Icaraí - Niterói - RJ | CEP 24220-071
                     </div>
                     <div class="footer-box text-center">
-                        <i class="fab fa-whatsapp"></i> 21 99993-0190<br>
-                        <i class="far fa-envelope"></i> contato@graficava.com.br<br>
-                        <b>@grafica.venomarts</b> | <b>@graficava</b>
+                        21 99993-0190 | contato@graficava.com.br<br>
+                        <b>@grafica.venomarts</b>
                     </div>
                     <div class="footer-box text-right">
-                        <b>Horário de Funcionamento:</b><br>
-                        Segunda a Sexta: 10h às 16h<br>
-                        Sábado: 10h às 14h
+                        Seg a Sex: 10h às 16h | Sáb: 10h às 14h
                     </div>
                 </div>
             </footer>
@@ -172,7 +138,7 @@
     </div>
 
     <div id="modalFundo"><div id="modalConteudo" class="gva-card"></div></div>
-    <div id="alertaFundo"><div id="alertaCaixa"><h3>Aviso do Sistema</h3><p id="alertaTexto"></p><button class="btn-gva" onclick="fecharAlerta()">Entendi</button></div></div>
+    <div id="alertaFundo"><div id="alertaCaixa"><h3>Aviso</h3><p id="alertaTexto"></p><button class="btn-gva" onclick="fecharAlerta()">Ok</button></div></div>
     <img id="logoGVA_Preto" src="logo GVA black.png" style="display:none;">
 
     <script src="script.js"></script>
