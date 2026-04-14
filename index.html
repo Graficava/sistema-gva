@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GVA • Gráfica Venom Arts</title>
+    <title>GVA • Gestão de Gráfica</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
@@ -47,7 +47,7 @@
 
             <div class="content-wrapper">
                 <section id="abaCliente" class="content active">
-                    <div class="search-container"><input type="text" id="buscaProduto" placeholder="Pesquisar..." oninput="filtrarProdutos()"></div>
+                    <div class="search-container"><input type="text" id="buscaProduto" placeholder="Pesquisar catálogo..." oninput="filtrarProdutos()"></div>
                     <div class="zap-grid" id="gradeCliente"></div>
                 </section>
 
@@ -55,18 +55,18 @@
                     <div class="flex-row">
                         <div class="flex-main">
                             <div class="gva-card">
-                                <div class="card-header">Carrinho</div>
-                                <div id="listaCarrinho" class="card-body">Vazio.</div>
+                                <div class="card-header">Carrinho de Itens</div>
+                                <div id="listaCarrinho" class="card-body">Seu carrinho está vazio.</div>
                             </div>
                             <div class="gva-card">
                                 <div class="card-header">Cliente</div>
                                 <div class="card-body">
                                     <div class="form-row">
                                         <div class="form-group"><select id="tipoCliente"><option value="PF">PF</option><option value="PJ">PJ</option></select></div>
-                                        <div class="form-group" style="flex:3;"><input type="text" id="nomeCliente" placeholder="Nome"></div>
+                                        <div class="form-group" style="flex:3;"><input type="text" id="nomeCliente" placeholder="Nome do Cliente"></div>
                                     </div>
-                                    <input type="tel" id="telCliente" placeholder="WhatsApp">
-                                    <textarea id="obsPedido" placeholder="Notas..."></textarea>
+                                    <input type="tel" id="telCliente" placeholder="WhatsApp (DDD + Número)">
+                                    <textarea id="obsPedido" placeholder="Notas técnicas, acabamento..."></textarea>
                                 </div>
                             </div>
                         </div>
@@ -75,13 +75,20 @@
                                 <div class="card-header">Resumo</div>
                                 <div class="card-body">
                                     <p>Total: <b>R$ <span id="totalCarrinho">0,00</span></b></p>
+                                    <label>Sinal Pago:</label>
                                     <input type="number" id="valorSinal" value="0" oninput="atualizarCarrinho()">
-                                    <p style="color:red;">Resta: R$ <span id="restanteCarrinho">0,00</span></p>
-                                    <button class="btn-success" onclick="enviarPedido()">Criar Pedido</button>
+                                    <p style="color:red; font-weight:bold;">Resta: R$ <span id="restanteCarrinho">0,00</span></p>
+                                    <label>Previsão:</label>
+                                    <input type="date" id="dataEntrega">
+                                    <button class="btn-success" onclick="enviarPedido()">Salvar e Enviar</button>
                                 </div>
                             </div>
                         </div>
                     </div>
+                </section>
+
+                <section id="abaLoja" class="content">
+                    <div id="listaProducao" class="prod-grid"></div>
                 </section>
 
                 <section id="abaAdmin" class="content">
@@ -101,8 +108,6 @@
                     </div>
                     <div id="subAdminLista" style="display:none;"><div id="listaGerenciarAdmin"></div></div>
                 </section>
-
-                <section id="abaLoja" class="content"><div id="listaProducao"></div></section>
             </div>
 
             <footer class="main-footer">
@@ -115,8 +120,8 @@
         </main>
     </div>
 
-    <div id="modalFundo"><div id="modalConteudo" class="gva-card"></div></div>
-    <div id="alertaFundo"><div id="alertaCaixa"><h3>Aviso</h3><p id="alertaTexto"></p><button class="btn-gva" onclick="fecharAlerta()">Ok</button></div></div>
+    <div id="modalFundo" style="display:none;"><div id="modalConteudo" class="gva-card"></div></div>
+    <div id="alertaFundo" style="display:none;"><div id="alertaCaixa"><h3>Aviso</h3><p id="alertaTexto"></p><button class="btn-gva" onclick="fecharAlerta()">Ok</button></div></div>
     <img id="logoGVA_Preto" src="logo GVA black.png" style="display:none;">
 
     <script src="script.js"></script>
