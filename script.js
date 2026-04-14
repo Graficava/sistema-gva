@@ -29,11 +29,12 @@ function iniciarSincronizacao() {
     db.collection("categorias").onSnapshot(snap => {
         categorias = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         renderizarMenus();
+        renderizarListaCategorias();
         const selAdmin = document.getElementById('adminCatSelect');
         const selAcab = document.getElementById('acabCatVinculo');
         const options = categorias.map(c => `<option value="${c.nome}">${c.nome}</option>`).join('');
         if(selAdmin) selAdmin.innerHTML = options;
-        if(selAcab) selAcab.innerHTML = `<option value="Geral">Todas Categorias</option>` + options;
+        if(selAcab) selAcab.innerHTML = `<option value="Geral">Todas</option>` + options;
     });
     db.collection("acabamentos").onSnapshot(snap => {
         acabamentos = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -49,9 +50,10 @@ function iniciarSincronizacao() {
         atualizarProducao();
         calcularFinanceiro();
     });
+    db.collection("financeiro_avulso").onSnapshot(() => calcularFinanceiro());
 }
 
-// CATALOGO E FILTRO
+// CATALOGO
 function renderizarMenus() {
     const nav = document.getElementById('menuCategorias');
     if(!nav) return;
@@ -72,19 +74,18 @@ function carregarProdutos(lista = bancoDeDados) {
     lista.forEach(p => {
         grade.innerHTML += `<div class="zap-card">
             <div class="zap-color-bg">SKU: ${p.sku || '---'}</div>
-            <div class="zap-info"><h4>${p.nome}</h4><p>A partir de R$ ${p.preco.toFixed(2)}</p>
+            <div class="zap-info"><h4>${p.nome}</h4><p>R$ ${p.preco.toFixed(2)}</p>
             <button class="btn-gva" onclick="abrirConfigurador('${p.id}')">Configurar</button></div></div>`;
     });
 }
 
-// CONFIGURADOR INTELIGENTE (PONTO CHAVE)
+// CONFIGURADOR
 function abrirConfigurador(id) {
     const p = bancoDeDados.find(item => item.id === id);
     let html = `<div class="card-header">Configurar: ${p.nome}</div><div class="card-body gva-form-large">`;
     
-    // 1. Quantidades Fixas
     if(p.qtdsFixas) {
-        html += `<label>Escolha a Quantidade:</label><div class="qty-btns">`;
+        html += `<label>Quantidade:</label><div class="qty-btns">`;
         p.qtdsFixas.split(',').forEach(q => {
             html += `<button class="btn-qty" onclick="selecionarQtd(this, ${q.trim()})">${q.trim()}</button>`;
         });
@@ -94,18 +95,16 @@ function abrirConfigurador(id) {
         html += `<label>Largura (Máx ${maxL}m):</label><input type="number" id="cfgL" value="1.00" step="0.01">
                  <label>Altura (m):</label><input type="number" id="cfgA" value="1.00" step="0.01">`;
     } else {
-        html += `<label>Quantidade:</label><input type="number" id="cfgQ" value="1" oninput="calcularPrecoEscalonado('${p.id}', this.value)">`;
+        html += `<label>Quantidade:</label><input type="number" id="cfgQ" value="1">`;
     }
 
-    // 2. Acabamentos Filtrados por Categoria
     html += `<label style="margin-top:10px; display:block;">Acabamentos:</label><div class="acabamento-seletor">`;
     const acabFiltrados = acabamentos.filter(a => a.vinculo === p.categoria || a.vinculo === 'Geral');
     acabFiltrados.forEach(a => {
         html += `<label><input type="checkbox" class="check-acab" data-preco="${a.preco}" value="${a.nome}"> ${a.nome}</label>`;
     });
     
-    html += `</div><div id="previewPreco" style="margin-top:15px; font-weight:bold; color:var(--gva-azul);">Preço Base: R$ ${p.preco.toFixed(2)}</div>
-             <button class="btn-success" style="margin-top:15px;" onclick="confirmarCarrinho('${p.id}')">Adicionar</button>
+    html += `</div><button class="btn-success" style="margin-top:15px;" onclick="confirmarCarrinho('${p.id}')">Adicionar</button>
              <button class="btn-gva" style="background:#666; width:100%; margin-top:10px;" onclick="fecharModal()">Voltar</button></div>`;
     
     document.getElementById('modalConteudo').innerHTML = html;
@@ -118,95 +117,184 @@ function selecionarQtd(btn, valor) {
     document.getElementById('cfgQ').value = valor;
 }
 
-// LOGICA DE PREÇO ESCALONADO
-function calcularPrecoEscalonado(id, qtd) {
-    const p = bancoDeDados.find(item => item.id === id);
-    if(!p.escalonado) return;
-    let precoUnitario = p.preco;
-    const faixas = p.escalonado.split(',').map(f => {
-        const [q, v] = f.split(':');
-        return { qtd: parseInt(q), valor: parseFloat(v) };
-    }).sort((a,b) => b.qtd - a.qtd);
-
-    const faixaEncontrada = faixas.find(f => qtd >= f.qtd);
-    if(faixaEncontrada) precoUnitario = faixaEncontrada.valor;
-    
-    document.getElementById('previewPreco').innerText = `Preço Unitário: R$ ${precoUnitario.toFixed(2)}`;
-}
-
 function confirmarCarrinho(id) {
     const p = bancoDeDados.find(i => i.id === id);
     let total = 0, det = "", qtd = parseFloat(document.getElementById('cfgQ')?.value || 0);
 
-    // Lógica de Preço Escalonado no Fechamento
-    let precoBase = p.preco;
+    let precoFinal = p.preco;
     if(p.escalonado && qtd > 0) {
         const faixas = p.escalonado.split(',').map(f => {
             const [q, v] = f.split(':');
             return { qtd: parseInt(q), valor: parseFloat(v) };
         }).sort((a,b) => b.qtd - a.qtd);
-        const faixaEncontrada = faixas.find(f => qtd >= f.qtd);
-        if(faixaEncontrada) precoBase = faixaEncontrada.valor;
+        const faixa = faixas.find(f => qtd >= f.qtd);
+        if(faixa) precoFinal = faixa.valor;
     }
 
     if(p.tipo === 'm_linear' || p.tipo === 'm2') {
         let l = parseFloat(document.getElementById('cfgL').value), a = parseFloat(document.getElementById('cfgA').value);
-        total = (l * a) * precoBase; det = `${l}x${a}m`;
+        total = (l * a) * precoFinal; det = `${l}x${a}m`;
     } else {
         if(qtd <= 0) return alert("Selecione a quantidade!");
-        total = qtd * precoBase; det = `${qtd} un`;
+        total = qtd * precoFinal; det = `${qtd} un`;
     }
 
-    let adicionais = 0; 
-    document.querySelectorAll('.check-acab:checked').forEach(c => { adicionais += parseFloat(c.getAttribute('data-preco')); });
+    let adicionais = 0, nomesAcab = [];
+    document.querySelectorAll('.check-acab:checked').forEach(c => {
+        adicionais += parseFloat(c.getAttribute('data-preco'));
+        nomesAcab.push(c.value);
+    });
     total += adicionais;
+    if(nomesAcab.length > 0) det += ` | Acab: ${nomesAcab.join(', ')}`;
 
     carrinho.push({ nome: p.nome, total: total, detalhes: det, sku: p.sku });
     fecharModal(); atualizarCarrinho();
 }
 
-// RESTANTE DO MOTOR (ESTÁVEL)
+// ORÇAMENTO
 function atualizarCarrinho() {
     const div = document.getElementById('listaCarrinho');
     let motoboy = parseFloat(document.getElementById('valorMotoboy').value) || 0;
     let t = carrinho.reduce((acc, i) => acc + i.total, 0) + motoboy;
     let s = parseFloat(document.getElementById('valorSinal').value) || 0;
-    div.innerHTML = carrinho.map((i, idx) => `<div style="display:flex; justify-content:space-between; margin-bottom:10px; padding:10px; background:#f9f9f9; border-radius:10px;"><span><b>[${i.sku}] ${i.nome}</b><br><small>${i.detalhes}</small></span><b>R$ ${i.total.toFixed(2)} <i class="fa fa-trash" style="color:red; cursor:pointer;" onclick="removerItem(${idx})"></i></b></div>`).join('') || "Vazio.";
+    div.innerHTML = carrinho.map((i, idx) => `<div style="display:flex; justify-content:space-between; margin-bottom:10px; padding:12px; background:#f9f9f9; border-radius:10px;"><span><b>[${i.sku || '---'}] ${i.nome}</b><br><small>${i.detalhes}</small></span><b>R$ ${i.total.toFixed(2)} <i class="fa fa-trash" style="color:red; cursor:pointer;" onclick="removerItem(${idx})"></i></b></div>`).join('') || "Vazio.";
     document.getElementById('totalCarrinho').innerText = t.toFixed(2);
     document.getElementById('restanteCarrinho').innerText = (t - s).toFixed(2);
 }
 
+function removerItem(idx) { carrinho.splice(idx, 1); atualizarCarrinho(); }
+function toggleCamposPagamento() { document.getElementById('divParcelas').style.display = document.getElementById('formaPagamento').value === 'CreditoParc' ? 'block' : 'none'; }
+function toggleCamposEntrega() { document.getElementById('divMotoboy').style.display = document.getElementById('metodoEntrega').value === 'Motoboy' ? 'block' : 'none'; }
+
+function enviarPedido() {
+    const nome = document.getElementById('nomeCliente').value;
+    if(!nome || carrinho.length === 0) return alert("Preencha os dados!");
+    const t = parseFloat(document.getElementById('totalCarrinho').innerText);
+    const s = parseFloat(document.getElementById('valorSinal').value) || 0;
+    const p = { cliente: nome, telefone: document.getElementById('telCliente').value, end: document.getElementById('endCliente').value, cep: document.getElementById('cepCliente').value, itens: [...carrinho], total: t, sinal: s, restante: t-s, status: "💰 Pagamento", dataCriacao: new Date().toLocaleDateString('pt-BR'), motoboy: parseFloat(document.getElementById('valorMotoboy').value) || 0 };
+    db.collection("pedidos").add(p).then(() => { carrinho = []; document.getElementById('nomeCliente').value = ""; atualizarCarrinho(); mudarAba('loja'); });
+}
+
+// PRODUÇÃO
+function atualizarProducao() {
+    const div = document.getElementById('listaProducao');
+    div.innerHTML = pedidosGVA.map((p, idx) => `
+        <div class="gva-card">
+            <div class="card-header" style="display:flex; justify-content:space-between;"><span>👤 ${p.cliente}</span>
+            <select onchange="mudarStatus('${p.id}', this.value)" style="font-size:11px;">
+                <option ${p.status === '💰 Pagamento' ? 'selected' : ''}>💰 Pagamento</option>
+                <option ${p.status === '📂 Verif. Arquivos' ? 'selected' : ''}>📂 Verif. Arquivos</option>
+                <option ${p.status === '🖨️ Impressão' ? 'selected' : ''}>🖨️ Impressão</option>
+                <option ${p.status === '✂️ Acabamento' ? 'selected' : ''}>✂️ Acabamento</option>
+                <option ${p.status === '🏠 Pronto' ? 'selected' : ''}>🏠 Pronto</option>
+                <option value="cancelar">❌ Cancelar</option><option value="entregar">📦 Entregue</option>
+            </select></div>
+            <div class="card-body">
+                <button class="btn-gva" style="font-size:11px;" onclick="imprimirCupom(${idx})">Nota Balcão</button>
+                <button class="btn-gva" style="background:#25D366; font-size:11px;" onclick="enviarWA(${idx})"><i class="fab fa-whatsapp"></i> Status</button>
+            </div>
+        </div>`).join('');
+}
+
+function mudarStatus(id, v) {
+    if(v === 'cancelar') { if(confirm("Cancelar?")) db.collection("pedidos").doc(id).delete(); }
+    else if(v === 'entregar') { 
+        const p = pedidosGVA.find(i => i.id === id);
+        db.collection("pedidos_arquivados").add({...p, status: 'Entregue'}).then(() => db.collection("pedidos").doc(id).delete());
+    } else { db.collection("pedidos").doc(id).update({status: v}); }
+}
+
+function enviarWA(idx) {
+    const p = pedidosGVA[idx];
+    const msg = window.encodeURIComponent(`Olá ${p.cliente}, o status do seu pedido na GVA mudou para: ${p.status}`);
+    window.open(`https://wa.me/55${p.telefone.replace(/\D/g,'')}?text=${msg}`);
+}
+
+function imprimirCupom(idx) {
+    const { jsPDF } = window.jspdf;
+    const p = pedidosGVA[idx];
+    const doc = new jsPDF({ format: [80, 280] });
+    function via(y, tit) {
+        doc.setFontSize(10); doc.text("GVA VENOM ARTS", 40, y, null, null, "center");
+        doc.setFontSize(7); doc.text(tit, 40, y+5, null, null, "center");
+        doc.line(5, y+7, 75, y+7);
+        doc.text(`Cliente: ${p.cliente}`, 5, y+11);
+        if(p.motoboy > 0) doc.text(`Entrega: ${p.end || '---'}`, 5, y+15);
+        let cy = y+20; p.itens.forEach(i => { doc.text(`- ${i.nome}: R$ ${i.total.toFixed(2)}`, 5, cy); cy += 4; });
+        doc.text(`TOTAL: R$ ${p.total.toFixed(2)}`, 75, cy+2, null, null, "right");
+        return cy + 15;
+    }
+    let prox = via(10, "VIA CLIENTE"); doc.line(0, prox-5, 80, prox-5); via(prox+5, "VIA PRODUÇÃO");
+    window.open(doc.output('bloburl'), '_blank');
+}
+
+// FINANCEIRO
+async function calcularFinanceiro() {
+    let fat = pedidosGVA.reduce((acc, p) => acc + (p.total || 0), 0);
+    const snap = await db.collection("financeiro_avulso").get();
+    let extras = 0, saidas = 0;
+    snap.forEach(doc => { const d = doc.data(); if(d.tipo === 'entrada') extras += d.valor; else saidas += d.valor; });
+    document.getElementById('finFaturamento').innerText = fat.toFixed(2);
+    document.getElementById('finEntradas').innerText = extras.toFixed(2);
+    document.getElementById('finSaidas').innerText = saidas.toFixed(2);
+    document.getElementById('finSaldo').innerText = (fat + extras - saidas).toFixed(2);
+}
+
+function abrirLancamento(tipo) {
+    const v = prompt("Valor (R$):"); const d = prompt("Descrição:");
+    if(v && d) db.collection("financeiro_avulso").add({ tipo, valor: parseFloat(v), desc: d, data: new Date().toLocaleDateString('pt-BR') });
+}
+
+// ADMIN GESTÃO
+function renderizarListaAdmin() {
+    const div = document.getElementById('listaGerenciarProdutos');
+    div.innerHTML = `<table class="wp-table"><thead><tr><th>SKU</th><th>Nome</th><th>Ação</th></tr></thead><tbody>` + 
+        bancoDeDados.map(p => `<tr><td>${p.sku}</td><td>${p.nome}</td><td><button onclick="editarProduto('${p.id}')">E</button><button onclick="excluirItem('catalogo', '${p.id}')">X</button></td></tr>`).join('') + `</tbody></table>`;
+}
+
+function editarProduto(id) {
+    const p = bancoDeDados.find(i => i.id === id);
+    document.getElementById('editId').value = p.id;
+    document.getElementById('adminSku').value = p.sku || "";
+    document.getElementById('adminNome').value = p.nome;
+    document.getElementById('adminPreco').value = p.preco;
+    document.getElementById('adminCatSelect').value = p.categoria;
+    document.getElementById('adminQtdsFixas').value = p.qtdsFixas || "";
+    document.getElementById('adminEscalonado').value = p.escalonado || "";
+    document.getElementById('adminTipo').value = p.tipo;
+    document.getElementById('btnSalvarProd').innerText = "Atualizar";
+}
+
+function renderizarListaCategorias() {
+    const div = document.getElementById('listaGerenciarCategorias');
+    div.innerHTML = `<table class="wp-table"><tbody>` + categorias.map(c => `<tr><td>${c.nome}</td><td><button onclick="excluirItem('categorias', '${c.id}')">X</button></td></tr>`).join('') + `</tbody></table>`;
+}
+
+function renderizarListaAcabamentos() {
+    const div = document.getElementById('listaGerenciarAcabamentos');
+    div.innerHTML = `<table class="wp-table"><tbody>` + acabamentos.map(a => `<tr><td>${a.nome} (Vinc: ${a.vinculo})</td><td><button onclick="excluirItem('acabamentos', '${a.id}')">X</button></td></tr>`).join('') + `</tbody></table>`;
+}
+
 async function salvarNovoProduto() {
     const id = document.getElementById('editId').value;
-    const d = { 
-        sku: document.getElementById('adminSku').value, 
-        nome: document.getElementById('adminNome').value, 
-        preco: parseFloat(document.getElementById('adminPreco').value), 
-        categoria: document.getElementById('adminCatSelect').value, 
-        tipo: document.getElementById('adminTipo').value,
-        qtdsFixas: document.getElementById('adminQtdsFixas').value,
-        escalonado: document.getElementById('adminEscalonado').value
-    };
+    const d = { sku: document.getElementById('adminSku').value, nome: document.getElementById('adminNome').value, preco: parseFloat(document.getElementById('adminPreco').value), categoria: document.getElementById('adminCatSelect').value, tipo: document.getElementById('adminTipo').value, qtdsFixas: document.getElementById('adminQtdsFixas').value, escalonado: document.getElementById('adminEscalonado').value };
     if(id) await db.collection("catalogo").doc(id).update(d); else await db.collection("catalogo").add(d);
     limparFormAdmin();
 }
 
-async function salvarAcabamento() {
-    const id = document.getElementById('editAcabId').value;
-    const d = { 
-        nome: document.getElementById('acabNome').value, 
-        preco: parseFloat(document.getElementById('acabPreco').value),
-        vinculo: document.getElementById('acabCatVinculo').value
-    };
-    if(id) await db.collection("acabamentos").doc(id).update(d); else await db.collection("acabamentos").add(d);
-    document.getElementById('acabNome').value = ""; document.getElementById('editAcabId').value = "";
+async function salvarCategoria() {
+    const nome = document.getElementById('catNome').value;
+    if(nome) await db.collection("categorias").add({nome});
+    document.getElementById('catNome').value = "";
 }
 
-// FINANCEIRO, WA, MODAL, ETC (BLINDADOS)
-function removerItem(idx) { carrinho.splice(idx, 1); atualizarCarrinho(); }
-function toggleCamposPagamento() { document.getElementById('divParcelas').style.display = document.getElementById('formaPagamento').value === 'CreditoParc' ? 'block' : 'none'; }
-function toggleCamposEntrega() { document.getElementById('divMotoboy').style.display = document.getElementById('metodoEntrega').value === 'Motoboy' ? 'block' : 'none'; }
-function fecharModal() { document.getElementById('modalFundo').style.display = 'none'; }
+async function salvarAcabamento() {
+    const d = { nome: document.getElementById('acabNome').value, preco: parseFloat(document.getElementById('acabPreco').value), vinculo: document.getElementById('acabCatVinculo').value };
+    await db.collection("acabamentos").add(d);
+    document.getElementById('acabNome').value = ""; document.getElementById('acabPreco').value = "";
+}
+
+// AUXILIARES
 function mudarAba(aba) {
     const titulos = { cliente: "Catálogo", carrinho: "Orçamento", loja: "Produção", caixa: "Financeiro", admin: "Configurações" };
     document.getElementById('tituloPagina').innerText = titulos[aba];
@@ -221,15 +309,9 @@ function toggleAdminSub(s) {
     document.getElementById('subAdmin' + s.charAt(0).toUpperCase() + s.slice(1)).style.display = 'block';
     document.getElementById('subBtn' + s.charAt(0).toUpperCase() + s.slice(1)).classList.add('sub-active');
 }
-function abrirLancamento(tipo) {
-    const v = prompt(`Valor (R$):`); const d = prompt(`Descrição:`);
-    if(v && d) db.collection("financeiro_avulso").add({ tipo, valor: parseFloat(v), desc: d, data: new Date().toLocaleDateString('pt-BR') });
-}
+function fecharModal() { document.getElementById('modalFundo').style.display = 'none'; }
+function fecharAlerta() { document.getElementById('alertaFundo').style.display = 'none'; }
+function excluirItem(coll, id) { if(confirm("Excluir?")) db.collection(coll).doc(id).delete(); }
+function limparFormAdmin() { document.getElementById('editId').value = ""; document.getElementById('adminSku').value = ""; document.getElementById('adminNome').value = ""; document.getElementById('btnSalvarProd').innerText = "Salvar Produto"; }
 function fazerLogin() { auth.signInWithEmailAndPassword(document.getElementById('loginEmail').value, document.getElementById('loginSenha').value); }
 function fazerLogout() { auth.signOut().then(() => window.location.reload()); }
-function fecharAlerta() { document.getElementById('alertaFundo').style.display = 'none'; }
-function renderizarListaAdmin() { /* Tabela igual anterior */ }
-function renderizarListaAcabamentos() { /* Tabela igual anterior */ }
-function renderizarListaCategorias() { /* Tabela igual anterior */ }
-function atualizarProducao() { /* Cards igual anterior */ }
-function enviarPedido() { /* Gravação Firestore igual anterior */ }
