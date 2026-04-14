@@ -3,12 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GVA • Gráfica Venom Arts</title>
+    <title>GVA • Sistema de Gestão</title>
     <link rel="stylesheet" href="style.css">
-    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
@@ -17,89 +15,106 @@
 
     <div id="telaLogin">
         <div class="login-caixa">
-            <img src="logo GVA azul.png" alt="Logo GVA" style="width: 200px; margin-bottom: 20px;">
-            <input type="email" id="loginEmail" placeholder="E-mail">
+            <img src="logo GVA azul.png" alt="Logo GVA" style="width: 180px; margin-bottom: 20px;">
+            <input type="email" id="loginEmail" placeholder="E-mail de Acesso">
             <input type="password" id="loginSenha" placeholder="Senha">
-            <button class="acao" onclick="fazerLogin()">Entrar no Sistema</button>
+            <button class="acao" onclick="fazerLogin()">Acessar Painel GVA</button>
         </div>
     </div>
 
     <header>
-        <img id="logoGVA" src="logo GVA br.png" alt="Logo GVA" class="logo-img">
-        <img id="logoGVA_Preto" src="logo GVA black.png" style="display:none;">
-        <button onclick="fazerLogout()" style="position: absolute; right: 10px; top: 10px; background: none; border: 1px solid white; color: white; border-radius: 4px; padding: 5px; cursor: pointer;">Sair</button>
+        <div class="container-header">
+            <img id="logoGVA" src="logo GVA br.png" alt="GVA Venom Arts" class="logo-img">
+            <button onclick="fazerLogout()" class="btn-sair">Sair</button>
+        </div>
     </header>
 
-    <div class="tabs">
-        <button id="btnCliente" class="active" onclick="mudarAba('cliente')">Catálogo</button>
-        <button id="btnCarrinho" onclick="mudarAba('carrinho')">Orçamento</button>
-        <button id="btnLoja" onclick="mudarAba('loja')">Painel (PDV)</button>
-        <button id="btnCaixa" class="aba-restrita" onclick="mudarAba('caixa')" style="color: #28a745; display: none;">💰 Caixa</button>
-        <button id="btnAdmin" class="aba-restrita" onclick="mudarAba('admin')" style="color: #ffc107; display: none;">⚙️ Admin</button>
-    </div>
-
-    <div id="abaCliente" class="content active">
-        <div class="barra-busca">
-            <input type="text" id="buscaProduto" placeholder="🔍 Buscar produto..." oninput="filtrarProdutos()">
+    <nav class="tabs">
+        <div class="container-nav">
+            <button id="btnCliente" class="active" onclick="mudarAba('cliente')">Catálogo</button>
+            <button id="btnCarrinho" onclick="mudarAba('carrinho')">Orçamento</button>
+            <button id="btnLoja" onclick="mudarAba('loja')">Produção</button>
+            <button id="btnCaixa" class="aba-restrita" onclick="mudarAba('caixa')" style="display: none;">Financeiro</button>
+            <button id="btnAdmin" class="aba-restrita" onclick="mudarAba('admin')" style="display: none;">Configurações</button>
         </div>
-        <div class="grid" id="gradeCliente">Sincronizando produtos...</div>
-    </div>
+    </nav>
 
-    <div id="abaCarrinho" class="content">
-        <div id="listaCarrinho">Nenhum item adicionado.</div>
-        <hr>
-        <label>Tipo de Cliente:</label>
-        <select id="tipoCliente" onchange="ajustarCamposCliente()">
-            <option value="PF">Pessoa Física (PF)</option>
-            <option value="PJ">Pessoa Jurídica (PJ)</option>
-        </select>
-
-        <div id="camposCliente">
-            <input type="text" id="nomeCliente" placeholder="Nome / Razão Social">
-            <input type="text" id="docCliente" placeholder="CPF / CNPJ">
-            <input type="tel" id="telCliente" placeholder="WhatsApp">
-            <input type="text" id="endCliente" placeholder="Endereço Completo">
+    <main class="container">
+        <div id="abaCliente" class="content active">
+            <div class="barra-busca">
+                <input type="text" id="buscaProduto" placeholder="🔍 O que o cliente procura hoje?" oninput="filtrarProdutos()">
+            </div>
+            <div class="grid" id="gradeCliente">Sincronizando banco de dados...</div>
         </div>
 
-        <div style="display: flex; gap: 10px;">
-            <div style="flex: 1;"><label>Desconto:</label><input type="number" id="valorDesconto" value="0" oninput="atualizarCarrinho()"></div>
-            <div style="flex: 1;"><label>Sinal:</label><input type="number" id="valorSinal" value="0" oninput="atualizarCarrinho()"></div>
+        <div id="abaCarrinho" class="content">
+            <div class="card-orcamento">
+                <div id="listaCarrinho">Selecione produtos no catálogo.</div>
+                <hr>
+                <div class="form-cliente">
+                    <select id="tipoCliente" onchange="ajustarCamposCliente()">
+                        <option value="PF">Pessoa Física</option>
+                        <option value="PJ">Pessoa Jurídica</option>
+                    </select>
+                    <input type="text" id="nomeCliente" placeholder="Nome Completo / Razão Social">
+                    <input type="text" id="docCliente" placeholder="CPF ou CNPJ">
+                    <input type="tel" id="telCliente" placeholder="WhatsApp (com DDD)">
+                    <textarea id="obsPedido" placeholder="Detalhes técnicos (Ex: Laminação, tipo de corte, etc)"></textarea>
+                    <input type="date" id="dataEntrega">
+                </div>
+                <div class="financeiro-resumo">
+                    <div>Total: <b>R$ <span id="totalCarrinho">0,00</span></b></div>
+                    <div>Sinal: <input type="number" id="valorSinal" value="0" oninput="atualizarCarrinho()"></div>
+                    <div class="restante">Resta: <b>R$ <span id="restanteCarrinho">0,00</span></b></div>
+                </div>
+                <button class="acao btn-finalizar" onclick="enviarPedido()">Gerar Pedido e Notificar</button>
+            </div>
         </div>
-        
-        <h3 style="text-align: right;">Total: R$ <span id="totalCarrinho">0,00</span></h3>
-        <h3 style="text-align: right; color: #dc3545;">Resta: R$ <span id="restanteCarrinho">0,00</span></h3>
-        <button class="acao" style="background:#28a745;" onclick="enviarPedido()">Salvar Orçamento</button>
-    </div>
 
-    <div id="abaLoja" class="content">
-        <div class="dashboard">
-            <h3>Faturamento Mensal</h3>
-            <p>R$ <span id="faturamentoValor">0,00</span></p>
-        </div>
-        <h2>Produção em Tempo Real</h2>
-        <div id="listaProducao"></div>
-    </div>
+        <div id="abaAdmin" class="content">
+            <div class="painel-admin">
+                <h2>📦 Gestão de Produtos</h2>
+                <label>Nome do Produto:</label>
+                <input type="text" id="adminNome" placeholder="Ex: Banner Lona 440g">
+                
+                <label>Tipo de Cobrança:</label>
+                <select id="adminTipo">
+                    <option value="unidade">Preço por Unidade (Fixo)</option>
+                    <option value="m2">Cálculo por Metro Quadrado ($m^2$)</option>
+                    <option value="folha">Cálculo por Folha/Página (Apostila)</option>
+                </select>
 
-    <div id="abaCaixa" class="content">
-        <div class="painel-admin">
-            <h2>💰 Controle de Caixa</h2>
-            <div id="resumoCaixa">Sincronizando...</div>
-        </div>
-    </div>
+                <label>Preço Base (R$):</label>
+                <input type="number" id="adminPreco" step="0.01" placeholder="0.00">
 
-    <div id="abaAdmin" class="content">
-        <div class="painel-admin">
-            <h2>📦 Cadastrar Produto</h2>
-            <input type="text" id="adminNome" placeholder="Nome do Produto">
-            <input type="number" id="adminPreco" placeholder="Preço Unitário">
-            <select id="adminCategoria">
-                <option>Papelaria</option>
-                <option>Comunicação Visual</option>
-                <option>Serviços</option>
-            </select>
-            <button class="acao" onclick="salvarNovoProduto()">Cadastrar no Banco</button>
+                <label>Link da Imagem:</label>
+                <input type="text" id="adminImg" placeholder="Link da foto do produto">
+
+                <label>Categoria:</label>
+                <select id="adminCategoria">
+                    <option>Papelaria</option>
+                    <option>Comunicação Visual</option>
+                    <option>Brindes</option>
+                    <option>Serviços Rapidos</option>
+                </select>
+
+                <button class="acao" onclick="salvarNovoProduto()">Cadastrar na Nuvem</button>
+            </div>
         </div>
-    </div>
+    </main>
+
+    <footer>
+        <div class="container-footer">
+            <div class="footer-info">
+                <b>GVA • Venom Arts</b><br>
+                Rua Sua Rua, 123 - Bairro | (21) 98888-8888<br>
+                <span class="social">@graficavenomarts | graficavenomarts.com.br</span>
+            </div>
+            <div class="footer-status">
+                <span class="status-bolinha"></span> Sistema Online
+            </div>
+        </div>
+    </footer>
 
     <div id="alertaFundo"><div id="alertaCaixa"><div id="alertaTexto"></div><button class="acao" onclick="fecharAlerta()">Ok</button></div></div>
 
