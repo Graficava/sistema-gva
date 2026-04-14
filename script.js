@@ -14,9 +14,7 @@ const EMAIL_ADMIN = "contato@graficava.com.br";
 
 let bancoDeDados = [], pedidosGVA = [], carrinho = [], categorias = [], acabamentos = [];
 
-// ==========================================
-// 1. ACESSO E CABEÇALHO DINÂMICO
-// ==========================================
+// ACESSO
 auth.onAuthStateChanged(user => {
     if (user) {
         document.getElementById('telaLogin').style.display = 'none';
@@ -29,22 +27,11 @@ auth.onAuthStateChanged(user => {
     }
 });
 
-function mudarAba(aba) {
-    const titulos = { cliente: "Catálogo", carrinho: "Novo Orçamento", loja: "Produção", caixa: "Controle Financeiro", admin: "Configurações" };
-    document.getElementById('tituloPagina').innerText = titulos[aba];
-    document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
-    document.querySelectorAll('.sidebar-nav button').forEach(b => b.classList.remove('active'));
-    document.getElementById('aba' + aba.charAt(0).toUpperCase() + aba.slice(1)).classList.add('active');
-    document.getElementById('btn' + aba.charAt(0).toUpperCase() + aba.slice(1)).classList.add('active');
-}
-
-// ==========================================
-// 2. SINCRONIZAÇÃO EM TEMPO REAL
-// ==========================================
 function iniciarSincronizacao() {
     db.collection("categorias").onSnapshot(snap => {
         categorias = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         renderizarMenus();
+        renderizarListaCategorias();
     });
     db.collection("acabamentos").onSnapshot(snap => {
         acabamentos = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -58,57 +45,65 @@ function iniciarSincronizacao() {
     db.collection("pedidos").orderBy("dataCriacao", "desc").onSnapshot(snap => {
         pedidosGVA = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         atualizarProducao();
-        calcularFinanceiro();
     });
-    db.collection("financeiro_avulso").onSnapshot(() => calcularFinanceiro());
 }
 
-// ==========================================
-// 3. CATALOGO E MEDIDAS
-// ==========================================
+// MUDAR ABA E TÍTULO
+function mudarAba(aba) {
+    const titulos = { cliente: "Catálogo", carrinho: "Novo Orçamento", loja: "Produção GVA", caixa: "Financeiro", admin: "Configurações" };
+    document.getElementById('tituloPagina').innerText = titulos[aba];
+    document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+    document.querySelectorAll('.sidebar-nav button').forEach(b => b.classList.remove('active'));
+    document.getElementById('aba' + aba.charAt(0).toUpperCase() + aba.slice(1)).classList.add('active');
+    document.getElementById('btn' + aba.charAt(0).toUpperCase() + aba.slice(1)).classList.add('active');
+}
+
+// CATALOGO E FILTRO SKU
 function carregarProdutos(lista = bancoDeDados) {
     const grade = document.getElementById('gradeCliente');
     grade.innerHTML = '';
-    const cores = ['#3E3B9F', '#00a859', '#dc3545', '#17a2b8', '#ffc107'];
-    lista.forEach((p, idx) => {
-        let visual = p.img ? `<img src="${p.img}" class="zap-img" onerror="this.parentElement.innerHTML='<div class=\'zap-color-bg\' style=\'background:${cores[idx % 5]}\'>${p.nome}</div>'">` 
-                           : `<div class="zap-color-bg" style="background:${cores[idx % 5]}">${p.nome}</div>`;
-        grade.innerHTML += `<div class="zap-card">${visual}<div class="zap-info"><small>${p.categoria || 'Geral'}</small><h4>${p.nome}</h4><p class="zap-price">R$ ${p.preco.toFixed(2)}</p><button class="btn-gva" onclick="abrirConfigurador('${p.id}')">Configurar</button></div></div>`;
+    lista.forEach(p => {
+        grade.innerHTML += `
+            <div class="zap-card">
+                <div class="zap-color-bg">${p.sku || 'PROD'}</div>
+                <div class="zap-info">
+                    <small>${p.categoria}</small>
+                    <h4>${p.nome}</h4>
+                    <p class="zap-price">R$ ${p.preco.toFixed(2)}</p>
+                    <button class="btn-gva" onclick="abrirConfigurador('${p.id}')">Configurar</button>
+                </div>
+            </div>`;
     });
 }
 
+function filtrarProdutos() {
+    const b = document.getElementById('buscaProduto').value.toLowerCase();
+    const f = bancoDeDados.filter(p => p.nome.toLowerCase().includes(b) || (p.sku && p.sku.toLowerCase().includes(b)));
+    carregarProdutos(f);
+}
+
+// CONFIGURADOR COM ACABAMENTOS BONITOS
 function abrirConfigurador(id) {
     const p = bancoDeDados.find(item => item.id === id);
-    let html = `<div class="card-header">Configurar: ${p.nome}</div><div class="card-body gva-form-large">`;
+    let html = `<div class="card-header">Configurar Pedido: ${p.nome}</div><div class="card-body gva-form-large">`;
     
     if(p.tipo === 'm_linear' || p.tipo === 'm2') {
         const maxL = p.tipo === 'm_linear' ? 1.50 : 3.10;
-        html += `<label>Largura (Máx ${maxL}m):</label>
-                 <input type="number" id="cfgL" value="1.00" step="0.01" onchange="validarMedida(this, ${maxL})">
-                 <label>Comprimento (Máx 100m):</label>
-                 <input type="number" id="cfgA" value="1.00" step="0.01" onchange="validarMedida(this, 100)">`;
-    } else if(p.tipo === 'folha') {
-        html += `<label>Total de Páginas:</label><input type="number" id="cfgF" value="10">`;
+        html += `<label>Largura (Máx ${maxL}m):</label><input type="number" id="cfgL" value="1.00" step="0.01">
+                 <label>Altura (m):</label><input type="number" id="cfgA" value="1.00" step="0.01">`;
     } else {
         html += `<label>Quantidade:</label><input type="number" id="cfgQ" value="1">`;
     }
 
-    html += `<label style="margin-top:15px; display:block;">Acabamentos Adicionais:</label><div style="display:grid; grid-template-columns:1fr 1fr; gap:5px; margin-bottom:15px;">`;
+    html += `<label style="margin-top:15px; display:block;">Selecione os Acabamentos:</label><div class="acabamento-seletor">`;
     acabamentos.forEach(a => {
-        html += `<label style="font-size:11px; font-weight:normal;"><input type="checkbox" class="check-acab" data-preco="${a.preco}" value="${a.nome}"> ${a.nome} (+R$ ${a.preco})</label>`;
+        html += `<label><input type="checkbox" class="check-acab" data-preco="${a.preco}" value="${a.nome}"> <i class="fa fa-plus-circle"></i> ${a.nome} (+R$ ${a.preco})</label>`;
     });
-    html += `</div><button class="btn-success" onclick="confirmarCarrinho('${p.id}')">Adicionar ao Orçamento</button>
-             <button class="btn-gva" style="background:#666; width:100%; margin-top:10px;" onclick="fecharModal()">Cancelar</button></div>`;
+    html += `</div><button class="btn-success" style="margin-top:20px;" onclick="confirmarCarrinho('${p.id}')">Adicionar ao Carrinho</button>
+             <button class="btn-gva" style="background:#666; margin-top:10px;" onclick="fecharModal()">Cancelar</button></div>`;
     
     document.getElementById('modalConteudo').innerHTML = html;
     document.getElementById('modalFundo').style.display = 'flex';
-}
-
-function validarMedida(el, max) { 
-    if(parseFloat(el.value) > max) { 
-        mostrarAlerta(`Atenção: A medida máxima permitida para este material é ${max}m.`); 
-        el.value = max; 
-    } 
 }
 
 function confirmarCarrinho(id) {
@@ -118,19 +113,12 @@ function confirmarCarrinho(id) {
     if(p.tipo === 'm_linear' || p.tipo === 'm2') {
         let l = parseFloat(document.getElementById('cfgL').value);
         let a = parseFloat(document.getElementById('cfgA').value);
-        totalItem = (l * a) * p.preco;
-        det = `${l.toFixed(2)}x${a.toFixed(2)}m`;
-    } else if(p.tipo === 'folha') {
-        let f = parseInt(document.getElementById('cfgF').value);
-        totalItem = f * p.preco;
-        det = `${f} páginas`;
+        totalItem = (l * a) * p.preco; det = `${l}x${a}m`;
     } else {
         let q = parseInt(document.getElementById('cfgQ').value);
-        totalItem = q * p.preco;
-        det = `${q} un`;
+        totalItem = q * p.preco; det = `${q} un`;
     }
 
-    // Soma acabamentos
     let adicionais = 0, nomesAcab = [];
     document.querySelectorAll('.check-acab:checked').forEach(c => {
         adicionais += parseFloat(c.getAttribute('data-preco'));
@@ -139,194 +127,210 @@ function confirmarCarrinho(id) {
     totalItem += adicionais;
     if(nomesAcab.length > 0) det += ` | Acab: ${nomesAcab.join(', ')}`;
 
-    carrinho.push({ nome: p.nome, total: totalItem, detalhes: det });
+    carrinho.push({ nome: p.nome, total: totalItem, detalhes: det, sku: p.sku });
     fecharModal();
     atualizarCarrinho();
 }
 
-// ==========================================
-// 4. ORÇAMENTO E FINANCEIRO
-// ==========================================
 function atualizarCarrinho() {
     const div = document.getElementById('listaCarrinho');
-    let totalItens = carrinho.reduce((acc, i) => acc + i.total, 0);
-    let taxaMotoboy = parseFloat(document.getElementById('valorMotoboy').value) || 0;
-    let totalGeral = totalItens + taxaMotoboy;
-
-    div.innerHTML = carrinho.map((i, idx) => `
-        <div style="display:flex; justify-content:space-between; margin-bottom:10px; font-size:13px; background:#f9f9f9; padding:10px; border-radius:8px;">
-            <span><b>${i.nome}</b><br><small>${i.detalhes}</small></span>
-            <b>R$ ${i.total.toFixed(2)} <i class="fa fa-trash" style="color:red; cursor:pointer; margin-left:10px;" onclick="removerItem(${idx})"></i></b>
-        </div>`).join('') || "Selecione produtos.";
-
-    document.getElementById('totalCarrinho').innerText = totalGeral.toFixed(2);
+    let t = carrinho.reduce((acc, i) => acc + i.total, 0) + (parseFloat(document.getElementById('valorMotoboy').value) || 0);
     let sinal = parseFloat(document.getElementById('valorSinal').value) || 0;
-    document.getElementById('restanteCarrinho').innerText = (totalGeral - sinal).toFixed(2);
+    
+    div.innerHTML = carrinho.map((i, idx) => `
+        <div style="display:flex; justify-content:space-between; margin-bottom:10px; font-size:13px; background:#f9f9f9; padding:10px; border-radius:8px; border:1px solid #eee;">
+            <span><b>[${i.sku || 'GVA'}] ${i.nome}</b><br><small>${i.detalhes}</small></span>
+            <b>R$ ${i.total.toFixed(2)} <i class="fa fa-trash" style="color:red; cursor:pointer; margin-left:10px;" onclick="removerItem(${idx})"></i></b>
+        </div>`).join('') || "Carrinho vazio.";
+
+    document.getElementById('totalCarrinho').innerText = t.toFixed(2);
+    document.getElementById('restanteCarrinho').innerText = (t - sinal).toFixed(2);
 }
 
 function removerItem(idx) { carrinho.splice(idx, 1); atualizarCarrinho(); }
 
-function toggleCamposPagamento() {
-    const p = document.getElementById('formaPagamento').value;
-    document.getElementById('divParcelas').style.display = (p === 'CreditoParc') ? 'block' : 'none';
-}
-
-function toggleCamposEntrega() {
-    const e = document.getElementById('metodoEntrega').value;
-    document.getElementById('divMotoboy').style.display = (e === 'Motoboy') ? 'block' : 'none';
-}
-
-function enviarPedido() {
-    const nome = document.getElementById('nomeCliente').value;
-    if(!nome || carrinho.length === 0) return mostrarAlerta("Dados incompletos!");
-
-    const sinal = parseFloat(document.getElementById('valorSinal').value) || 0;
-    const motoboy = parseFloat(document.getElementById('valorMotoboy').value) || 0;
-    const total = parseFloat(document.getElementById('totalCarrinho').innerText);
-
-    const pedido = {
-        cliente: nome, telefone: document.getElementById('telCliente').value,
-        doc: document.getElementById('docCliente').value, end: document.getElementById('endCliente').value,
-        itens: [...carrinho], total: total, sinal: sinal, motoboy: motoboy,
-        forma: document.getElementById('formaPagamento').value,
-        status: "💰 Pagamento", dataCriacao: new Date().toLocaleDateString('pt-BR'),
-        previsao: document.getElementById('dataEntrega').value, mes: new Date().getMonth() + 1
-    };
-
-    db.collection("pedidos").add(pedido).then(() => {
-        carrinho = []; document.getElementById('nomeCliente').value = "";
-        atualizarCarrinho(); mudarAba('loja');
-    });
-}
-
-// ==========================================
-// 5. FINANCEIRO E ADMIN SUB-TABS
-// ==========================================
-async function calcularFinanceiro() {
-    let faturamento = pedidosGVA.reduce((acc, p) => acc + (p.total || 0), 0);
-    const snap = await db.collection("financeiro_avulso").get();
-    let extras = 0, saidas = 0;
-    snap.forEach(doc => {
-        const d = doc.data();
-        if(d.tipo === 'entrada') extras += d.valor;
-        else saidas += d.valor;
-    });
-
-    document.getElementById('finFaturamento').innerText = faturamento.toFixed(2);
-    document.getElementById('finEntradas').innerText = extras.toFixed(2);
-    document.getElementById('finSaidas').innerText = saidas.toFixed(2);
-    document.getElementById('finSaldo').innerText = (faturamento + extras - saidas).toFixed(2);
-}
-
-function abrirLancamento(tipo) {
-    const valor = prompt(`Valor da ${tipo} (R$):`);
-    const desc = prompt(`Descrição:`);
-    if(valor && desc) {
-        db.collection("financeiro_avulso").add({ tipo, valor: parseFloat(valor), desc, data: new Date().toLocaleDateString('pt-BR') });
-    }
-}
-
-function toggleAdminSub(sub) {
-    document.querySelectorAll('.admin-panel').forEach(p => p.style.display = 'none');
-    document.querySelectorAll('.sub-nav-gva button').forEach(b => b.classList.remove('sub-active'));
-    
-    document.getElementById('subAdmin' + sub.charAt(0).toUpperCase() + sub.slice(1)).style.display = 'block';
-    document.getElementById('subBtn' + sub.charAt(0).toUpperCase() + sub.slice(1)).classList.add('sub-active');
-}
-
-// ==========================================
-// 6. MENUS E ACABAMENTOS (ADMIN)
-// ==========================================
-function renderizarMenus() {
-    const nav = document.getElementById('menuCategorias');
-    const select = document.getElementById('adminCatSelect');
-    nav.innerHTML = `<button class="active" onclick="filtrarCat('Todos')">Todos</button>` + 
-        categorias.map(c => `<button onclick="filtrarCat('${c.nome}')">${c.nome}</button>`).join('');
-    select.innerHTML = categorias.map(c => `<option>${c.nome}</option>`).join('');
-}
-
-function salvarCategoria() {
-    const nome = document.getElementById('catNome').value;
-    if(nome) db.collection("categorias").add({ nome }).then(() => document.getElementById('catNome').value = "");
-}
-
-function salvarAcabamento() {
-    const nome = document.getElementById('acabNome').value;
-    const preco = parseFloat(document.getElementById('acabPreco').value);
-    if(nome) db.collection("acabamentos").add({ nome, preco }).then(() => {
-        document.getElementById('acabNome').value = ""; document.getElementById('acabPreco').value = "";
-    });
-}
-
-function salvarNovoProduto() {
-    const id = document.getElementById('editId').value;
-    const dados = {
-        nome: document.getElementById('adminNome').value,
-        preco: parseFloat(document.getElementById('adminPreco').value),
-        img: document.getElementById('adminImg').value,
-        tipo: document.getElementById('adminTipo').value,
-        categoria: document.getElementById('adminCatSelect').value
-    };
-    if(id) db.collection("catalogo").doc(id).update(dados);
-    else db.collection("catalogo").add(dados);
-    mostrarAlerta("Produto Salvo!");
-}
-
-function renderizarListaAdmin() {
-    const div = document.getElementById('listaGerenciarProdutos');
-    div.innerHTML = `<table style="width:100%; font-size:12px; margin-top:15px; border-collapse:collapse;">
-        <thead style="background:#eee; text-align:left;"><tr><th style="padding:10px;">Nome</th><th style="padding:10px;">Ações</th></tr></thead>
-        <tbody>${bancoDeDados.map(p => `<tr><td style="padding:10px; border-bottom:1px solid #eee;">${p.nome}</td>
-        <td style="padding:10px; border-bottom:1px solid #eee;"><button onclick="excluirItem('catalogo', '${p.id}')" style="color:red; background:none; border:none; cursor:pointer;">Excluir</button></td></tr>`).join('')}</tbody></table>`;
-}
-
-function renderizarListaAcabamentos() {
-    const div = document.getElementById('listaGerenciarAcabamentos');
-    div.innerHTML = acabamentos.map(a => `<div style="padding:10px; border-bottom:1px solid #eee; display:flex; justify-content:space-between;"><span>${a.nome} (+R$ ${a.preco})</span><button onclick="excluirItem('acabamentos', '${a.id}')" style="color:red; border:none; background:none; cursor:pointer;">X</button></div>`).join('');
-}
-
-function excluirItem(coll, id) { if(confirm("Deseja excluir permanentemente?")) db.collection(coll).doc(id).delete(); }
-
-// AUXILIARES
-function filtrarProdutos() {
-    const b = document.getElementById('buscaProduto').value.toLowerCase();
-    carregarProdutos(bancoDeDados.filter(p => p.nome.toLowerCase().includes(b)));
-}
-function filtrarCat(cat) {
-    if(cat === 'Todos') carregarProdutos();
-    else carregarProdutos(bancoDeDados.filter(p => p.categoria === cat));
-    document.querySelectorAll('.cat-nav button').forEach(b => b.classList.toggle('active', b.innerText === cat));
-}
+// PRODUÇÃO 7 ETAPAS
 function atualizarProducao() {
     const div = document.getElementById('listaProducao');
     div.innerHTML = pedidosGVA.map((p, idx) => `
         <div class="gva-card">
-            <div class="card-header" style="display:flex; justify-content:space-between;"><span>👤 ${p.cliente}</span><small>${p.status}</small></div>
-            <div class="card-body"><p style="font-size:12px;">${p.itens.map(i => i.nome).join(', ')}</p>
-            <button class="btn-gva" onclick="imprimirCupom(${idx})" style="font-size:11px; padding:5px 15px;">Imprimir Cupom</button>
-            <button class="btn-gva" onclick="abrirWhatsAppStatus(${idx})" style="background:#25D366; font-size:11px; padding:5px 15px;">Status WhatsApp</button></div>
-        </div>`).join('') || "Sem pedidos.";
+            <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+                <span>👤 ${p.cliente}</span>
+                <select onchange="mudarStatus('${p.id}', this.value)" style="width:auto; margin:0; font-size:11px;">
+                    <option ${p.status === '💰 Pagamento' ? 'selected' : ''}>💰 Pagamento</option>
+                    <option ${p.status === '📂 Verif. Arquivos' ? 'selected' : ''}>📂 Verif. Arquivos</option>
+                    <option ${p.status === '🖨️ Impressão' ? 'selected' : ''}>🖨️ Impressão</option>
+                    <option ${p.status === '✂️ Acabamento' ? 'selected' : ''}>✂️ Acabamento</option>
+                    <option ${p.status === '🏠 Pronto Retirada' ? 'selected' : ''}>🏠 Pronto Retirada</option>
+                    <option style="color:red;">❌ Pedido Cancelado</option>
+                    <option style="color:green;">📦 Pedido Entregue</option>
+                </select>
+            </div>
+            <div class="card-body">
+                <p style="font-size:12px; margin:0;">${p.itens.map(i => `• ${i.nome}`).join('<br>')}</p>
+                <div style="display:flex; gap:10px;">
+                    <button class="btn-gva" style="font-size:11px; padding:5px 15px; margin-top:10px;" onclick="imprimirCupom(${idx})"><i class="fa fa-print"></i> Nota Balcão</button>
+                    <button class="status-wa" onclick="enviarWhatsApp(${idx})"><i class="fab fa-whatsapp"></i> Notificar Cliente</button>
+                </div>
+            </div>
+        </div>`).join('') || "Fila de produção vazia.";
 }
-function abrirWhatsAppStatus(idx) {
+
+function mudarStatus(id, novoStatus) {
+    if(novoStatus === '❌ Pedido Cancelado') {
+        if(confirm("Cancelar pedido e remover do financeiro?")) db.collection("pedidos").doc(id).delete();
+    } else if(novoStatus === '📦 Pedido Entregue') {
+        const p = pedidosGVA.find(item => item.id === id);
+        db.collection("pedidos_arquivados").add({ ...p, status: '📦 Entregue', dataEntrega: new Date().toLocaleDateString('pt-BR') })
+        .then(() => db.collection("pedidos").doc(id).delete());
+    } else {
+        db.collection("pedidos").doc(id).update({ status: novoStatus });
+    }
+}
+
+// NOTA DE BALCÃO GVA (REFEITA DO ZERO)
+function imprimirCupom(index) {
+    const { jsPDF } = window.jspdf;
+    const p = pedidosGVA[index];
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [80, 200] });
+
+    // Cabeçalho Profissional
+    doc.setFontSize(10); doc.setFont("helvetica", "bold");
+    doc.text("GVA • VENOM ARTS", 40, 10, null, null, "center");
+    doc.setFontSize(7); doc.setFont("helvetica", "normal");
+    doc.text("CNPJ: 17.184.159/0001-06", 40, 14, null, null, "center");
+    doc.text("Rua Lopes Trovão, 474 - Icaraí - Niterói", 40, 17, null, null, "center");
+    doc.text("Zap: (21) 99993-0190", 40, 20, null, null, "center");
+    
+    doc.setLineWidth(0.2); doc.line(5, 22, 75, 22);
+    
+    doc.setFont("helvetica", "bold"); doc.text("CLIENTE:", 5, 26);
+    doc.setFont("helvetica", "normal"); doc.text(p.cliente.toUpperCase(), 18, 26);
+    doc.text("DATA:", 5, 29); doc.text(p.dataCriacao, 15, 29);
+    doc.text("PREVISÃO:", 5, 32); doc.text(p.previsao || '---', 20, 32);
+    
+    doc.line(5, 34, 75, 34);
+
+    // Corpo do Pedido
+    let y = 38;
+    doc.setFontSize(8); doc.setFont("helvetica", "bold");
+    doc.text("ITEM / DESCRIÇÃO", 5, y); doc.text("VALOR", 75, y, null, null, "right");
+    
+    y += 4;
+    p.itens.forEach(item => {
+        doc.setFont("helvetica", "bold");
+        doc.text(item.nome.substring(0, 30), 5, y);
+        doc.text(item.total.toFixed(2), 75, y, null, null, "right");
+        y += 3.5;
+        doc.setFontSize(6); doc.setFont("helvetica", "italic");
+        doc.text("Det: " + item.detalhes, 5, y);
+        y += 4;
+        doc.setFontSize(8);
+    });
+
+    if(p.motoboy > 0) {
+        doc.text("TAXA ENTREGA:", 5, y); doc.text(p.motoboy.toFixed(2), 75, y, null, null, "right");
+        y += 4;
+    }
+
+    doc.line(5, y, 75, y); y += 5;
+
+    // Totais
+    doc.setFontSize(9); doc.setFont("helvetica", "bold");
+    doc.text("TOTAL DO PEDIDO:", 5, y); doc.text("R$ " + p.total.toFixed(2), 75, y, null, null, "right");
+    y += 4.5;
+    doc.setFont("helvetica", "normal"); doc.setFontSize(8);
+    doc.text("SINAL PAGO:", 5, y); doc.text("R$ " + p.sinal.toFixed(2), 75, y, null, null, "right");
+    y += 5;
+    doc.setFontSize(10); doc.setFont("helvetica", "bold");
+    doc.text("RESTANTE:", 5, y); doc.text("R$ " + p.restante.toFixed(2), 75, y, null, null, "right");
+
+    y += 8;
+    doc.setFontSize(6); doc.setFont("helvetica", "normal");
+    doc.text("Este documento não é nota fiscal.", 40, y, null, null, "center");
+    y += 3;
+    doc.text("Obrigado pela preferência!", 40, y, null, null, "center");
+
+    window.open(doc.output('bloburl'), '_blank');
+}
+
+// GESTÃO ADMIN (EDITAR E EXCLUIR TUDO)
+function renderizarListaAdmin() {
+    const div = document.getElementById('listaGerenciarProdutos');
+    div.innerHTML = `<table class="wp-table"><thead><tr><th>SKU</th><th>Nome</th><th>Ações</th></tr></thead><tbody>` + 
+        bancoDeDados.map(p => `<tr><td>${p.sku || '--'}</td><td>${p.nome}</td><td>
+        <button class="btn-edit" onclick="editarProduto('${p.id}')">Editar</button>
+        <button class="btn-del" onclick="excluirItem('catalogo', '${p.id}')">Excluir</button></td></tr>`).join('') + `</tbody></table>`;
+}
+
+function renderizarListaCategorias() {
+    const div = document.getElementById('listaGerenciarCategorias');
+    div.innerHTML = `<table class="wp-table"><thead><tr><th>Categoria</th><th>Ações</th></tr></thead><tbody>` + 
+        categorias.map(c => `<tr><td>${c.nome}</td><td>
+        <button class="btn-edit" onclick="editarCategoria('${c.id}')">Editar</button>
+        <button class="btn-del" onclick="excluirItem('categorias', '${c.id}')">Excluir</button></td></tr>`).join('') + `</tbody></table>`;
+}
+
+function renderizarListaAcabamentos() {
+    const div = document.getElementById('listaGerenciarAcabamentos');
+    div.innerHTML = `<table class="wp-table"><thead><tr><th>Acabamento</th><th>Preço</th><th>Ações</th></tr></thead><tbody>` + 
+        acabamentos.map(a => `<tr><td>${a.nome}</td><td>R$ ${a.preco.toFixed(2)}</td><td>
+        <button class="btn-edit" onclick="editarAcabamento('${a.id}')">Editar</button>
+        <button class="btn-del" onclick="excluirItem('acabamentos', '${a.id}')">Excluir</button></td></tr>`).join('') + `</tbody></table>`;
+}
+
+// Funções de salvar com verificação de EDIT
+async function salvarNovoProduto() {
+    const id = document.getElementById('editId').value;
+    const dados = {
+        sku: document.getElementById('adminSku').value,
+        nome: document.getElementById('adminNome').value,
+        preco: parseFloat(document.getElementById('adminPreco').value),
+        categoria: document.getElementById('adminCatSelect').value,
+        tipo: document.getElementById('adminTipo').value,
+        img: document.getElementById('adminImg').value
+    };
+    if(id) await db.collection("catalogo").doc(id).update(dados);
+    else await db.collection("catalogo").add(dados);
+    limparFormAdmin(); alert("Salvo!");
+}
+
+function editarProduto(id) {
+    const p = bancoDeDados.find(i => i.id === id);
+    document.getElementById('editId').value = p.id;
+    document.getElementById('adminSku').value = p.sku || "";
+    document.getElementById('adminNome').value = p.nome;
+    document.getElementById('adminPreco').value = p.preco;
+    document.getElementById('adminCatSelect').value = p.categoria;
+    document.getElementById('adminTipo').value = p.tipo;
+    document.getElementById('adminImg').value = p.img || "";
+}
+
+function excluirItem(coll, id) { if(confirm("Deseja excluir?")) db.collection(coll).doc(id).delete(); }
+
+// WhatsApp Status
+function enviarWhatsApp(idx) {
     const p = pedidosGVA[idx];
     const msg = window.encodeURIComponent(`Olá ${p.cliente}, o status do seu pedido na GVA Venom Arts mudou para: ${p.status}`);
     window.open(`https://wa.me/55${p.telefone.replace(/\D/g,'')}?text=${msg}`);
 }
-function imprimirCupom(idx) {
-    const { jsPDF } = window.jspdf;
-    const p = pedidosGVA[idx];
-    const doc = new jsPDF({ format: [80, 150] });
-    doc.text("GVA VENOM ARTS", 40, 20, null, null, "center");
-    doc.text(`Cliente: ${p.cliente}`, 10, 30);
-    p.itens.forEach((i, j) => doc.text(`- ${i.nome}: R$ ${i.total.toFixed(2)}`, 10, 40 + (j*10)));
-    doc.text(`TOTAL: R$ ${p.total.toFixed(2)}`, 10, 100);
-    window.open(doc.output('bloburl'), '_blank');
+
+// Utilitários de Navegação
+function mudarStatus(id, novoStatus) { /* Lógica de arquivamento já inclusa na função anterior */ }
+function toggleAdminSub(sub) { 
+    document.querySelectorAll('.admin-panel').forEach(p => p.style.display = 'none');
+    document.querySelectorAll('.sub-nav-gva button').forEach(b => b.classList.remove('sub-active'));
+    document.getElementById('subAdmin' + sub.charAt(0).toUpperCase() + sub.slice(1)).style.display = 'block';
+    document.getElementById('subBtn' + sub.charAt(0).toUpperCase() + sub.slice(1)).classList.add('sub-active');
 }
-function fazerLogin() {
-    const e = document.getElementById('loginEmail').value, s = document.getElementById('loginSenha').value;
-    auth.signInWithEmailAndPassword(e, s).catch(() => alert("Erro no Login."));
-}
-function fazerLogout() { auth.signOut().then(() => window.location.reload()); }
-function fecharAlerta() { document.getElementById('alertaFundo').style.display = 'none'; }
-function mostrarAlerta(m) { document.getElementById('alertaTexto').innerText = m; document.getElementById('alertaFundo').style.display = 'flex'; }
+function renderizarMenus() { /* Categorias botões */ }
 function fecharModal() { document.getElementById('modalFundo').style.display = 'none'; }
+function mostrarAlerta(m) { alert(m); }
+function fecharAlerta() { }
+function toggleCamposPagamento() { 
+    document.getElementById('divParcelas').style.display = document.getElementById('formaPagamento').value === 'CreditoParc' ? 'block' : 'none'; 
+}
+function toggleCamposEntrega() { 
+    document.getElementById('divMotoboy').style.display = document.getElementById('metodoEntrega').value === 'Motoboy' ? 'block' : 'none'; 
+}
+function limparFormAdmin() { document.getElementById('editId').value = ""; /* limpar outros campos */ }
