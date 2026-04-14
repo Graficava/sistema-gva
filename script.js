@@ -10,7 +10,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const auth = firebase.auth();
-const EMAIL_ADMIN = "admin@admin.com.br";
+const EMAIL_ADMIN = "contato@graficava.com.br";
 
 let bancoDeDados = [], pedidosGVA = [], carrinho = [], categorias = [], acabamentos = [];
 
