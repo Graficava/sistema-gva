@@ -1,74 +1,71 @@
-:root {
-    --gva-azul: #3E3B9F;
-    --gva-verde: #25D366;
-    --gva-bg: #F0F2F5;
-    --radius: 15px; /* Arredondamento premium */
-}
-
-body { margin: 0; font-family: 'Segoe UI', system-ui; background: var(--gva-bg); color: #333; }
+:root { --gva-azul: #3E3B9F; --radius: 15px; }
+body { margin: 0; font-family: 'Segoe UI', sans-serif; background: #F0F2F5; color: #333; overflow-x: hidden; }
 .app-wrapper { display: flex; min-height: 100vh; }
 
-/* SIDEBAR RESPONSIVA */
+/* SIDEBAR */
 .sidebar { width: 220px; background: var(--gva-azul); color: white; position: fixed; height: 100vh; display: flex; flex-direction: column; z-index: 1000; }
 .sidebar-logo { padding: 30px 20px; text-align: center; }
 .sidebar-logo img { width: 140px; }
-.sidebar-nav button { width: 90%; background: none; border: none; color: rgba(255,255,255,0.7); padding: 15px; text-align: left; cursor: pointer; border-radius: 12px; margin: 5px auto; font-weight: 500; transition: 0.3s; }
+.sidebar-nav button { width: 90%; background: none; border: none; color: rgba(255,255,255,0.7); padding: 15px; text-align: left; cursor: pointer; border-radius: 12px; margin: 5px auto; }
 .sidebar-nav button.active { background: white; color: var(--gva-azul); font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
 
-/* CONTEÚDO PRINCIPAL */
 .main-content { flex: 1; margin-left: 220px; display: flex; flex-direction: column; min-width: 0; }
-.top-header { background: white; padding: 20px 30px; border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center; }
+.top-header { background: white; padding: 20px 30px; border-bottom: 1px solid #ddd; }
 .content-wrapper { padding: 25px; flex: 1; }
 
-/* CARDS ARREDONDADOS */
+/* CARDS */
 .gva-card { background: white; border-radius: var(--radius); box-shadow: 0 4px 20px rgba(0,0,0,0.06); margin-bottom: 25px; border: 1px solid #eee; overflow: hidden; }
 .card-header { padding: 15px 20px; background: #fafafa; border-bottom: 1px solid #eee; font-weight: bold; color: var(--gva-azul); }
 .card-body { padding: 20px; }
 
-/* CATEGORIAS (MENU BOTÕES) */
-.cat-nav { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 15px; margin-bottom: 20px; scrollbar-width: none; }
-.cat-nav button { background: white; border: 1px solid #ddd; padding: 10px 22px; border-radius: 30px; white-space: nowrap; cursor: pointer; font-weight: 600; color: #666; transition: 0.3s; }
+/* CATEGORIAS */
+.cat-nav { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 15px; margin-bottom: 20px; }
+.cat-nav button { background: white; border: 1px solid #ddd; padding: 10px 22px; border-radius: 30px; white-space: nowrap; cursor: pointer; font-weight: 600; color: #666; }
 .cat-nav button.active { background: var(--gva-azul); color: white; border-color: var(--gva-azul); }
 
 /* GRID CATALOGO */
 .zap-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; }
 .zap-card { background: white; border-radius: var(--radius); overflow: hidden; border: 1px solid #eee; text-align: center; transition: 0.3s; }
-.zap-card:hover { transform: translateY(-5px); box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
 .zap-color-bg { width: 100%; height: 140px; background: var(--gva-azul); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; padding: 10px; box-sizing: border-box; }
 .zap-info { padding: 15px; }
 
-/* MODAIS CENTRALIZADOS (FIXO) */
-#modalFundo, #alertaFundo { 
-    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); 
-    z-index: 10000; align-items: center; justify-content: center; backdrop-filter: blur(4px);
-}
-#modalConteudo, #alertaCaixa { width: 90%; max-width: 450px; position: relative; animation: pop 0.3s ease-out; }
+/* ACABAMENTOS BONITOS */
+.acabamento-seletor { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.acabamento-seletor label { background: #f0f2f5; border: 2px solid #ddd; padding: 8px 18px; border-radius: 20px; cursor: pointer; font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 5px; }
+.acabamento-seletor input { display: none; }
+.acabamento-seletor label:has(input:checked) { background: var(--gva-azul); color: white; border-color: var(--gva-azul); box-shadow: 0 3px 8px rgba(0,0,0,0.2); }
+
+/* FINANCEIRO */
+.financeiro-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+.fin-box { padding: 20px; border-radius: 12px; color: white; }
+.fin-box.entries { background: #28a745; }
+.fin-box.exits { background: #dc3545; }
+.fin-box.total { background: var(--gva-azul); }
+
+/* BOTOES E FORMS */
+.gva-form-large input, .gva-form-large select, .gva-form-large textarea { width: 100%; padding: 14px; border: 1px solid #ddd; border-radius: 12px; margin-bottom: 15px; box-sizing: border-box; background: #fafafa; }
+.btn-gva { background: var(--gva-azul); color: white; border: none; padding: 12px 25px; border-radius: 30px; font-weight: bold; cursor: pointer; }
+.btn-success { background: #00a859; color: white; border: none; padding: 18px; border-radius: 12px; width: 100%; font-size: 18px; font-weight: bold; cursor: pointer; }
+
+/* MODAIS FIXOS NO CENTRO */
+#modalFundo, #alertaFundo { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 10000; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+#modalConteudo { width: 90%; max-width: 450px; animation: pop 0.3s ease-out; }
+
+/* TABELAS ADMIN */
+.wp-table { width: 100%; border-collapse: collapse; }
+.wp-table th { text-align: left; padding: 12px; background: #f8f9fa; font-size: 13px; border-bottom: 2px solid #eee; }
+.wp-table td { padding: 12px; border-bottom: 1px solid #eee; font-size: 14px; }
 
 @keyframes pop { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
 
-/* FORMULARIOS ESPAÇOSOS */
-.gva-form-large label { display: block; font-weight: 600; margin-bottom: 8px; font-size: 14px; }
-.gva-form-large input, .gva-form-large select, .gva-form-large textarea { 
-    width: 100%; padding: 14px; border: 1px solid #ddd; border-radius: 12px; margin-bottom: 15px; box-sizing: border-box; font-size: 15px; background: #fafafa;
-}
-.form-row { display: flex; gap: 15px; }
-.form-group { flex: 1; }
-
-/* BOTOES */
-.btn-gva { background: var(--gva-azul); color: white; border: none; padding: 12px 25px; border-radius: 30px; font-weight: bold; cursor: pointer; }
-.btn-success { background: #00a859; color: white; border: none; padding: 18px; border-radius: 12px; width: 100%; font-size: 18px; font-weight: bold; cursor: pointer; }
-.btn-wa { background: var(--gva-verde); color: white; border: none; padding: 8px 15px; border-radius: 10px; cursor: pointer; font-size: 12px; font-weight: bold; }
-
-/* RESPONSIVIDADE CELULAR */
 @media (max-width: 768px) {
     .sidebar { width: 100%; height: auto; position: relative; }
-    .sidebar-nav { display: flex; overflow-x: auto; padding: 5px; }
-    .sidebar-nav button { width: auto; white-space: nowrap; padding: 10px 15px; font-size: 12px; }
+    .sidebar-nav { display: flex; overflow-x: auto; }
     .main-content { margin-left: 0; }
-    .sidebar-logo, .nav-divider { display: none; }
-    .form-row { flex-direction: column; gap: 0; }
-    .flex-row { flex-direction: column; }
+    .form-row { flex-direction: column; }
 }
-
 .content { display: none; }
 .content.active { display: block; }
+.flex-row { display: flex; gap: 20px; }
+.flex-main { flex: 2; }
+.flex-side { flex: 1; }
