@@ -9,9 +9,11 @@
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
 </head>
 <body class="wp-body">
 
@@ -26,38 +28,29 @@
 
     <div class="wp-wrapper">
         <aside class="wp-sidebar">
-            <div class="wp-branding">
-                <img src="logo GVA br.png" alt="GVA Logo">
-            </div>
+            <div class="wp-branding"><img src="logo GVA br.png" alt="GVA"></div>
             <nav class="wp-menu">
                 <button id="btnCliente" class="active" onclick="mudarAba('cliente')"><i class="fa fa-th-large"></i> Produtos</button>
                 <button id="btnCarrinho" onclick="mudarAba('carrinho')"><i class="fa fa-shopping-cart"></i> Novo Orçamento</button>
                 <button id="btnLoja" onclick="mudarAba('loja')"><i class="fa fa-tasks"></i> Produção</button>
-                
                 <div class="aba-restrita" style="display:none;">
                     <div class="wp-separator">Gerenciamento</div>
                     <button id="btnCaixa" onclick="mudarAba('caixa')"><i class="fa fa-chart-line"></i> Financeiro</button>
                     <button id="btnAdmin" onclick="mudarAba('admin')"><i class="fa fa-cog"></i> Configurações</button>
                 </div>
             </nav>
-            <div class="wp-logout-area">
-                <button onclick="fazerLogout()"><i class="fa fa-power-off"></i> Sair</button>
-            </div>
+            <div class="wp-logout-area"><button onclick="fazerLogout()"><i class="fa fa-power-off"></i> Sair</button></div>
         </aside>
 
         <main class="wp-main">
             <header class="wp-topbar">
                 <h1 id="tituloPagina">Produtos</h1>
-                <div class="wp-topbar-right">
-                    <span>GVA Venom Arts | <b>Bruno</b></span>
-                </div>
+                <div class="wp-topbar-right"><span>GVA Venom Arts | <b>Admin</b></span></div>
             </header>
 
             <div class="wp-content">
                 <section id="abaCliente" class="content active">
-                    <div class="zap-search">
-                        <input type="text" id="buscaProduto" placeholder="O que você deseja produzir hoje?" oninput="filtrarProdutos()">
-                    </div>
+                    <div class="zap-search"><input type="text" id="buscaProduto" placeholder="O que vamos produzir hoje?" oninput="filtrarProdutos()"></div>
                     <div class="zap-grid" id="gradeCliente"></div>
                 </section>
 
@@ -65,7 +58,7 @@
                     <div class="wp-columns">
                         <div class="wp-col-main">
                             <div class="wp-box">
-                                <div class="wp-box-title">Itens Selecionados</div>
+                                <div class="wp-box-title">Itens do Pedido</div>
                                 <div id="listaCarrinho" class="wp-box-content">Selecione produtos no catálogo.</div>
                             </div>
                             <div class="wp-box">
@@ -81,7 +74,7 @@
                         </div>
                         <div class="wp-col-side">
                             <div class="wp-box">
-                                <div class="wp-box-title">Publicar Pedido</div>
+                                <div class="wp-box-title">Finalização</div>
                                 <div class="wp-box-content wp-summary">
                                     <p>Total: <b>R$ <span id="totalCarrinho">0,00</span></b></p>
                                     <p>Sinal: <input type="number" id="valorSinal" value="0" oninput="atualizarCarrinho()"></p>
@@ -95,15 +88,40 @@
                 </section>
 
                 <section id="abaAdmin" class="content">
-                    <div class="wp-box" style="max-width: 600px;">
-                        <div class="wp-box-title">Cadastrar Novo Produto</div>
+                    <div class="wp-sub-nav">
+                        <button class="sub-active" onclick="toggleAdminSub('novo')">Cadastrar Novo Produto</button>
+                        <button onclick="toggleAdminSub('lista')">Gerenciar Catálogo (Editar/Excluir)</button>
+                    </div>
+
+                    <div id="subAdminNovo" class="wp-box" style="max-width: 600px;">
+                        <div class="wp-box-title">Formulário de Produto</div>
                         <div class="wp-box-content wp-form">
+                            <input type="hidden" id="editId">
                             <label>Nome do Produto:</label><input type="text" id="adminNome">
-                            <label>Preço Base:</label><input type="number" id="adminPreco" step="0.01">
-                            <label>Link da Imagem (ZAP Style):</label><input type="text" id="adminImg">
+                            <label>Preço Base (R$):</label><input type="number" id="adminPreco" step="0.01">
+                            <label>Foto do Produto (Upload):</label>
+                            <input type="file" id="adminFile" accept="image/*" style="border:none; padding:10px 0;">
                             <label>Tipo de Cálculo:</label>
-                            <select id="adminTipo"><option value="unidade">Unidade</option><option value="m2">Metro Quadrado</option></select>
-                            <button class="wp-btn-blue" onclick="salvarNovoProduto()">Salvar no Banco</button>
+                            <select id="adminTipo">
+                                <option value="unidade">Unidade (Fixo)</option>
+                                <option value="m2">Metro Quadrado (Área)</option>
+                                <option value="folha">Por Página (Apostila)</option>
+                            </select>
+                            <label>Categoria:</label>
+                            <select id="adminCategoria">
+                                <option>Papelaria</option><option>Comunicação Visual</option><option>Brindes</option><option>Serviços</option>
+                            </select>
+                            <button id="btnSalvarProduto" class="wp-btn-blue" onclick="salvarNovoProduto()">Cadastrar Produto</button>
+                        </div>
+                    </div>
+
+                    <div id="subAdminLista" class="wp-box" style="display:none;">
+                        <div class="wp-box-title">Produtos Cadastrados</div>
+                        <div class="wp-box-content">
+                            <table class="wp-table">
+                                <thead><tr><th>Imagem</th><th>Nome</th><th>Preço</th><th>Ações</th></tr></thead>
+                                <tbody id="tabelaProdutosAdmin"></tbody>
+                            </table>
                         </div>
                     </div>
                 </section>
