@@ -28,26 +28,78 @@ auth.onAuthStateChanged(user => {
 });
 
 function iniciarSincronizacao() {
+    // Sincroniza Categorias (Lida com o Menu, a Lista Admin e o Select de Produtos)
     db.collection("categorias").onSnapshot(snap => {
         categorias = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        renderizarMenus();
+        renderizarMenus(); // Botões do Catálogo
+        renderizarListaCategorias(); // Tabela no Admin
+        
+        // Atualiza o seletor (dropdown) dentro do cadastro de produtos
         const sel = document.getElementById('adminCatSelect');
-        if(sel) sel.innerHTML = categorias.map(c => `<option>${c.nome}</option>`).join('');
+        if(sel) {
+            sel.innerHTML = categorias.map(c => `<option value="${c.nome}">${c.nome}</option>`).join('');
+        }
     });
+
     db.collection("acabamentos").onSnapshot(snap => {
         acabamentos = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         renderizarListaAcabamentos();
     });
+
     db.collection("catalogo").onSnapshot(snap => {
         bancoDeDados = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         carregarProdutos();
         renderizarListaAdmin();
     });
+
     db.collection("pedidos").orderBy("dataCriacao", "desc").onSnapshot(snap => {
         pedidosGVA = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         atualizarProducao();
         calcularFinanceiro();
     });
+}
+
+// 2. RENDERIZAR CATEGORIAS NO ADMIN (Aparecer na lista para Editar/Excluir)
+function renderizarListaCategorias() {
+    const div = document.getElementById('listaGerenciarCategorias');
+    if(!div) return;
+    
+    if(categorias.length === 0) {
+        div.innerHTML = "<p style='font-size:13px; color:#999;'>Nenhuma categoria cadastrada.</p>";
+        return;
+    }
+
+    div.innerHTML = `
+        <table class="wp-table">
+            <thead>
+                <tr>
+                    <th>Nome da Categoria</th>
+                    <th style="text-align:right;">Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${categorias.map(c => `
+                    <tr>
+                        <td><b>${c.nome}</b></td>
+                        <td style="text-align:right;">
+                            <button class="btn-mini" onclick="editarCategoria('${c.id}')" style="background:#e1ecf4; color:#3E3B9F; border:none; padding:5px 10px; border-radius:5px; cursor:pointer; font-weight:bold; margin-right:5px;">Editar</button>
+                            <button class="btn-mini" onclick="excluirItem('categorias', '${c.id}')" style="background:#fbeaea; color:#d63638; border:none; padding:5px 10px; border-radius:5px; cursor:pointer; font-weight:bold;">Excluir</button>
+                        </td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>`;
+}
+
+// 3. FUNÇÃO PARA EDITAR CATEGORIA (Subir para o campo)
+function editarCategoria(id) {
+    const c = categorias.find(i => i.id === id);
+    if(c) {
+        document.getElementById('editCatId').value = c.id;
+        document.getElementById('catNome').value = c.nome;
+        document.getElementById('btnSalvarCat').innerText = "Atualizar Categoria";
+        window.scrollTo(0,0); // Sobe a tela para o formulário
+    }
 }
 
 // CATALOGO E FILTRO DE CATEGORIA
