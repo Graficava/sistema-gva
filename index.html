@@ -26,13 +26,13 @@
         <aside class="sidebar">
             <div class="sidebar-logo"><img src="logo GVA br.png" alt="GVA"></div>
             <nav class="sidebar-nav">
-                <button id="btnCliente" class="active" onclick="mudarAba('cliente')"><i class="fa fa-th-large"></i> Catálogo</button>
-                <button id="btnCarrinho" onclick="mudarAba('carrinho')"><i class="fa fa-shopping-cart"></i> Orçamento</button>
+                <button id="btnCliente" class="active" onclick="mudarAba('cliente')"><i class="fa fa-th-large"></i> Catálogo W2P</button>
+                <button id="btnCarrinho" onclick="mudarAba('carrinho')"><i class="fa fa-shopping-cart"></i> Pedidos</button>
                 <button id="btnLoja" onclick="mudarAba('loja')"><i class="fa fa-tasks"></i> Produção</button>
                 <div class="aba-restrita" style="display:none;">
                     <div class="nav-divider">Gerenciamento</div>
                     <button id="btnCaixa" onclick="mudarAba('caixa')"><i class="fa fa-chart-line"></i> Financeiro</button>
-                    <button id="btnAdmin" onclick="mudarAba('admin')"><i class="fa fa-cog"></i> Configurações</button>
+                    <button id="btnAdmin" onclick="mudarAba('admin')"><i class="fa fa-cog"></i> Banco de Dados</button>
                 </div>
             </nav>
             <div class="sidebar-footer"><button onclick="fazerLogout()" class="btn-sair">Sair</button></div>
@@ -40,14 +40,14 @@
 
         <main class="main-content">
             <header class="top-header">
-                <h1 id="tituloPagina">Catálogo</h1>
+                <h1 id="tituloPagina">Catálogo Web2Print</h1>
                 <div class="header-info">GVA • Gráfica Venom Arts</div>
             </header>
 
             <div class="content-wrapper">
                 
                 <section id="abaCliente" class="content active">
-                    <div class="search-container"><input type="text" id="buscaProduto" placeholder="Pesquisar..." oninput="filtrarProdutos()"></div>
+                    <div class="search-container"><input type="text" id="buscaProduto" placeholder="Pesquisar produtos..." oninput="filtrarProdutos()"></div>
                     <div class="cat-nav" id="menuCategorias"></div>
                     <div class="zap-grid" id="gradeCliente"></div>
                 </section>
@@ -71,7 +71,6 @@
                                         <div class="form-group"><label>WhatsApp:</label><input type="tel" id="telCliente"></div>
                                     </div>
                                     <input type="text" id="endCliente" placeholder="Endereço de Entrega">
-                                    <input type="text" id="cepCliente" placeholder="CEP">
                                 </div>
                             </div>
                         </div>
@@ -81,21 +80,20 @@
                                 <div class="card-body gva-form-large">
                                     <label>Pagamento:</label>
                                     <select id="formaPagamento" onchange="toggleCamposPagamento()">
-                                        <option value="Pix">Pix</option><option value="Dinheiro">Dinheiro</option><option value="Débito">Débito</option>
+                                        <option value="Pix">Pix</option><option value="Dinheiro">Dinheiro</option>
                                         <option value="Credito">Crédito à Vista</option><option value="CreditoParc">Crédito Parcelado</option>
                                     </select>
-                                    <div id="divParcelas" style="display:none;"><label>Parcelas:</label><select id="qtdParcelas"><option>2x</option><option>3x</option><option>4x</option><option>5x</option><option>6x</option><option>10x</option><option>12x</option></select></div>
+                                    <div id="divParcelas" style="display:none;"><label>Parcelas:</label><select id="qtdParcelas"><option>2x</option><option>3x</option><option>4x</option><option>6x</option><option>12x</option></select></div>
                                     <label style="margin-top:10px;">Entrega:</label>
                                     <select id="metodoEntrega" onchange="toggleCamposEntrega()">
                                         <option value="Retirada">Retirada na Loja</option><option value="Motoboy">Motoboy</option>
                                     </select>
                                     <div id="divMotoboy" style="display:none;"><label>Taxa (R$):</label><input type="number" id="valorMotoboy" value="0" step="0.01" oninput="atualizarCarrinho()"></div>
                                     <hr>
-                                    <p>Total: <b>R$ <span id="totalCarrinho">0,00</span></b></p>
+                                    <p style="font-size:18px;">Total: <b>R$ <span id="totalCarrinho">0.00</span></b></p>
                                     <label>Sinal Pago (R$):</label><input type="number" id="valorSinal" value="0" step="0.01" oninput="atualizarCarrinho()">
-                                    <p style="color:red; font-weight:bold;">A Pagar: R$ <span id="restanteCarrinho">0,00</span></p>
-                                    <label>Previsão:</label><input type="date" id="dataEntrega">
-                                    <button class="btn-success" onclick="enviarPedido()">Finalizar e Produzir</button>
+                                    <p style="color:var(--gva-azul); font-weight:bold;">A Pagar: R$ <span id="restanteCarrinho">0.00</span></p>
+                                    <button class="btn-success" onclick="enviarPedido()">Finalizar Pedido</button>
                                 </div>
                             </div>
                         </div>
@@ -107,14 +105,10 @@
                         <div class="card-header">Financeiro</div>
                         <div class="card-body">
                             <div class="financeiro-grid">
-                                <div class="fin-box entries"><h4>Faturamento</h4><p>R$ <span id="finFaturamento">0,00</span></p></div>
-                                <div class="fin-box extra-in"><h4>Entradas Avulsas</h4><p>R$ <span id="finEntradas">0,00</span></p></div>
-                                <div class="fin-box exits"><h4>Saídas</h4><p>R$ <span id="finSaidas">0,00</span></p></div>
-                                <div class="fin-box total"><h4>Saldo Líquido</h4><p>R$ <span id="finSaldo">0,00</span></p></div>
-                            </div>
-                            <div style="display:flex; gap:10px; margin-top:20px;">
-                                <button class="btn-gva" onclick="abrirLancamento('entrada')" style="background:#28a745;">+ Entrada</button>
-                                <button class="btn-gva" onclick="abrirLancamento('saida')" style="background:#dc3545;">- Saída</button>
+                                <div class="fin-box entries"><h4>Vendas</h4><p>R$ <span id="finFaturamento">0.00</span></p></div>
+                                <div class="fin-box extra-in"><h4>Entradas</h4><p>R$ <span id="finEntradas">0.00</span></p></div>
+                                <div class="fin-box exits"><h4>Saídas</h4><p>R$ <span id="finSaidas">0.00</span></p></div>
+                                <div class="fin-box total"><h4>Caixa</h4><p>R$ <span id="finSaldo">0.00</span></p></div>
                             </div>
                         </div>
                     </div>
@@ -123,7 +117,7 @@
                 <section id="abaAdmin" class="content">
                     <div class="sub-nav-gva">
                         <button id="subBtnProdutos" class="sub-active" onclick="toggleAdminSub('produtos')">Produtos</button>
-                        <button id="subBtnAcabamentos" onclick="toggleAdminSub('acabamentos')">Acabamentos/Variações</button>
+                        <button id="subBtnAcabamentos" onclick="toggleAdminSub('acabamentos')">Variações e Valores</button>
                         <button id="subBtnMenus" onclick="toggleAdminSub('menus')">Categorias</button>
                     </div>
 
@@ -132,62 +126,62 @@
                             <input type="hidden" id="editId">
                             <div class="form-row">
                                 <div class="form-group"><label>SKU:</label><input type="text" id="adminSku"></div>
-                                <div class="form-group" style="flex:2;"><label>Nome do Produto:</label><input type="text" id="adminNome"></div>
+                                <div class="form-group" style="flex:2;"><label>Produto Base:</label><input type="text" id="adminNome"></div>
                                 <div class="form-group"><label>R$ Base:</label><input type="number" id="adminPreco" step="0.01" value="0"></div>
                             </div>
                             <div class="form-row">
                                 <div class="form-group"><label>Categoria:</label><select id="adminCatSelect"></select></div>
-                                <div class="form-group"><label>Qtds Fixas (Ex: 10,50,100):</label><input type="text" id="adminQtdsFixas" placeholder="Vazio = Livre"></div>
+                                <div class="form-group"><label>Qtds Fixas de Venda (Ex: 10,50,100):</label><input type="text" id="adminQtdsFixas" placeholder="Vazio = Qtd Livre"></div>
                             </div>
                             <div class="form-row">
-                                <div class="form-group"><label>Escalonado Produto Base (Ex: 10:8.50, 50:7.00):</label><input type="text" id="adminEscalonado" placeholder="Qtd:Preço"></div>
-                                <div class="form-group"><label>Regra do Produto Base:</label>
+                                <div class="form-group"><label>Regra do Produto:</label>
                                     <select id="adminTipo">
-                                        <option value="unidade">Por Unidade</option>
-                                        <option value="folha">Apostilas/Livros (Páginas)</option>
+                                        <option value="unidade">Por Unidade Fechada (Ex: Canecas, Cartões)</option>
+                                        <option value="folha">Páginas Dinâmicas (Apostilas, Manuais)</option>
                                         <option value="m_linear">Metro Linear (Lonas)</option>
-                                        <option value="m2">Metro Quadrado (Lonas)</option>
+                                        <option value="m2">Metro Quadrado (Lonas, Adesivos)</option>
                                     </select>
                                 </div>
+                                <div class="form-group"><label>URL da Imagem:</label><input type="text" id="adminImg"></div>
                             </div>
-                            <input type="text" id="adminImg" placeholder="URL da Imagem do Produto">
                             <button id="btnSalvarProd" class="btn-gva" onclick="salvarNovoProduto()">Salvar Produto</button>
                         </div></div>
-                        <div class="gva-card"><div class="card-header">Gerenciar Produtos</div><div id="listaGerenciarProdutos" class="card-body"></div></div>
+                        <div class="gva-card"><div class="card-header">Produtos Ativos</div><div id="listaGerenciarProdutos" class="card-body"></div></div>
                     </div>
 
                     <div id="subAdminAcabamentos" class="admin-panel" style="display:none;">
                         <div class="gva-card"><div class="card-body gva-form-large">
                             <input type="hidden" id="editAcabId">
                             <div class="form-row">
-                                <div class="form-group"><label>Nome da Variação (Ex: Impressão Frente):</label><input type="text" id="acabNome"></div>
-                                <div class="form-group"><label>Valor (Fixo ou Escalonado Ex: 1:1.00, 100:0.60):</label><input type="text" id="acabPreco" placeholder="Ex: 15.00 ou 1:1.00, 100:0.60"></div>
+                                <div class="form-group"><label>Opção (Ex: Impressão Frente e Verso):</label><input type="text" id="acabNome"></div>
+                                <div class="form-group"><label>Preço Fixo ou Escalonado (Ex: 1:1.00, 100:0.80):</label><input type="text" id="acabPreco"></div>
                             </div>
                             <div class="form-row">
-                                <div class="form-group"><label>Vínculo Categoria:</label><select id="acabCatVinculo"></select></div>
-                                <div class="form-group"><label>Grupo Menu (Ex: Tipo de Impressão):</label><input type="text" id="acabGrupo" placeholder="Vazio = Checkbox opcional"></div>
+                                <div class="form-group"><label>Aparece em qual categoria?</label><select id="acabCatVinculo"></select></div>
+                                <div class="form-group"><label>Agrupar no Menu (Ex: Tipo de Impressão):</label><input type="text" id="acabGrupo" placeholder="Vazio = Opcional solto"></div>
                             </div>
-                            <div class="form-group"><label>Como o sistema deve cobrar isso?</label>
+                            <div class="form-group"><label>Lógica Matemática da Variação:</label>
                                 <select id="acabMultiplicador">
-                                    <option value="por_pagina">Multiplicar pelo Total de Páginas (Ex: Custo de Tinta/Impressão)</option>
-                                    <option value="por_folha">Multiplicar por Folhas Físicas (Ex: Custo do Papel do Miolo)</option>
-                                    <option value="encadernacao">Ler a Espessura (Folhas), mas cobrar 1x por Apostila (Ex: Espiral, Capa)</option>
-                                    <option value="unidade_simples">Fixo por Unidade / Volume (Ex: Laminação, Arte)</option>
-                                    <option value="area_m2">Multiplicar por Área M² / M.Linear</option>
+                                    <option value="cobrar_paginas_frente">Volume: Multiplicar pelas Páginas [SÓ FRENTE]</option>
+                                    <option value="cobrar_paginas_verso">Volume: Multiplicar pelas Páginas [FRENTE E VERSO - Divide folhas por 2]</option>
+                                    <option value="cobrar_folhas">Volume: Multiplicar pelas Folhas Físicas (Ex: Papel Especial)</option>
+                                    <option value="cobrar_fixo">Consultar Escalonado, mas cobrar 1x por Unidade (Ex: Encadernação, Capa)</option>
+                                    <option value="cobrar_area">Volume: Multiplicar por Área M² / M.Linear</option>
+                                    <option value="unidade_simples">Fixo: Multiplicar apenas pelas Cópias Finais do Produto</option>
                                 </select>
                             </div>
                             <button id="btnSalvarAcab" class="btn-gva" onclick="salvarAcabamento()">Salvar Variação</button>
                         </div></div>
-                        <div class="gva-card"><div class="card-header">Gerenciar Acabamentos / Variações</div><div id="listaGerenciarAcabamentos" class="card-body"></div></div>
+                        <div class="gva-card"><div class="card-header">Variações Ativas</div><div id="listaGerenciarAcabamentos" class="card-body"></div></div>
                     </div>
 
                     <div id="subAdminMenus" class="admin-panel" style="display:none;">
                         <div class="gva-card"><div class="card-body gva-form-large">
                             <input type="hidden" id="editCatId">
-                            <input type="text" id="catNome" placeholder="Nome da Categoria">
-                            <button id="btnSalvarCat" class="btn-gva" onclick="salvarCategoria()">Salvar Categoria</button>
+                            <input type="text" id="catNome" placeholder="Nova Categoria">
+                            <button id="btnSalvarCat" class="btn-gva" onclick="salvarCategoria()">Salvar</button>
                         </div></div>
-                        <div class="gva-card"><div class="card-header">Gerenciar Categorias</div><div id="listaGerenciarCategorias" class="card-body"></div></div>
+                        <div class="gva-card"><div class="card-header">Categorias</div><div id="listaGerenciarCategorias" class="card-body"></div></div>
                     </div>
                 </section>
 
