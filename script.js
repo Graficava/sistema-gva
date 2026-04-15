@@ -67,15 +67,21 @@ function carregarProdutos(lista = bancoDeDados) {
     const grade = document.getElementById('gradeCliente');
     if(!grade) return; grade.innerHTML = '';
     lista.forEach(p => {
-        let imgHtml = p.img ? `<img src="${p.img}">` : `SKU: ${p.sku || '--'}`;
-        grade.innerHTML += `<div class="zap-card"><div class="zap-color-bg">${imgHtml}</div>
-            <div class="zap-info"><h4>${p.nome}</h4><p style="color:var(--gva-azul); font-weight:bold;">Orçamento Online</p>
-            <button class="btn-gva" style="width:100%" onclick="abrirConfigurador('${p.id}')">Configurar</button></div></div>`;
+        let imgHtml = p.img ? `<img src="${p.img}">` : `<div style="color:#A0AEC0; font-size:40px;"><i class="fa fa-image"></i></div>`;
+        grade.innerHTML += `
+            <div class="zap-card" onclick="abrirConfigurador('${p.id}')">
+                <div class="zap-color-bg">${imgHtml}</div>
+                <div class="zap-info">
+                    <h4>${p.nome}</h4>
+                    <p>A partir de R$ ${parseFloat(p.preco || 0).toFixed(2)}</p>
+                    <button class="btn-gva" style="width:100%">Configurar</button>
+                </div>
+            </div>`;
     });
 }
 
 // ---------------------------------------------------------
-// MOTOR MATEMÁTICO: LÊ PREÇOS ESCALONADOS
+// MOTOR MATEMÁTICO DE ESCALONAMENTO
 // ---------------------------------------------------------
 function getPrecoReal(precoStr, qtdComparacao) {
     if(!precoStr) return 0;
@@ -92,54 +98,59 @@ function getPrecoReal(precoStr, qtdComparacao) {
 }
 
 // ---------------------------------------------------------
-// CONFIGURADOR WEB2PRINT (VISUAL)
+// UI: MODAL WEB2PRINT PREMIUM
 // ---------------------------------------------------------
 function abrirConfigurador(id) {
     const p = bancoDeDados.find(item => item.id === id);
-    let imgSrc = p.img ? p.img : 'logo GVA azul.png';
+    let imgSrc = p.img ? `<img src="${p.img}">` : `<div style="padding:100px; color:#CBD5E0; font-size:80px; text-align:center;"><i class="fa fa-file-alt"></i></div>`;
     
     let html = `
-        <div class="w2p-header"><h2>Configurar: ${p.nome}</h2><button class="btn-close" onclick="fecharModal()">X</button></div>
+        <div class="w2p-header">
+            <h2>${p.nome}</h2>
+            <button class="btn-close" onclick="fecharModal()"><i class="fa fa-times"></i></button>
+        </div>
         <div class="w2p-body">
-            <div class="w2p-left"><img src="${imgSrc}"></div>
+            <div class="w2p-left">
+                ${imgSrc}
+                <div id="infoFolhas" style="display:none; width:100%;"></div>
+            </div>
             <div class="w2p-right gva-form-large">
     `;
     
+    // FORMATO DO PRODUTO (Páginas, Metragem ou Qtd)
     if(p.tipo === 'folha') {
-        html += `<div class="form-row">
-                    <div class="form-group"><label>Nº de Páginas (por arquivo/cópia):</label><input type="number" id="cfgPaginas" value="1" min="1" oninput="atualizarPrecoAoVivo('${p.id}')"></div>`;
+        html += `<div class="w2p-section-title">Estrutura do Arquivo</div>
+                 <div class="form-row">
+                    <div class="form-group">
+                        <label>Páginas (No PDF):</label>
+                        <input type="number" id="cfgPaginas" value="1" min="1" oninput="atualizarPrecoAoVivo('${p.id}')">
+                    </div>`;
         if(p.qtdsFixas) {
-            html += `<div class="form-group"><label>Qtd de Cópias/Livros:</label><div class="qty-btns">`;
+            html += `<div class="form-group"><label>Tiragem (Cópias):</label><div class="qty-btns">`;
             p.qtdsFixas.split(',').forEach(q => { html += `<button class="btn-qty" onclick="selecionarQtd(this, ${q.trim()}, '${p.id}')">${q.trim()}</button>`; });
             html += `</div><input type="hidden" id="cfgQ" value="0"></div></div>`;
         } else {
-            html += `<div class="form-group"><label>Qtd de Cópias/Livros:</label><input type="number" id="cfgQ" value="1" min="1" oninput="atualizarPrecoAoVivo('${p.id}')"></div></div>`;
+            html += `<div class="form-group"><label>Tiragem (Cópias):</label><input type="number" id="cfgQ" value="1" min="1" oninput="atualizarPrecoAoVivo('${p.id}')"></div></div>`;
         }
-        
-        // CHAVE DE OURO: CAIXA DO FRENTE E VERSO
-        html += `<label class="box-frente-verso">
-                    <input type="checkbox" id="cfgFrenteVerso" onchange="atualizarPrecoAoVivo('${p.id}')" style="width:20px; height:20px;">
-                    Imprimir Frente e Verso (Reduz em 50% o gasto de papel e barateia a encadernação)
-                 </label>
-                 <div id="infoFolhas" class="info-folhas" style="display:none;"></div>`;
-
     } else if(p.tipo === 'm_linear' || p.tipo === 'm2') {
-        const maxL = p.tipo === 'm_linear' ? 1.50 : 3.10;
-        html += `<div class="form-row">
-                    <div class="form-group"><label>Largura (Máx ${maxL}m):</label><input type="number" id="cfgL" value="1.00" step="0.01" oninput="atualizarPrecoAoVivo('${p.id}')"></div>
+        html += `<div class="w2p-section-title">Dimensões e Tiragem</div>
+                 <div class="form-row">
+                    <div class="form-group"><label>Largura (m):</label><input type="number" id="cfgL" value="1.00" step="0.01" oninput="atualizarPrecoAoVivo('${p.id}')"></div>
                     <div class="form-group"><label>Altura (m):</label><input type="number" id="cfgA" value="1.00" step="0.01" oninput="atualizarPrecoAoVivo('${p.id}')"></div>
                  </div>
                  <label>Quantidade:</label><input type="number" id="cfgQ" value="1" min="1" oninput="atualizarPrecoAoVivo('${p.id}')">`;
     } else {
+        html += `<div class="w2p-section-title">Tiragem</div>`;
         if(p.qtdsFixas) {
-            html += `<label>Quantidade:</label><div class="qty-btns">`;
+            html += `<div class="qty-btns">`;
             p.qtdsFixas.split(',').forEach(q => { html += `<button class="btn-qty" onclick="selecionarQtd(this, ${q.trim()}, '${p.id}')">${q.trim()}</button>`; });
             html += `</div><input type="hidden" id="cfgQ" value="0">`;
         } else {
-            html += `<label>Quantidade:</label><input type="number" id="cfgQ" value="1" min="1" oninput="atualizarPrecoAoVivo('${p.id}')">`;
+            html += `<input type="number" id="cfgQ" value="1" min="1" oninput="atualizarPrecoAoVivo('${p.id}')">`;
         }
     }
 
+    // VARIAÇÕES E ACABAMENTOS
     const acabFiltrados = acabamentos.filter(a => a.vinculo === p.categoria || a.vinculo === 'Geral');
     const grupos = {}; const avulsos = [];
     
@@ -149,28 +160,35 @@ function abrirConfigurador(id) {
         } else { avulsos.push(a); }
     });
 
+    if(Object.keys(grupos).length > 0 || avulsos.length > 0) {
+        html += `<div class="w2p-section-title">Personalização</div>`;
+    }
+
     for (const nomeGrupo in grupos) {
-        html += `<label style="margin-top:10px; font-weight:bold;">${nomeGrupo}:</label>
+        html += `<label>${nomeGrupo}</label>
                  <select class="grupo-var-select check-grupo" onchange="atualizarPrecoAoVivo('${p.id}')">
-                    <option value="" data-preco="0" data-mult="unidade_simples">Selecione...</option>`;
+                    <option value="" data-preco="0" data-mult="unidade_simples">Selecione uma opção...</option>`;
         grupos[nomeGrupo].forEach(op => {
-            html += `<option value="${nomeGrupo}: ${op.nome}" data-preco="${op.preco}" data-mult="${op.multiplicador || 'unidade_simples'}">${op.nome}</option>`;
+            html += `<option value="${nomeGrupo}: ${op.nome}" data-preco="${op.preco}" data-mult="${op.multiplicador}">${op.nome}</option>`;
         });
         html += `</select>`;
     }
 
     if(avulsos.length > 0) {
-        html += `<label style="margin-top:15px; font-weight:bold;">Opcionais Extras:</label><div class="acabamento-seletor">`;
+        html += `<label style="margin-top:15px;">Serviços Extras</label><div class="acabamento-seletor">`;
         avulsos.forEach(a => {
-            html += `<label><input type="checkbox" class="check-acab" data-preco="${a.preco}" data-mult="${a.multiplicador || 'unidade_simples'}" value="${a.nome}" onchange="atualizarPrecoAoVivo('${p.id}')"> ${a.nome}</label>`;
+            html += `<label><input type="checkbox" class="check-acab" data-preco="${a.preco}" data-mult="${a.multiplicador}" value="${a.nome}" onchange="atualizarPrecoAoVivo('${p.id}')"> ${a.nome}</label>`;
         });
         html += `</div>`;
     }
 
     html += `</div></div>
              <div class="w2p-footer">
-                <div class="w2p-price">Subtotal: R$ <span id="previewSubtotal">0.00</span></div>
-                <button class="btn-success" style="width:auto; padding:15px 40px;" onclick="confirmarCarrinho('${p.id}')">Adicionar ao Carrinho</button>
+                <div>
+                    <div class="w2p-price-label">Valor Total</div>
+                    <div class="w2p-price">R$ <span id="previewSubtotal">0.00</span></div>
+                </div>
+                <button class="btn-success" onclick="confirmarCarrinho('${p.id}')"><i class="fa fa-shopping-cart"></i> Adicionar ao Carrinho</button>
              </div>`;
     
     document.getElementById('modalConteudo').innerHTML = html;
@@ -186,33 +204,39 @@ function selecionarQtd(btn, valor, idProduto) {
 }
 
 // ---------------------------------------------------------
-// CÁLCULO AO VIVO (COM INTELIGÊNCIA IMPRIFACIL)
+// INTELIGÊNCIA DE CÁLCULO (O MOTOR)
 // ---------------------------------------------------------
 function atualizarPrecoAoVivo(id) {
     const p = bancoDeDados.find(item => item.id === id);
     let qtdCopias = parseFloat(document.getElementById('cfgQ')?.value || 1);
     let numPaginas = parseFloat(document.getElementById('cfgPaginas')?.value || 1);
     
-    let isFrenteVerso = document.getElementById('cfgFrenteVerso') ? document.getElementById('cfgFrenteVerso').checked : false;
+    // 1. O sistema caça se alguma opção selecionada é "Frente e Verso"
+    let isFrenteVerso = false;
+    document.querySelectorAll('.check-grupo, .check-acab:checked').forEach(el => {
+        let opt = el.options ? el.options[el.selectedIndex] : el;
+        if(opt && opt.getAttribute('data-mult') === 'cobrar_paginas_verso') isFrenteVerso = true;
+    });
+
     let folhasFisicas = isFrenteVerso ? Math.ceil(numPaginas / 2) : numPaginas;
 
-    // Mostra as folhas na tela
+    // Atualiza info de folhas na UI
     const divFolhas = document.getElementById('infoFolhas');
     if(divFolhas && p.tipo === 'folha') {
-        divFolhas.style.display = 'block';
-        divFolhas.innerHTML = `<i class="fa fa-info-circle"></i> O arquivo usará <b>${folhasFisicas} folha(s) física(s)</b> de papel por cópia.`;
+        divFolhas.style.display = 'flex';
+        divFolhas.innerHTML = `<i class="fa fa-layer-group" style="font-size:20px;"></i> <div><b>${folhasFisicas} Folhas Físicas</b><br><small>Utilizadas por cópia montada.</small></div>`;
     }
 
-    // 1. Preço Base (Apostilas geralmente tem preço base 0, pois o preço vem da impressão/papel)
+    // 2. Cálculo do Produto Base (Se houver)
     let precoBaseOpt = getPrecoReal(p.escalonado || p.preco, qtdCopias);
     let multiplicadorBase = 1;
-    if(p.tipo === 'folha') multiplicadorBase = numPaginas;
+    if(p.tipo === 'folha') multiplicadorBase = numPaginas; // Se a gráfica cobra o produto base por pág.
     else if(p.tipo === 'm_linear' || p.tipo === 'm2') {
         multiplicadorBase = (parseFloat(document.getElementById('cfgL')?.value || 1) * parseFloat(document.getElementById('cfgA')?.value || 1));
     }
     let subtotalCopia = precoBaseOpt * multiplicadorBase;
 
-    // 2. Somar Variações usando as Regras de Cobrança
+    // 3. Somar Variações usando as Regras de Cobrança Matemáticas
     document.querySelectorAll('.check-grupo, .check-acab:checked').forEach(el => {
         let opt = el.options ? el.options[el.selectedIndex] : el;
         if(!opt || !opt.value) return;
@@ -221,31 +245,31 @@ function atualizarPrecoAoVivo(id) {
         let tipoMult = opt.getAttribute('data-mult');
         let valorDaOpcao = 0;
 
-        if(tipoMult === 'por_pagina') {
-            // Tinta: Calcula baseado no Total de Páginas e cobra por página
+        if(tipoMult === 'cobrar_paginas_frente' || tipoMult === 'cobrar_paginas_verso') {
+            // Tinta: Calcula baseado no Total de Páginas no PDF
             valorDaOpcao = getPrecoReal(precoStr, numPaginas) * numPaginas;
         } 
-        else if(tipoMult === 'por_folha') {
-            // Papel: Calcula baseado nas Folhas Físicas e cobra por Folha
+        else if(tipoMult === 'cobrar_folhas') {
+            // Papel do Miolo: Calcula baseado nas Folhas Físicas
             valorDaOpcao = getPrecoReal(precoStr, folhasFisicas) * folhasFisicas;
         } 
-        else if(tipoMult === 'encadernacao') {
-            // Espiral: Olha a espessura (folhas), mas cobra 1 VEZ por cópia.
+        else if(tipoMult === 'cobrar_fixo') {
+            // Encadernação: Olha a espessura (folhas), acha o preço na tabela, cobra 1 VEZ.
             valorDaOpcao = getPrecoReal(precoStr, folhasFisicas) * 1;
         } 
-        else if(tipoMult === 'area_m2') {
+        else if(tipoMult === 'cobrar_area') {
+            // Adesivos/Lonas Extras
             let area = (parseFloat(document.getElementById('cfgL')?.value || 1) * parseFloat(document.getElementById('cfgA')?.value || 1));
             valorDaOpcao = getPrecoReal(precoStr, qtdCopias) * area;
         } 
         else {
-            // unidade_simples: Ex Capa Dura. Valor fixo por cópia.
+            // unidade_simples: Fixo por unidade (Ex: Laminação)
             valorDaOpcao = getPrecoReal(precoStr, qtdCopias) * 1;
         }
         
         subtotalCopia += valorDaOpcao;
     });
 
-    // 3. Multiplica o preço da "Cópia Montada" pela quantidade que o cliente quer
     let totalFinal = subtotalCopia * qtdCopias;
     document.getElementById('previewSubtotal').innerText = totalFinal.toFixed(2);
 }
@@ -255,12 +279,11 @@ function confirmarCarrinho(id) {
     const subtotalReal = parseFloat(document.getElementById('previewSubtotal').innerText);
     let det = "", qtdCopias = parseFloat(document.getElementById('cfgQ')?.value || 0);
 
-    if(p.qtdsFixas && qtdCopias === 0) return alert("Selecione uma quantidade nas opções!");
+    if(p.qtdsFixas && qtdCopias === 0) return alert("Selecione uma tiragem válida!");
 
     if(p.tipo === 'folha') {
         let pags = document.getElementById('cfgPaginas').value;
-        let fv = document.getElementById('cfgFrenteVerso').checked ? "(Frente/Verso)" : "(Só Frente)";
-        det = `${qtdCopias} un de ${pags} págs ${fv}`;
+        det = `${qtdCopias} un de ${pags} págs`;
     } else if(p.tipo === 'm_linear' || p.tipo === 'm2') {
         let l = document.getElementById('cfgL').value, a = document.getElementById('cfgA').value;
         det = `${qtdCopias} un (${l}x${a}m)`;
@@ -277,15 +300,12 @@ function confirmarCarrinho(id) {
     fecharModal(); atualizarCarrinho();
 }
 
-// ---------------------------------------------------------
-// ROTINAS DE FINALIZAÇÃO E PRODUÇÃO
-// ---------------------------------------------------------
 function atualizarCarrinho() {
     const div = document.getElementById('listaCarrinho');
     let m = parseFloat(document.getElementById('valorMotoboy').value) || 0;
     let t = carrinho.reduce((acc, i) => acc + i.total, 0) + m;
     let s = parseFloat(document.getElementById('valorSinal').value) || 0;
-    div.innerHTML = carrinho.map((i, idx) => `<div style="display:flex; justify-content:space-between; margin-bottom:10px; padding:12px; background:#f9f9f9; border-radius:10px;"><span><b>[${i.sku || '--'}] ${i.nome}</b><br><small>${i.detalhes}</small></span><b>R$ ${i.total.toFixed(2)} <i class="fa fa-trash" style="color:red; cursor:pointer;" onclick="removerItem(${idx})"></i></b></div>`).join('') || "Vazio.";
+    div.innerHTML = carrinho.map((i, idx) => `<div style="display:flex; justify-content:space-between; margin-bottom:12px; padding:15px; background:#F8FAFC; border:1px solid #E2E8F0; border-radius:8px;"><span><b style="color:#2D3748;">[${i.sku || '--'}] ${i.nome}</b><br><small style="color:#718096; line-height:1.4; display:block; margin-top:5px;">${i.detalhes}</small></span><b style="color:var(--gva-azul);">R$ ${i.total.toFixed(2)} <i class="fa fa-trash" style="color:#E53E3E; cursor:pointer; margin-left:10px;" onclick="removerItem(${idx})"></i></b></div>`).join('') || "<div style='color:#A0AEC0; padding:20px; text-align:center;'>Nenhum item configurado.</div>";
     document.getElementById('totalCarrinho').innerText = t.toFixed(2);
     document.getElementById('restanteCarrinho').innerText = (t - s).toFixed(2);
 }
@@ -296,10 +316,10 @@ function toggleCamposEntrega() { document.getElementById('divMotoboy').style.dis
 
 function enviarPedido() {
     const nome = document.getElementById('nomeCliente').value;
-    if(!nome || carrinho.length === 0) return alert("Preencha o cliente e o carrinho!");
+    if(!nome || carrinho.length === 0) return alert("Preencha o cliente e configure um produto!");
     const t = parseFloat(document.getElementById('totalCarrinho').innerText);
     const s = parseFloat(document.getElementById('valorSinal').value) || 0;
-    const p = { cliente: nome, telefone: document.getElementById('telCliente').value, end: document.getElementById('endCliente').value, cep: document.getElementById('cepCliente').value, itens: [...carrinho], total: t, sinal: s, restante: t-s, status: "💰 Pagamento", dataCriacao: new Date().toLocaleDateString('pt-BR'), motoboy: parseFloat(document.getElementById('valorMotoboy').value) || 0 };
+    const p = { cliente: nome, telefone: document.getElementById('telCliente').value, end: document.getElementById('endCliente').value, itens: [...carrinho], total: t, sinal: s, restante: t-s, status: "💰 Pagamento", dataCriacao: new Date().toLocaleDateString('pt-BR') };
     db.collection("pedidos").add(p).then(() => { carrinho = []; document.getElementById('nomeCliente').value = ""; atualizarCarrinho(); mudarAba('loja'); });
 }
 
@@ -307,8 +327,8 @@ function atualizarProducao() {
     const div = document.getElementById('listaProducao');
     div.innerHTML = pedidosGVA.map((p, idx) => `
         <div class="gva-card">
-            <div class="card-header" style="display:flex; justify-content:space-between;"><span>👤 ${p.cliente}</span>
-            <select onchange="mudarStatus('${p.id}', this.value)" style="font-size:11px;">
+            <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;"><span>👤 ${p.cliente}</span>
+            <select onchange="mudarStatus('${p.id}', this.value)" style="padding:5px; border-radius:5px; border:1px solid #ddd;">
                 <option ${p.status === '💰 Pagamento' ? 'selected' : ''}>💰 Pagamento</option>
                 <option ${p.status === '📂 Verif. Arquivos' ? 'selected' : ''}>📂 Verif. Arquivos</option>
                 <option ${p.status === '🖨️ Impressão' ? 'selected' : ''}>🖨️ Impressão</option>
@@ -316,8 +336,11 @@ function atualizarProducao() {
                 <option ${p.status === '🏠 Pronto' ? 'selected' : ''}>🏠 Pronto</option>
                 <option value="cancelar">❌ Cancelar</option><option value="entregar">📦 Entregue</option>
             </select></div>
-            <div class="card-body"><button class="btn-gva" style="font-size:11px;" onclick="imprimirCupom(${idx})">Nota Balcão</button>
-            <button class="btn-gva" style="background:#25D366; font-size:11px;" onclick="enviarWA(${idx})"><i class="fab fa-whatsapp"></i></button></div>
+            <div class="card-body">
+                <p style="margin-top:0; font-weight:bold;">Total: R$ ${p.total.toFixed(2)}</p>
+                <button class="btn-gva" style="font-size:12px; padding:8px 15px;" onclick="imprimirCupom(${idx})"><i class="fa fa-print"></i> Ficha</button>
+                <button class="btn-gva" style="background:#25D366; font-size:12px; padding:8px 15px; margin-left:5px;" onclick="enviarWA(${idx})"><i class="fab fa-whatsapp"></i> Cliente</button>
+            </div>
         </div>`).join('');
 }
 
@@ -341,8 +364,7 @@ function imprimirCupom(idx) {
         doc.setFontSize(10); doc.text("GVA VENOM ARTS", 40, y, null, null, "center");
         doc.setFontSize(7); doc.text(tit, 40, y+5, null, null, "center");
         doc.line(5, y+7, 75, y+7); doc.text(`Cliente: ${p.cliente}`, 5, y+11);
-        if(p.motoboy > 0) doc.text(`Entrega: ${p.end || '--'}`, 5, y+15);
-        let cy = y+20; p.itens.forEach(i => { 
+        let cy = y+16; p.itens.forEach(i => { 
             const n = doc.splitTextToSize(`- ${i.nome} | ${i.detalhes}`, 70);
             doc.text(n, 5, cy); cy += (n.length * 4);
             doc.text(`R$ ${i.total.toFixed(2)}`, 75, cy-4, null, null, "right");
@@ -371,8 +393,8 @@ function abrirLancamento(tipo) {
 
 function renderizarListaAdmin() {
     const div = document.getElementById('listaGerenciarProdutos');
-    div.innerHTML = `<table class="wp-table"><thead><tr><th>SKU</th><th>Nome</th><th>Ação</th></tr></thead><tbody>` + 
-        bancoDeDados.map(p => `<tr><td>${p.sku || '--'}</td><td>${p.nome}</td><td style="text-align:right"><button class="btn-mini" onclick="editarProduto('${p.id}')" style="background:#e1ecf4; color:#3E3B9F;">E</button> <button class="btn-mini" onclick="excluirItem('catalogo', '${p.id}')" style="background:#fbeaea; color:#d63638;">X</button></td></tr>`).join('') + `</tbody></table>`;
+    div.innerHTML = `<table class="wp-table"><thead><tr><th>Produto</th><th>Categoria</th><th>Ação</th></tr></thead><tbody>` + 
+        bancoDeDados.map(p => `<tr><td><b>${p.nome}</b><br><small>${p.sku || '--'}</small></td><td>${p.categoria}</td><td style="text-align:right"><button class="btn-gva" style="padding:6px 12px; font-size:12px; background:#EBF4FF; color:var(--gva-azul);" onclick="editarProduto('${p.id}')">Editar</button> <button class="btn-gva" style="padding:6px 12px; font-size:12px; background:#FFF5F5; color:#E53E3E;" onclick="excluirItem('catalogo', '${p.id}')">Excluir</button></td></tr>`).join('') + `</tbody></table>`;
 }
 
 function editarProduto(id) {
@@ -391,7 +413,7 @@ function editarProduto(id) {
 
 function renderizarListaCategorias() {
     const div = document.getElementById('listaGerenciarCategorias');
-    div.innerHTML = `<table class="wp-table"><tbody>` + categorias.map(c => `<tr><td>${c.nome}</td><td style="text-align:right"><button class="btn-mini" onclick="editarCategoria('${c.id}')" style="background:#e1ecf4; color:#3E3B9F;">E</button> <button class="btn-mini" onclick="excluirItem('categorias', '${c.id}')" style="background:#fbeaea; color:#d63638;">X</button></td></tr>`).join('') + `</tbody></table>`;
+    div.innerHTML = `<table class="wp-table"><tbody>` + categorias.map(c => `<tr><td>${c.nome}</td><td style="text-align:right"><button class="btn-gva" style="padding:6px 12px; font-size:12px; background:#EBF4FF; color:var(--gva-azul);" onclick="editarCategoria('${c.id}')">Editar</button> <button class="btn-gva" style="padding:6px 12px; font-size:12px; background:#FFF5F5; color:#E53E3E;" onclick="excluirItem('categorias', '${c.id}')">Excluir</button></td></tr>`).join('') + `</tbody></table>`;
 }
 
 function editarCategoria(id) {
@@ -403,7 +425,7 @@ function editarCategoria(id) {
 
 function renderizarListaAcabamentos() {
     const div = document.getElementById('listaGerenciarAcabamentos');
-    div.innerHTML = `<table class="wp-table"><tbody>` + acabamentos.map(a => `<tr><td><b>${a.nome}</b><br><small style="color:#666;">Valor: ${a.preco} | Regra: ${a.multiplicador}</small></td><td style="text-align:right"><button class="btn-mini" onclick="editarAcabamento('${a.id}')" style="background:#e1ecf4; color:#3E3B9F;">E</button> <button class="btn-mini" onclick="excluirItem('acabamentos', '${a.id}')" style="background:#fbeaea; color:#d63638;">X</button></td></tr>`).join('') + `</tbody></table>`;
+    div.innerHTML = `<table class="wp-table"><tbody>` + acabamentos.map(a => `<tr><td><b>${a.nome}</b><br><small style="color:#718096;">Vínculo: ${a.vinculo} | Grupo: ${a.grupo || 'Nenhum'}</small></td><td style="text-align:right"><button class="btn-gva" style="padding:6px 12px; font-size:12px; background:#EBF4FF; color:var(--gva-azul);" onclick="editarAcabamento('${a.id}')">Editar</button> <button class="btn-gva" style="padding:6px 12px; font-size:12px; background:#FFF5F5; color:#E53E3E;" onclick="excluirItem('acabamentos', '${a.id}')">Excluir</button></td></tr>`).join('') + `</tbody></table>`;
 }
 
 function editarAcabamento(id) {
@@ -436,11 +458,11 @@ async function salvarAcabamento() {
     const id = document.getElementById('editAcabId').value;
     const d = { nome: document.getElementById('acabNome').value, preco: document.getElementById('acabPreco').value, vinculo: document.getElementById('acabCatVinculo').value, grupo: document.getElementById('acabGrupo').value, multiplicador: document.getElementById('acabMultiplicador').value };
     if(id) await db.collection("acabamentos").doc(id).update(d); else await db.collection("acabamentos").add(d);
-    document.getElementById('acabNome').value = ""; document.getElementById('acabPreco').value = ""; document.getElementById('acabGrupo').value = ""; document.getElementById('editAcabId').value = ""; document.getElementById('btnSalvarAcab').innerText = "Salvar";
+    document.getElementById('acabNome').value = ""; document.getElementById('acabPreco').value = ""; document.getElementById('acabGrupo').value = ""; document.getElementById('editAcabId').value = ""; document.getElementById('btnSalvarAcab').innerText = "Salvar Variação";
 }
 
 function mudarAba(aba) {
-    const titulos = { cliente: "Catálogo", carrinho: "Orçamento", loja: "Produção", caixa: "Financeiro", admin: "Configurações" };
+    const titulos = { cliente: "Catálogo Web2Print", carrinho: "Orçamentos e Pedidos", loja: "Painel de Produção", caixa: "Fluxo de Caixa", admin: "Banco de Dados" };
     document.getElementById('tituloPagina').innerText = titulos[aba];
     document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
     document.querySelectorAll('.sidebar-nav button').forEach(b => b.classList.remove('active'));
@@ -459,7 +481,7 @@ function filtrarProdutos() {
 }
 function fecharModal() { document.getElementById('modalFundo').style.display = 'none'; }
 function fecharAlerta() { document.getElementById('alertaFundo').style.display = 'none'; }
-function excluirItem(coll, id) { if(confirm("Excluir?")) db.collection(coll).doc(id).delete(); }
-function limparFormAdmin() { document.getElementById('editId').value = ""; document.getElementById('adminSku').value = ""; document.getElementById('adminNome').value = ""; document.getElementById('adminQtdsFixas').value = ""; document.getElementById('adminEscalonado').value = ""; document.getElementById('adminImg').value = ""; document.getElementById('btnSalvarProd').innerText = "Salvar Produto"; }
+function excluirItem(coll, id) { if(confirm("Tem certeza que deseja excluir?")) db.collection(coll).doc(id).delete(); }
+function limparFormAdmin() { document.getElementById('editId').value = ""; document.getElementById('adminSku').value = ""; document.getElementById('adminNome').value = ""; document.getElementById('adminPreco').value = "0"; document.getElementById('adminQtdsFixas').value = ""; document.getElementById('adminEscalonado').value = ""; document.getElementById('adminImg').value = ""; document.getElementById('btnSalvarProd').innerText = "Salvar Produto"; }
 function fazerLogin() { auth.signInWithEmailAndPassword(document.getElementById('loginEmail').value, document.getElementById('loginSenha').value); }
 function fazerLogout() { auth.signOut().then(() => window.location.reload()); }
