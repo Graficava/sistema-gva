@@ -22,25 +22,37 @@ body { margin: 0; font-family: 'Segoe UI', sans-serif; background: #F0F2F5; colo
 
 .zap-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 20px; }
 .zap-card { background: white; border-radius: var(--radius); border: 1px solid #eee; text-align: center; overflow: hidden; transition: 0.3s; }
-.zap-color-bg { width: 100%; height: 130px; background: var(--gva-azul); color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 18px; }
+.zap-color-bg { width: 100%; height: 160px; background: var(--gva-azul); color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 18px; }
+.zap-color-bg img { width: 100%; height: 100%; object-fit: cover; }
+.zap-info { padding: 15px; }
 
 .qty-btns { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; }
 .btn-qty { border: 1px solid #ddd; background: #f9f9f9; padding: 10px 18px; border-radius: 12px; cursor: pointer; font-weight: bold; }
 .btn-qty.active { background: var(--gva-azul); color: white; border-color: var(--gva-azul); }
 
-.acabamento-seletor { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.acabamento-seletor { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 5px; }
 .acabamento-seletor label { background: #f0f2f5; border: 1.5px solid #ddd; padding: 10px 20px; border-radius: 25px; cursor: pointer; font-size: 12px; font-weight: 600; }
 .acabamento-seletor input { display: none; }
 .acabamento-seletor label:has(input:checked) { background: var(--gva-azul); color: white; border-color: var(--gva-azul); }
 
-/* Novos selects para os grupos do configurador */
-.grupo-var-select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; margin-top: 5px; font-size: 14px; background: #fff; }
+.grupo-var-select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; margin-top: 5px; font-size: 14px; background: #fff; margin-bottom: 10px; }
+.info-folhas { background: #eef2fa; color: var(--gva-azul); padding: 12px; border-radius: 8px; font-weight: bold; font-size: 14px; margin-bottom: 15px; text-align: center; border: 1px dashed var(--gva-azul); }
+.box-frente-verso { background: #fff3cd; border: 1px solid #ffeeba; padding: 15px; border-radius: 10px; margin-bottom: 15px; cursor: pointer; display: flex; align-items: center; gap: 10px; font-weight: bold; color: #856404; }
 
 .btn-gva { background: var(--gva-azul); color: white; border: none; padding: 12px 25px; border-radius: 30px; font-weight: bold; cursor: pointer; }
 .btn-success { background: #00a859; color: white; border: none; padding: 18px; border-radius: 15px; width: 100%; font-size: 18px; font-weight: bold; cursor: pointer; }
 
 #modalFundo { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 10000; align-items: center; justify-content: center; backdrop-filter: blur(5px); }
-#modalConteudo { width: 90%; max-width: 450px; max-height: 90vh; overflow-y: auto; }
+.modal-w2p { background: white; width: 95%; max-width: 900px; border-radius: 20px; overflow: hidden; display: flex; flex-direction: column; max-height: 90vh; }
+.w2p-header { padding: 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background: #fafafa; }
+.w2p-header h2 { margin: 0; color: var(--gva-azul); font-size: 20px; }
+.btn-close { background: #ffebeb; color: #d63638; border: none; border-radius: 50%; width: 35px; height: 35px; font-weight: bold; cursor: pointer; }
+.w2p-body { display: flex; flex: 1; overflow-y: auto; }
+.w2p-left { flex: 1; background: #f0f2f5; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.w2p-left img { max-width: 100%; max-height: 400px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+.w2p-right { flex: 1.5; padding: 30px; }
+.w2p-footer { padding: 20px 30px; border-top: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background: white; }
+.w2p-price { font-size: 24px; font-weight: bold; color: var(--gva-azul); }
 
 .wp-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .wp-table td { padding: 12px; border-bottom: 1px solid #eee; }
@@ -50,6 +62,9 @@ body { margin: 0; font-family: 'Segoe UI', sans-serif; background: #F0F2F5; colo
     .sidebar { width: 100%; height: auto; position: relative; }
     .sidebar-nav { display: flex; overflow-x: auto; }
     .main-content { margin-left: 0; }
+    .w2p-body { flex-direction: column; }
+    .w2p-left { height: 200px; }
+    .w2p-footer { flex-direction: column; gap: 15px; text-align: center; }
 }
 .content { display: none; }
 .content.active { display: block; }
