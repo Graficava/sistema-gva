@@ -42,6 +42,10 @@ function iniciarSincronizacao() {
         bancoDeDados = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         carregarProdutos(); renderizarListaAdmin();
     });
+    db.collection("pedidos").orderBy("dataCriacao", "desc").onSnapshot(snap => {
+        pedidosGVA = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        atualizarProducao(); calcularFinanceiro();
+    });
 }
 
 function renderizarMenus() {
@@ -76,14 +80,14 @@ function carregarProdutos(lista = bancoDeDados) {
 }
 
 // ---------------------------------------------------------
-// TABELAS DE ESCALONAMENTO DO ADMIN (O CÉREBRO)
+// REGRAS DE PREÇO E TABELAS DO ADMIN
 // ---------------------------------------------------------
 function adicionarFaixaPreco(containerId, qtd = 1, preco = 0) {
     const container = document.getElementById(containerId);
     const div = document.createElement('div');
     div.className = 'faixa-preco-row';
     div.innerHTML = `
-        <div class="form-group"><label>A partir da Qtd/Medida:</label><input type="number" class="faixa-qtd" min="1" value="${qtd}"></div>
+        <div class="form-group"><label>A partir da Qtd/Medida:</label><input type="number" class="faixa-qtd" min="1" step="0.01" value="${qtd}"></div>
         <div class="form-group"><label>Valor Un. (R$):</label><input type="number" class="faixa-preco" step="0.001" value="${preco}"></div>
         <button type="button" class="btn-remover-faixa" onclick="this.parentElement.remove()">X</button>
     `;
@@ -121,7 +125,7 @@ function getPrecoReal(arrayPrecos, qtdComparacao) {
 }
 
 // ---------------------------------------------------------
-// W2P CONFIGURADOR (FRONT END DO CLIENTE)
+// W2P CONFIGURADOR DA LOJA (COM LÓGICA DE PADRÃO / GRÁTIS)
 // ---------------------------------------------------------
 function abrirConfigurador(id) {
     const p = bancoDeDados.find(item => item.id === id);
@@ -132,36 +136,33 @@ function abrirConfigurador(id) {
         <div class="w2p-body"><div class="w2p-left">${imgSrc}<div id="infoFolhas" style="display:none; width:100%;"></div></div><div class="w2p-right gva-form-large">
     `;
     
-    // DINÂMICA DA TELA BASEADA NOS 4 MUNDOS
+    // CAMPOS BASEADOS NA MATRIZ (Folha, M2, Offset)
     if(p.tipo === 'folha') {
-        html += `<div class="w2p-section-title">Dados da Impressão Digital</div>
+        html += `<div class="w2p-section-title">Dados da Impressão</div>
                  <div class="form-row">
-                    <div class="form-group"><label>Total de Páginas (do seu PDF):</label><input type="number" id="cfgPaginas" value="1" min="1" oninput="atualizarPrecoAoVivo('${p.id}')"></div>`;
+                    <div class="form-group"><label>Páginas (do PDF):</label><input type="number" id="cfgPaginas" value="1" min="1" oninput="atualizarPrecoAoVivo('${p.id}')"></div>`;
         if(p.qtdsFixas) {
-            html += `<div class="form-group"><label>Quantidade Desejada:</label><div class="qty-btns">`;
+            html += `<div class="form-group"><label>Qtd de Cópias:</label><div class="qty-btns">`;
             p.qtdsFixas.split(',').forEach(q => { html += `<button class="btn-qty" onclick="selecionarQtd(this, ${q.trim()}, '${p.id}')">${q.trim()}</button>`; });
             html += `</div><input type="hidden" id="cfgQ" value="0"></div></div>`;
         } else {
-            html += `<div class="form-group"><label>Quantidade Desejada:</label><input type="number" id="cfgQ" value="1" min="1" oninput="atualizarPrecoAoVivo('${p.id}')"></div></div>`;
+            html += `<div class="form-group"><label>Qtd de Cópias:</label><input type="number" id="cfgQ" value="1" min="1" oninput="atualizarPrecoAoVivo('${p.id}')"></div></div>`;
         }
-
     } else if(p.tipo === 'm2' || p.tipo === 'm_linear') {
-        html += `<div class="w2p-section-title">Dimensões da Comunicação Visual</div>
+        html += `<div class="w2p-section-title">Dimensões da Mídia</div>
                  <div class="form-row">
                     <div class="form-group"><label>Largura (m):</label><input type="number" id="cfgL" value="1.00" step="0.01" oninput="atualizarPrecoAoVivo('${p.id}')"></div>
                     <div class="form-group"><label>Altura (m):</label><input type="number" id="cfgA" value="1.00" step="0.01" oninput="atualizarPrecoAoVivo('${p.id}')"></div>
                     <div class="form-group"><label>Qtd:</label><input type="number" id="cfgQ" value="1" min="1" oninput="atualizarPrecoAoVivo('${p.id}')"></div>
                  </div>`;
-                 
     } else if(p.tipo === 'cm2') {
-        html += `<div class="w2p-section-title">Medidas (Recorte / Adesivo Pequeno)</div>
+        html += `<div class="w2p-section-title">Medidas (Recorte / Pequenos)</div>
                  <div class="form-row">
                     <div class="form-group"><label>Largura (cm):</label><input type="number" id="cfgL" value="10" step="0.1" oninput="atualizarPrecoAoVivo('${p.id}')"></div>
                     <div class="form-group"><label>Altura (cm):</label><input type="number" id="cfgA" value="10" step="0.1" oninput="atualizarPrecoAoVivo('${p.id}')"></div>
-                    <div class="form-group"><label>Qtd de Unidades:</label><input type="number" id="cfgQ" value="1" min="1" oninput="atualizarPrecoAoVivo('${p.id}')"></div>
+                    <div class="form-group"><label>Qtd:</label><input type="number" id="cfgQ" value="1" min="1" oninput="atualizarPrecoAoVivo('${p.id}')"></div>
                  </div>`;
-                 
-    } else { // 'unidade' (Offset / Personalizados)
+    } else {
         html += `<div class="w2p-section-title">Definir Tiragem / Pacote</div>`;
         if(p.qtdsFixas) {
             html += `<div class="qty-btns">`;
@@ -172,7 +173,7 @@ function abrirConfigurador(id) {
         }
     }
 
-    // CARREGA AS VARIAÇÕES E ACABAMENTOS DA CATEGORIA
+    // CARREGA ACABAMENTOS DA GRADE
     const acabFiltrados = acabamentos.filter(a => a.vinculo === p.categoria || a.vinculo.includes('Geral'));
     const grupos = {}; const avulsos = [];
     
@@ -186,22 +187,55 @@ function abrirConfigurador(id) {
         html += `<div class="w2p-section-title">Especificações e Acabamentos</div>`;
     }
 
+    // GRUPOS OBRIGATÓRIOS (DROPDOWNS)
     for (const nomeGrupo in grupos) {
         html += `<label>${nomeGrupo}</label>
-                 <select class="grupo-var-select check-grupo" onchange="atualizarPrecoAoVivo('${p.id}')">
-                    <option value="" data-mult="unidade_simples">Selecione uma opção de ${nomeGrupo}...</option>`;
-        grupos[nomeGrupo].forEach(op => {
+                 <select class="grupo-var-select check-grupo" onchange="atualizarPrecoAoVivo('${p.id}')">`;
+        
+        let opcoesGrupo = grupos[nomeGrupo].sort((a, b) => {
+            let precoA = (a.precos && a.precos.length > 0) ? a.precos[0].valor : 0;
+            let precoB = (b.precos && b.precos.length > 0) ? b.precos[0].valor : 0;
+            return precoA - precoB; 
+        });
+
+        opcoesGrupo.forEach(op => {
             let infoArray = JSON.stringify(op.precos);
-            html += `<option value="${nomeGrupo}: ${op.nome}" data-precos='${infoArray}' data-mult="${op.multiplicador}">${op.nome}</option>`;
+            let textoPreco = "";
+            let valorInicial = (op.precos && op.precos.length > 0) ? op.precos[0].valor : 0;
+
+            if (valorInicial === 0 && (!op.precos || op.precos.length <= 1)) {
+                textoPreco = " - (Padrão / Sem Custo)";
+            } else if (op.precos && op.precos.length > 1) {
+                textoPreco = " - (+ Custo Variável)";
+            } else {
+                textoPreco = ` - (+ R$ ${valorInicial.toFixed(2)})`;
+            }
+
+            html += `<option value="${nomeGrupo}: ${op.nome}" data-precos='${infoArray}' data-mult="${op.multiplicador}">${op.nome}${textoPreco}</option>`;
         });
         html += `</select>`;
     }
 
+    // OPCIONAIS AVULSOS (CHECKBOXES)
     if(avulsos.length > 0) {
-        html += `<label style="margin-top:15px; font-weight:600;">Opcionais Extras</label><div class="acabamento-seletor">`;
+        html += `<label style="margin-top:15px; font-weight:600; display:block; margin-bottom:5px;">Opcionais Extras (Opcional)</label>
+                 <div class="acabamento-seletor">`;
         avulsos.forEach(a => {
             let infoArray = JSON.stringify(a.precos);
-            html += `<label><input type="checkbox" class="check-acab" data-precos='${infoArray}' data-mult="${a.multiplicador}" value="${a.nome}" onchange="atualizarPrecoAoVivo('${p.id}')"> ${a.nome}</label>`;
+            let valorInicial = (a.precos && a.precos.length > 0) ? a.precos[0].valor : 0;
+            let classePreco = valorInicial === 0 ? "gratis" : "destaque";
+            let textoPreco = valorInicial === 0 ? "Sem custo extra" : `+ R$ ${valorInicial.toFixed(2)}`;
+            if (a.precos && a.precos.length > 1) textoPreco = "+ Custo Variável";
+
+            html += `
+                <label class="check-box-custom">
+                    <div style="display:flex; align-items:center;">
+                        <input type="checkbox" class="check-acab" data-precos='${infoArray}' data-mult="${a.multiplicador}" value="${a.nome}" onchange="atualizarPrecoAoVivo('${p.id}')">
+                        <span class="check-box-nome">${a.nome}</span>
+                    </div>
+                    <span class="check-box-preco ${classePreco}">${textoPreco}</span>
+                </label>
+            `;
         });
         html += `</div>`;
     }
@@ -231,10 +265,7 @@ function atualizarPrecoAoVivo(id) {
     const p = bancoDeDados.find(item => item.id === id);
     let qtdCopias = parseFloat(document.getElementById('cfgQ')?.value || 1);
     
-    // Variaveis Dinâmicas baseadas no Tipo
-    let numPaginas = 1;
-    let medidaL = 1;
-    let medidaA = 1;
+    let numPaginas = 1; let medidaL = 1; let medidaA = 1;
 
     if(p.tipo === 'folha') numPaginas = parseFloat(document.getElementById('cfgPaginas')?.value || 1);
     if(p.tipo === 'm2' || p.tipo === 'm_linear' || p.tipo === 'cm2') {
@@ -242,7 +273,6 @@ function atualizarPrecoAoVivo(id) {
         medidaA = parseFloat(document.getElementById('cfgA')?.value || 1);
     }
 
-    // Lógica para Folhas (Se achar regra de frente/verso, corta as folhas na metade)
     let isFrenteVerso = false;
     document.querySelectorAll('.check-grupo, .check-acab:checked').forEach(el => {
         let opt = el.options ? el.options[el.selectedIndex] : el;
@@ -250,24 +280,21 @@ function atualizarPrecoAoVivo(id) {
     });
     let folhasFisicas = isFrenteVerso ? Math.ceil(numPaginas / 2) : numPaginas;
 
-    // Atualiza info visual
     const divFolhas = document.getElementById('infoFolhas');
     if(divFolhas && p.tipo === 'folha') {
         divFolhas.style.display = 'flex';
         divFolhas.innerHTML = `<i class="fa fa-layer-group" style="font-size:20px;"></i> <div><b>${folhasFisicas} Folhas Físicas</b><br><small>Gastas na produção.</small></div>`;
     }
 
-    // 1. CUSTO DO PRODUTO BASE
     let precoBaseOpt = getPrecoReal(p.precos, qtdCopias);
     let subtotalCopia = 0;
 
     if(p.tipo === 'folha') subtotalCopia = precoBaseOpt * numPaginas; 
     else if(p.tipo === 'm2') subtotalCopia = precoBaseOpt * (medidaL * medidaA);
-    else if(p.tipo === 'cm2') subtotalCopia = precoBaseOpt * (medidaL * medidaA); // Area em cm2
+    else if(p.tipo === 'cm2') subtotalCopia = precoBaseOpt * (medidaL * medidaA);
     else if(p.tipo === 'm_linear') subtotalCopia = precoBaseOpt * medidaL;
-    else subtotalCopia = precoBaseOpt; // Unidade / Offset
+    else subtotalCopia = precoBaseOpt;
 
-    // 2. CUSTO DAS VARIAÇÕES / ACABAMENTOS
     document.querySelectorAll('.check-grupo, .check-acab:checked').forEach(el => {
         let opt = el.options ? el.options[el.selectedIndex] : el;
         if(!opt || !opt.value || opt.value === "") return;
@@ -276,31 +303,22 @@ function atualizarPrecoAoVivo(id) {
         let tipoMult = opt.getAttribute('data-mult');
         let valorDaOpcao = 0;
 
-        // Regras Digital
         if(tipoMult === 'cobrar_paginas_frente' || tipoMult === 'cobrar_paginas_verso') {
             valorDaOpcao = getPrecoReal(arrayPrecosOpt, numPaginas) * numPaginas;
-        } 
-        else if(tipoMult === 'cobrar_folhas') {
+        } else if(tipoMult === 'cobrar_folhas') {
             valorDaOpcao = getPrecoReal(arrayPrecosOpt, folhasFisicas) * folhasFisicas;
-        } 
-        else if(tipoMult === 'cobrar_fixo') {
-            valorDaOpcao = getPrecoReal(arrayPrecosOpt, folhasFisicas) * 1; // 1x por Cópia Final
-        } 
-        // Regras Com. Visual
-        else if(tipoMult === 'cobrar_area_m2') {
+        } else if(tipoMult === 'cobrar_fixo') {
+            valorDaOpcao = getPrecoReal(arrayPrecosOpt, folhasFisicas) * 1; 
+        } else if(tipoMult === 'cobrar_area_m2') {
             let m2 = (p.tipo === 'cm2') ? ((medidaL/100) * (medidaA/100)) : (medidaL * medidaA);
             valorDaOpcao = getPrecoReal(arrayPrecosOpt, qtdCopias) * m2;
-        }
-        else if(tipoMult === 'cobrar_area_cm2') {
+        } else if(tipoMult === 'cobrar_area_cm2') {
             let cm2 = (p.tipo === 'm2') ? ((medidaL*100) * (medidaA*100)) : (medidaL * medidaA);
             valorDaOpcao = getPrecoReal(arrayPrecosOpt, qtdCopias) * cm2;
-        }
-        else if(tipoMult === 'cobrar_m_linear') {
+        } else if(tipoMult === 'cobrar_m_linear') {
             let linear = (p.tipo === 'cm2') ? (medidaL/100) : medidaL;
             valorDaOpcao = getPrecoReal(arrayPrecosOpt, qtdCopias) * linear;
-        }
-        // Regra Offset / Padrão
-        else {
+        } else {
             valorDaOpcao = getPrecoReal(arrayPrecosOpt, qtdCopias) * 1;
         }
         
@@ -339,15 +357,12 @@ function confirmarCarrinho(id) {
 
 function atualizarCarrinho() {
     const div = document.getElementById('listaCarrinho');
-    let m = parseFloat(document.getElementById('valorMotoboy').value) || 0;
-    let t = carrinho.reduce((acc, i) => acc + i.total, 0) + m;
+    let t = carrinho.reduce((acc, i) => acc + i.total, 0);
     div.innerHTML = carrinho.map((i, idx) => `<div style="display:flex; justify-content:space-between; margin-bottom:12px; padding:15px; background:#F8FAFC; border:1px solid #E2E8F0; border-radius:8px;"><span><b style="color:#2D3748;">[${i.sku || '--'}] ${i.nome}</b><br><small style="color:#718096; line-height:1.4; display:block; margin-top:5px;">${i.detalhes}</small></span><b style="color:var(--gva-azul);">R$ ${i.total.toFixed(2)} <i class="fa fa-trash" style="color:#E53E3E; cursor:pointer; margin-left:10px;" onclick="removerItem(${idx})"></i></b></div>`).join('') || "<div style='color:#A0AEC0; padding:20px; text-align:center;'>Vazio.</div>";
     document.getElementById('totalCarrinho').innerText = t.toFixed(2);
 }
 
 function removerItem(idx) { carrinho.splice(idx, 1); atualizarCarrinho(); }
-function toggleCamposPagamento() { document.getElementById('divParcelas').style.display = document.getElementById('formaPagamento').value === 'Credito' ? 'block' : 'none'; }
-function toggleCamposEntrega() { document.getElementById('divMotoboy').style.display = document.getElementById('metodoEntrega').value === 'Motoboy' ? 'block' : 'none'; }
 
 function enviarPedido() {
     const nome = document.getElementById('nomeCliente').value;
@@ -369,7 +384,7 @@ function atualizarProducao() {
             </select></div>
             <div class="card-body">
                 <p style="margin-top:0; font-weight:bold;">Total: R$ ${p.total.toFixed(2)}</p>
-                <button class="btn-gva" style="font-size:12px; padding:8px 15px;" onclick="imprimirCupom(${idx})">Ficha</button>
+                <button class="btn-gva" style="font-size:12px; padding:8px 15px;" onclick="imprimirCupom(${idx})">Ficha W2P</button>
             </div>
         </div>`).join('');
 }
@@ -395,8 +410,7 @@ function imprimirCupom(idx) {
         });
         doc.line(5, cy, 75, cy); doc.text(`TOTAL: R$ ${p.total.toFixed(2)}`, 75, cy+4, null, null, "right"); return cy + 15;
     }
-    via(10, "VIA PRODUÇÃO");
-    window.open(doc.output('bloburl'), '_blank');
+    via(10, "Ficha de Produção"); window.open(doc.output('bloburl'), '_blank');
 }
 
 async function calcularFinanceiro() {
@@ -414,10 +428,13 @@ function renderizarListaAcabamentos() {
     const termoBusca = document.getElementById('filtroGrade')?.value.toLowerCase() || "";
     const listaFiltrada = acabamentos.filter(a => a.nome.toLowerCase().includes(termoBusca) || (a.grupo && a.grupo.toLowerCase().includes(termoBusca)));
 
-    let html = `<thead><tr><th>Vínculo</th><th>Variação</th><th>Regra W2P</th><th>Ações</th></tr></thead><tbody>`;
+    let html = `<thead><tr><th>Vínculo</th><th>Opção W2P</th><th>Preço Venda</th><th>Regra</th><th>Ações</th></tr></thead><tbody>`;
     listaFiltrada.forEach(a => {
+        let precoInicial = (a.precos && a.precos.length > 0) ? a.precos[0].valor : 0;
+        let pText = (a.precos && a.precos.length > 1) ? "Escalonado" : `R$ ${precoInicial.toFixed(2)}`;
         html += `<tr><td><small>${a.vinculo}</small></td>
                 <td><b>${a.nome}</b><br><small class="col-grupo">${a.grupo || 'Solto'}</small></td>
+                <td class="col-venda">${pText}</td>
                 <td><small style="color:#A0AEC0;">${a.multiplicador}</small></td>
                 <td class="acoes"><button class="btn-grid-edit" onclick="editarAcabamento('${a.id}')"><i class="fa fa-pen"></i></button>
                 <button class="btn-grid-del" onclick="excluirItem('acabamentos', '${a.id}')"><i class="fa fa-trash"></i></button></td></tr>`;
@@ -449,7 +466,7 @@ async function salvarAcabamento() {
 }
 
 function limparFormAcabamento() {
-    document.getElementById('editAcabId').value = ""; document.getElementById('acabNome').value = ""; document.getElementById('acabPrecoCusto').value = "0.00"; document.getElementById('acabPeso').value = "0.00"; document.getElementById('acabPrazo').value = "0"; preencherTabelaPrecos('containerPrecosAcabamento', []); document.getElementById('btnSalvarAcab').innerHTML = "<i class='fa fa-save'></i> Salvar Variação";
+    document.getElementById('editAcabId').value = ""; document.getElementById('acabNome').value = ""; document.getElementById('acabPrecoCusto').value = "0.00"; document.getElementById('acabPeso').value = "0.00"; document.getElementById('acabPrazo').value = "0"; preencherTabelaPrecos('containerPrecosAcabamento', []); document.getElementById('btnSalvarAcab').innerHTML = "<i class='fa fa-save'></i> Salvar Variação na Grade";
 }
 
 function renderizarListaAdmin() {
@@ -476,7 +493,7 @@ async function salvarNovoProduto() {
     const arrayPrecos = extrairTabelaPrecos('containerPrecosProduto');
     const d = { sku: document.getElementById('adminSku').value, nome: document.getElementById('adminNome').value, precos: arrayPrecos, categoria: document.getElementById('adminCatSelect').value, tipo: document.getElementById('adminTipo').value, qtdsFixas: document.getElementById('adminQtdsFixas').value, img: document.getElementById('adminImg').value };
     if(id) await db.collection("catalogo").doc(id).update(d); else await db.collection("catalogo").add(d);
-    document.getElementById('editId').value = ""; document.getElementById('adminSku').value = ""; document.getElementById('adminNome').value = ""; document.getElementById('adminQtdsFixas').value = ""; document.getElementById('adminImg').value = ""; preencherTabelaPrecos('containerPrecosProduto', []); document.getElementById('btnSalvarProd').innerText = "Salvar Produto";
+    document.getElementById('editId').value = ""; document.getElementById('adminSku').value = ""; document.getElementById('adminNome').value = ""; document.getElementById('adminQtdsFixas').value = ""; document.getElementById('adminImg').value = ""; preencherTabelaPrecos('containerPrecosProduto', []); document.getElementById('btnSalvarProd').innerText = "Salvar Produto Base";
 }
 
 function renderizarListaCategorias() {
