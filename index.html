@@ -122,12 +122,12 @@
                                 
                                 <div class="form-row">
                                     <div class="form-group" style="flex:2;">
-                                        <label>Nome (Ex: Laminação Fosca / Frente e Verso PB / Adesivo Vinil):</label>
+                                        <label>Nome (Ex: Sem Verniz / Frente e Verso PB / Adesivo Vinil):</label>
                                         <input type="text" id="acabNome" placeholder="Descreva como aparecerá para o cliente">
                                     </div>
                                     <div class="form-group">
-                                        <label>Grupo no Menu (Ex: Enobrecimento, Tipo de Papel):</label>
-                                        <input type="text" id="acabGrupo" placeholder="Vazio = Checkbox Extra">
+                                        <label>Grupo no Menu (Ex: Cobertura, Tipo de Papel):</label>
+                                        <input type="text" id="acabGrupo" placeholder="Vazio = Checkbox Extra (Opcional)">
                                     </div>
                                 </div>
 
@@ -157,7 +157,7 @@
                                     </div>
                                 </div>
 
-                                <div class="w2p-section-title">Tabela de Preços (Permite Escalonamento)</div>
+                                <div class="w2p-section-title">Tabela de Preços de Venda (Permite Escalonamento)</div>
                                 <div id="containerPrecosAcabamento" class="container-precos"></div>
                                 <button type="button" class="btn-gva" style="background:#4A5568; padding:8px 15px; margin-bottom:20px; font-size:13px;" onclick="adicionarFaixaPreco('containerPrecosAcabamento')">+ Adicionar Faixa de Preço</button>
 
@@ -165,7 +165,7 @@
                                 <div class="form-row" style="background:white; padding:15px; border-radius:8px; border:1px solid #E2E8F0;">
                                     <div class="form-group">
                                         <label style="color:#E53E3E;"><i class="fa fa-dollar-sign"></i> Preço de Custo (R$)</label>
-                                        <input type="number" id="acabPrecoCusto" step="0.001" value="0.00" placeholder="Apenas para seu controle de lucro">
+                                        <input type="number" id="acabPrecoCusto" step="0.001" value="0.00" placeholder="Para seu controle interno">
                                     </div>
                                     <div class="form-group">
                                         <label><i class="fa fa-weight-hanging"></i> Peso Unitário/m² (kg)</label>
@@ -178,7 +178,7 @@
                                 </div>
 
                                 <button id="btnSalvarAcab" class="btn-success" style="margin-top:15px;" onclick="salvarAcabamento()"><i class="fa fa-save"></i> Salvar Variação na Grade</button>
-                                <button class="btn-gva" style="margin-top:15px; background:#CBD5E0; color:#2D3748;" onclick="limparFormAcabamento()">Limpar</button>
+                                <button class="btn-gva" style="margin-top:15px; background:#CBD5E0; color:#2D3748;" onclick="limparFormAcabamento()">Limpar Formulário</button>
                             </div>
                         </div>
 
@@ -220,11 +220,11 @@
                                 </div>
 
                                 <div class="w2p-section-title">Tabela de Preços do Produto Base</div>
-                                <p style="font-size:13px; color:#718096; margin-top:0;">*Se o preço do seu produto é formado apenas pela soma dos Acabamentos/Materiais, deixe a tabela em R$ 0,00.</p>
+                                <p style="font-size:13px; color:#718096; margin-top:0;">*Se o preço for formado só pela soma dos Acabamentos, deixe R$ 0,00.</p>
                                 <div id="containerPrecosProduto" class="container-precos"></div>
                                 <button type="button" class="btn-gva" style="background:#4A5568; padding:8px 15px; margin-bottom:20px; font-size:13px;" onclick="adicionarFaixaPreco('containerPrecosProduto')">+ Adicionar Faixa de Preço</button>
 
-                                <button id="btnSalvarProd" class="btn-success" onclick="salvarNovoProduto()">Salvar Produto</button>
+                                <button id="btnSalvarProd" class="btn-success" onclick="salvarNovoProduto()">Salvar Produto Base</button>
                             </div>
                         </div>
                         <div class="gva-card"><div class="card-header">Produtos Ativos</div><div id="listaGerenciarProdutos" class="card-body"></div></div>
