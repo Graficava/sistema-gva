@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GVA • Gestão Pro Web2Print</title>
+    <title>GVA • Web2Print Pro</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -18,7 +18,7 @@
             <img src="logo GVA azul.png" alt="GVA" width="160">
             <input type="email" id="loginEmail" placeholder="E-mail">
             <input type="password" id="loginSenha" placeholder="Senha">
-            <button class="btn-gva" onclick="fazerLogin()">Acessar Painel</button>
+            <button class="btn-gva" onclick="fazerLogin()">Acessar Sistema</button>
         </div>
     </div>
 
@@ -26,13 +26,13 @@
         <aside class="sidebar">
             <div class="sidebar-logo"><img src="logo GVA br.png" alt="GVA"></div>
             <nav class="sidebar-nav">
-                <button id="btnCliente" class="active" onclick="mudarAba('cliente')"><i class="fa fa-th-large"></i> Catálogo W2P</button>
+                <button id="btnCliente" class="active" onclick="mudarAba('cliente')"><i class="fa fa-store"></i> Loja (W2P)</button>
                 <button id="btnCarrinho" onclick="mudarAba('carrinho')"><i class="fa fa-shopping-cart"></i> Pedidos</button>
                 <button id="btnLoja" onclick="mudarAba('loja')"><i class="fa fa-tasks"></i> Produção</button>
                 <div class="aba-restrita" style="display:none;">
-                    <div class="nav-divider">Gerenciamento</div>
+                    <div class="nav-divider">Gerenciamento ERP</div>
                     <button id="btnCaixa" onclick="mudarAba('caixa')"><i class="fa fa-chart-line"></i> Financeiro</button>
-                    <button id="btnAdmin" onclick="mudarAba('admin')"><i class="fa fa-cog"></i> Banco de Dados</button>
+                    <button id="btnAdmin" onclick="mudarAba('admin')"><i class="fa fa-database"></i> Cadastros</button>
                 </div>
             </nav>
             <div class="sidebar-footer"><button onclick="fazerLogout()" class="btn-sair">Sair</button></div>
@@ -40,7 +40,7 @@
 
         <main class="main-content">
             <header class="top-header">
-                <h1 id="tituloPagina">Catálogo Web2Print</h1>
+                <h1 id="tituloPagina">Loja Web2Print</h1>
                 <div class="header-info">GVA • Gráfica Venom Arts</div>
             </header>
 
@@ -60,7 +60,7 @@
                                 <div id="listaCarrinho" class="card-body">Vazio.</div>
                             </div>
                             <div class="gva-card">
-                                <div class="card-header">Ficha do Cliente</div>
+                                <div class="card-header">Dados do Cliente</div>
                                 <div class="card-body gva-form-large">
                                     <div class="form-row">
                                         <div class="form-group"><label>Tipo:</label><select id="tipoCliente"><option value="PF">PF</option><option value="PJ">PJ</option></select></div>
@@ -76,24 +76,19 @@
                         </div>
                         <div class="flex-side">
                             <div class="gva-card">
-                                <div class="card-header">Resumo do Pedido</div>
+                                <div class="card-header">Fechamento</div>
                                 <div class="card-body gva-form-large">
                                     <label>Pagamento:</label>
-                                    <select id="formaPagamento" onchange="toggleCamposPagamento()">
-                                        <option value="Pix">Pix</option><option value="Dinheiro">Dinheiro</option>
-                                        <option value="Credito">Crédito à Vista</option><option value="CreditoParc">Crédito Parcelado</option>
+                                    <select id="formaPagamento">
+                                        <option value="Pix">Pix</option><option value="Dinheiro">Dinheiro</option><option value="Credito">Crédito</option>
                                     </select>
-                                    <div id="divParcelas" style="display:none;"><label>Parcelas:</label><select id="qtdParcelas"><option>2x</option><option>3x</option><option>4x</option><option>6x</option><option>12x</option></select></div>
                                     <label style="margin-top:10px;">Entrega:</label>
-                                    <select id="metodoEntrega" onchange="toggleCamposEntrega()">
+                                    <select id="metodoEntrega">
                                         <option value="Retirada">Retirada na Loja</option><option value="Motoboy">Motoboy</option>
                                     </select>
-                                    <div id="divMotoboy" style="display:none;"><label>Taxa (R$):</label><input type="number" id="valorMotoboy" value="0" step="0.01" oninput="atualizarCarrinho()"></div>
                                     <hr>
                                     <p style="font-size:18px;">Total: <b>R$ <span id="totalCarrinho">0.00</span></b></p>
-                                    <label>Sinal Pago (R$):</label><input type="number" id="valorSinal" value="0" step="0.01" oninput="atualizarCarrinho()">
-                                    <p style="color:var(--gva-azul); font-weight:bold;">A Pagar: R$ <span id="restanteCarrinho">0.00</span></p>
-                                    <button class="btn-success" onclick="enviarPedido()">Finalizar Pedido</button>
+                                    <button class="btn-success" onclick="enviarPedido()">Gerar Pedido</button>
                                 </div>
                             </div>
                         </div>
@@ -102,12 +97,10 @@
 
                 <section id="abaCaixa" class="content">
                     <div class="gva-card">
-                        <div class="card-header">Financeiro</div>
+                        <div class="card-header">Resumo Financeiro</div>
                         <div class="card-body">
                             <div class="financeiro-grid">
-                                <div class="fin-box entries"><h4>Vendas</h4><p>R$ <span id="finFaturamento">0.00</span></p></div>
-                                <div class="fin-box extra-in"><h4>Entradas</h4><p>R$ <span id="finEntradas">0.00</span></p></div>
-                                <div class="fin-box exits"><h4>Saídas</h4><p>R$ <span id="finSaidas">0.00</span></p></div>
+                                <div class="fin-box entries"><h4>Faturamento</h4><p>R$ <span id="finFaturamento">0.00</span></p></div>
                                 <div class="fin-box total"><h4>Caixa</h4><p>R$ <span id="finSaldo">0.00</span></p></div>
                             </div>
                         </div>
@@ -116,63 +109,125 @@
 
                 <section id="abaAdmin" class="content">
                     <div class="sub-nav-gva">
-                        <button id="subBtnProdutos" class="sub-active" onclick="toggleAdminSub('produtos')">Produtos</button>
-                        <button id="subBtnAcabamentos" onclick="toggleAdminSub('acabamentos')">Variações e Valores</button>
-                        <button id="subBtnMenus" onclick="toggleAdminSub('menus')">Categorias</button>
+                        <button id="subBtnAcabamentos" class="sub-active" onclick="toggleAdminSub('acabamentos')"><i class="fa fa-th-list"></i> Grade de Variações / Acabamentos</button>
+                        <button id="subBtnProdutos" onclick="toggleAdminSub('produtos')"><i class="fa fa-box"></i> Produtos Base</button>
+                        <button id="subBtnMenus" onclick="toggleAdminSub('menus')"><i class="fa fa-tags"></i> Categorias</button>
                     </div>
 
-                    <div id="subAdminProdutos" class="admin-panel">
-                        <div class="gva-card"><div class="card-body gva-form-large">
-                            <input type="hidden" id="editId">
-                            <div class="form-row">
-                                <div class="form-group"><label>SKU:</label><input type="text" id="adminSku"></div>
-                                <div class="form-group" style="flex:2;"><label>Produto Base:</label><input type="text" id="adminNome"></div>
-                                <div class="form-group"><label>R$ Base:</label><input type="number" id="adminPreco" step="0.01" value="0"></div>
-                            </div>
-                            <div class="form-row">
-                                <div class="form-group"><label>Categoria:</label><select id="adminCatSelect"></select></div>
-                                <div class="form-group"><label>Qtds Fixas de Venda (Ex: 10,50,100):</label><input type="text" id="adminQtdsFixas" placeholder="Vazio = Qtd Livre"></div>
-                            </div>
-                            <div class="form-row">
-                                <div class="form-group"><label>Regra do Produto:</label>
-                                    <select id="adminTipo">
-                                        <option value="unidade">Por Unidade Fechada (Ex: Canecas, Cartões)</option>
-                                        <option value="folha">Páginas Dinâmicas (Apostilas, Manuais)</option>
-                                        <option value="m_linear">Metro Linear (Lonas)</option>
-                                        <option value="m2">Metro Quadrado (Lonas, Adesivos)</option>
-                                    </select>
+                    <div id="subAdminAcabamentos" class="admin-panel">
+                        <div class="gva-card">
+                            <div class="card-header" style="background:#2D3748; color:white;">Cadastrar Opção para a Grade</div>
+                            <div class="card-body gva-form-large" style="background:#F8FAFC;">
+                                <input type="hidden" id="editAcabId">
+                                
+                                <div class="form-row">
+                                    <div class="form-group" style="flex:2;">
+                                        <label>Nome (Ex: Laminação Fosca / Frente e Verso PB / Adesivo Vinil):</label>
+                                        <input type="text" id="acabNome" placeholder="Descreva como aparecerá para o cliente">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Grupo no Menu (Ex: Enobrecimento, Tipo de Papel):</label>
+                                        <input type="text" id="acabGrupo" placeholder="Vazio = Checkbox Extra">
+                                    </div>
                                 </div>
-                                <div class="form-group"><label>URL da Imagem:</label><input type="text" id="adminImg"></div>
+
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>Lógica Matemática da Variação (Como o sistema cobra isso?):</label>
+                                        <select id="acabMultiplicador" style="border-left: 4px solid var(--gva-azul);">
+                                            <optgroup label="COMUNICAÇÃO VISUAL">
+                                                <option value="cobrar_area_m2">Multiplicar por Metro Quadrado (m²)</option>
+                                                <option value="cobrar_area_cm2">Multiplicar por Centímetro Quadrado (cm²)</option>
+                                                <option value="cobrar_m_linear">Multiplicar por Metro Linear</option>
+                                            </optgroup>
+                                            <optgroup label="IMPRESSÃO DIGITAL (LIVROS/MANUAIS)">
+                                                <option value="cobrar_paginas_frente">Multiplicar pelas Páginas do Arquivo (Só Frente)</option>
+                                                <option value="cobrar_paginas_verso">Multiplicar pelas Páginas (Frente e Verso)</option>
+                                                <option value="cobrar_folhas">Multiplicar por Folhas Físicas (Custo de Papel)</option>
+                                                <option value="cobrar_fixo">Consultar Espessura mas cobrar 1x (Encadernações)</option>
+                                            </optgroup>
+                                            <optgroup label="OFFSET E PERSONALIZADOS">
+                                                <option value="unidade_simples">Fixo por Lote / Unidade (Ex: Verniz, Faca Especial)</option>
+                                            </optgroup>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Vincular a qual Categoria?</label>
+                                        <select id="acabCatVinculo"></select>
+                                    </div>
+                                </div>
+
+                                <div class="w2p-section-title">Tabela de Preços (Permite Escalonamento)</div>
+                                <div id="containerPrecosAcabamento" class="container-precos"></div>
+                                <button type="button" class="btn-gva" style="background:#4A5568; padding:8px 15px; margin-bottom:20px; font-size:13px;" onclick="adicionarFaixaPreco('containerPrecosAcabamento')">+ Adicionar Faixa de Preço</button>
+
+                                <div class="w2p-section-title" style="margin-top:10px;">Logística Interna</div>
+                                <div class="form-row" style="background:white; padding:15px; border-radius:8px; border:1px solid #E2E8F0;">
+                                    <div class="form-group">
+                                        <label style="color:#E53E3E;"><i class="fa fa-dollar-sign"></i> Preço de Custo (R$)</label>
+                                        <input type="number" id="acabPrecoCusto" step="0.001" value="0.00" placeholder="Apenas para seu controle de lucro">
+                                    </div>
+                                    <div class="form-group">
+                                        <label><i class="fa fa-weight-hanging"></i> Peso Unitário/m² (kg)</label>
+                                        <input type="number" id="acabPeso" step="0.001" value="0.00">
+                                    </div>
+                                    <div class="form-group">
+                                        <label><i class="fa fa-clock"></i> Tempo de Produção (Dias)</label>
+                                        <input type="number" id="acabPrazo" value="0">
+                                    </div>
+                                </div>
+
+                                <button id="btnSalvarAcab" class="btn-success" style="margin-top:15px;" onclick="salvarAcabamento()"><i class="fa fa-save"></i> Salvar Variação na Grade</button>
+                                <button class="btn-gva" style="margin-top:15px; background:#CBD5E0; color:#2D3748;" onclick="limparFormAcabamento()">Limpar</button>
                             </div>
-                            <button id="btnSalvarProd" class="btn-gva" onclick="salvarNovoProduto()">Salvar Produto</button>
-                        </div></div>
-                        <div class="gva-card"><div class="card-header">Produtos Ativos</div><div id="listaGerenciarProdutos" class="card-body"></div></div>
+                        </div>
+
+                        <div class="gva-card">
+                            <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+                                <span><i class="fa fa-list"></i> Banco de Variações e Acabamentos</span>
+                                <input type="text" id="filtroGrade" placeholder="Buscar opção..." style="padding:6px 12px; border-radius:6px; border:1px solid #ccc; font-size:12px;" oninput="renderizarListaAcabamentos()">
+                            </div>
+                            <div class="card-body" style="padding:0; overflow-x:auto;">
+                                <table class="wp-table-grid" id="tabelaGradeW2P"></table>
+                            </div>
+                        </div>
                     </div>
 
-                    <div id="subAdminAcabamentos" class="admin-panel" style="display:none;">
-                        <div class="gva-card"><div class="card-body gva-form-large">
-                            <input type="hidden" id="editAcabId">
-                            <div class="form-row">
-                                <div class="form-group"><label>Opção (Ex: Impressão Frente e Verso):</label><input type="text" id="acabNome"></div>
-                                <div class="form-group"><label>Preço Fixo ou Escalonado (Ex: 1:1.00, 100:0.80):</label><input type="text" id="acabPreco"></div>
+                    <div id="subAdminProdutos" class="admin-panel" style="display:none;">
+                        <div class="gva-card">
+                            <div class="card-header">Produto Base (Casca)</div>
+                            <div class="card-body gva-form-large">
+                                <input type="hidden" id="editId">
+                                <div class="form-row">
+                                    <div class="form-group"><label>SKU:</label><input type="text" id="adminSku"></div>
+                                    <div class="form-group" style="flex:2;"><label>Nome do Produto Base (Ex: Cartão de Visita, Banner):</label><input type="text" id="adminNome"></div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group"><label>Categoria:</label><select id="adminCatSelect"></select></div>
+                                    <div class="form-group"><label>O que o cliente precisa preencher na loja?</label>
+                                        <select id="adminTipo" style="border-left: 4px solid var(--gva-azul);">
+                                            <option value="unidade">Quantidade Fechada (Offset, Personalizados)</option>
+                                            <option value="folha">Qtd de Páginas + Cópias (Digital)</option>
+                                            <option value="m2">Largura e Altura em Metros (Lonas, Adesivos m²)</option>
+                                            <option value="cm2">Largura e Altura em Centímetros (Adesivos Recorte/Pequenos)</option>
+                                            <option value="m_linear">Largura em Metros + Medida Linear</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group"><label>Qtds Fixas Permitidas (Ex: 500,1000 - Vazio para qtd livre):</label><input type="text" id="adminQtdsFixas"></div>
+                                    <div class="form-group"><label>URL da Imagem:</label><input type="text" id="adminImg"></div>
+                                </div>
+
+                                <div class="w2p-section-title">Tabela de Preços do Produto Base</div>
+                                <p style="font-size:13px; color:#718096; margin-top:0;">*Se o preço do seu produto é formado apenas pela soma dos Acabamentos/Materiais, deixe a tabela em R$ 0,00.</p>
+                                <div id="containerPrecosProduto" class="container-precos"></div>
+                                <button type="button" class="btn-gva" style="background:#4A5568; padding:8px 15px; margin-bottom:20px; font-size:13px;" onclick="adicionarFaixaPreco('containerPrecosProduto')">+ Adicionar Faixa de Preço</button>
+
+                                <button id="btnSalvarProd" class="btn-success" onclick="salvarNovoProduto()">Salvar Produto</button>
                             </div>
-                            <div class="form-row">
-                                <div class="form-group"><label>Aparece em qual categoria?</label><select id="acabCatVinculo"></select></div>
-                                <div class="form-group"><label>Agrupar no Menu (Ex: Tipo de Impressão):</label><input type="text" id="acabGrupo" placeholder="Vazio = Opcional solto"></div>
-                            </div>
-                            <div class="form-group"><label>Lógica Matemática da Variação:</label>
-                                <select id="acabMultiplicador">
-                                    <option value="cobrar_paginas_frente">Volume: Multiplicar pelas Páginas [SÓ FRENTE]</option>
-                                    <option value="cobrar_paginas_verso">Volume: Multiplicar pelas Páginas [FRENTE E VERSO - Divide folhas por 2]</option>
-                                    <option value="cobrar_folhas">Volume: Multiplicar pelas Folhas Físicas (Ex: Papel Especial)</option>
-                                    <option value="cobrar_fixo">Consultar Escalonado, mas cobrar 1x por Unidade (Ex: Encadernação, Capa)</option>
-                                    <option value="cobrar_area">Volume: Multiplicar por Área M² / M.Linear</option>
-                                    <option value="unidade_simples">Fixo: Multiplicar apenas pelas Cópias Finais do Produto</option>
-                                </select>
-                            </div>
-                            <button id="btnSalvarAcab" class="btn-gva" onclick="salvarAcabamento()">Salvar Variação</button>
-                        </div></div>
-                        <div class="gva-card"><div class="card-header">Variações Ativas</div><div id="listaGerenciarAcabamentos" class="card-body"></div></div>
+                        </div>
+                        <div class="gva-card"><div class="card-header">Produtos Ativos</div><div id="listaGerenciarProdutos" class="card-body"></div></div>
                     </div>
 
                     <div id="subAdminMenus" class="admin-panel" style="display:none;">
