@@ -1,252 +1,438 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GVA • Web2Print Pro</title>
-    <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GVA Gráfica ERP | GVAsist</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+    
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
-</head>
-<body class="gva-body">
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
-    <div id="telaLogin">
-        <div class="login-caixa">
-            <img src="logo GVA azul.png" alt="GVA" width="160">
-            <input type="email" id="loginEmail" placeholder="E-mail">
-            <input type="password" id="loginSenha" placeholder="Senha">
-            <button class="btn-gva" onclick="fazerLogin()">Acessar Sistema</button>
+    <style>
+        .active-aba { background-color: #f1f5f9; color: #0f172a; border-left: 4px solid #1e293b; }
+        .active-sub { color: #1e293b; border-bottom: 3px solid #1e293b; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        input::-webkit-outer-spin-button, 
+        input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    </style>
+</head>
+<body class="bg-[#f4f4f2] text-slate-700 font-sans overflow-hidden">
+
+    <!-- TELA DE LOGIN -->
+    <div id="telaLogin" class="min-h-screen flex items-center justify-center bg-[#0f172a] px-4">
+        <div class="bg-white p-10 rounded-lg shadow-2xl w-full max-w-sm text-center">
+            <div class="bg-[#0f172a] p-4 rounded-lg mb-8">
+                <img src="https://i.postimg.cc/1RCc58qN/gva-br-1-ERP-26.png" alt="GVA Gráfica" class="mx-auto h-12 object-contain" />
+            </div>
+            <div class="space-y-4">
+                <input type="email" id="email" placeholder="E-mail" class="w-full p-3 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-slate-500" />
+                <input type="password" id="senha" placeholder="Senha" class="w-full p-3 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-slate-500" />
+                <button type="button" onclick="entrar()" class="w-full bg-[#1e293b] text-white font-bold py-3 rounded hover:bg-slate-800 transition shadow-lg">Entrar</button>
+                <p id="msgErro" class="text-red-500 text-xs hidden font-bold">Acesso negado. Verifique os dados.</p>
+            </div>
         </div>
     </div>
 
-    <div class="app-wrapper">
-        <aside class="sidebar">
-            <div class="sidebar-logo"><img src="logo GVA br.png" alt="GVA"></div>
-            <nav class="sidebar-nav">
-                <button id="btnCliente" class="active" onclick="mudarAba('cliente')"><i class="fa fa-store"></i> Loja (W2P)</button>
-                <button id="btnCarrinho" onclick="mudarAba('carrinho')"><i class="fa fa-shopping-cart"></i> Pedidos</button>
-                <button id="btnLoja" onclick="mudarAba('loja')"><i class="fa fa-tasks"></i> Produção</button>
-                <div class="aba-restrita" style="display:none;">
-                    <div class="nav-divider">Gerenciamento ERP</div>
-                    <button id="btnCaixa" onclick="mudarAba('caixa')"><i class="fa fa-chart-line"></i> Financeiro</button>
-                    <button id="btnAdmin" onclick="mudarAba('admin')"><i class="fa fa-database"></i> Cadastros</button>
-                </div>
-            </nav>
-            <div class="sidebar-footer"><button onclick="fazerLogout()" class="btn-sair">Sair</button></div>
-        </aside>
-
-        <main class="main-content">
-            <header class="top-header">
-                <h1 id="tituloPagina">Loja Web2Print</h1>
-                <div class="header-info">GVA • Gráfica Venom Arts</div>
-            </header>
-
-            <div class="content-wrapper">
-                
-                <section id="abaCliente" class="content active">
-                    <div class="search-container"><input type="text" id="buscaProduto" placeholder="Pesquisar produtos..." oninput="filtrarProdutos()"></div>
-                    <div class="cat-nav" id="menuCategorias"></div>
-                    <div class="zap-grid" id="gradeCliente"></div>
-                </section>
-
-                <section id="abaCarrinho" class="content">
-                    <div class="flex-row">
-                        <div class="flex-main">
-                            <div class="gva-card">
-                                <div class="card-header">Carrinho</div>
-                                <div id="listaCarrinho" class="card-body">Vazio.</div>
-                            </div>
-                            <div class="gva-card">
-                                <div class="card-header">Dados do Cliente</div>
-                                <div class="card-body gva-form-large">
-                                    <div class="form-row">
-                                        <div class="form-group"><label>Tipo:</label><select id="tipoCliente"><option value="PF">PF</option><option value="PJ">PJ</option></select></div>
-                                        <div class="form-group" style="flex:2;"><label>Nome / Razão Social:</label><input type="text" id="nomeCliente"></div>
-                                    </div>
-                                    <div class="form-row">
-                                        <div class="form-group"><label>CPF / CNPJ:</label><input type="text" id="docCliente"></div>
-                                        <div class="form-group"><label>WhatsApp:</label><input type="tel" id="telCliente"></div>
-                                    </div>
-                                    <input type="text" id="endCliente" placeholder="Endereço de Entrega">
-                                </div>
-                            </div>
-                        </div>
-                        <div class="flex-side">
-                            <div class="gva-card">
-                                <div class="card-header">Fechamento</div>
-                                <div class="card-body gva-form-large">
-                                    <label>Pagamento:</label>
-                                    <select id="formaPagamento">
-                                        <option value="Pix">Pix</option><option value="Dinheiro">Dinheiro</option><option value="Credito">Crédito</option>
-                                    </select>
-                                    <label style="margin-top:10px;">Entrega:</label>
-                                    <select id="metodoEntrega">
-                                        <option value="Retirada">Retirada na Loja</option><option value="Motoboy">Motoboy</option>
-                                    </select>
-                                    <hr>
-                                    <p style="font-size:18px;">Total: <b>R$ <span id="totalCarrinho">0.00</span></b></p>
-                                    <button class="btn-success" onclick="enviarPedido()">Gerar Pedido</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                <section id="abaCaixa" class="content">
-                    <div class="gva-card">
-                        <div class="card-header">Resumo Financeiro</div>
-                        <div class="card-body">
-                            <div class="financeiro-grid">
-                                <div class="fin-box entries"><h4>Faturamento</h4><p>R$ <span id="finFaturamento">0.00</span></p></div>
-                                <div class="fin-box total"><h4>Caixa</h4><p>R$ <span id="finSaldo">0.00</span></p></div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                <section id="abaAdmin" class="content">
-                    <div class="sub-nav-gva">
-                        <button id="subBtnAcabamentos" class="sub-active" onclick="toggleAdminSub('acabamentos')"><i class="fa fa-th-list"></i> Grade de Variações / Acabamentos</button>
-                        <button id="subBtnProdutos" onclick="toggleAdminSub('produtos')"><i class="fa fa-box"></i> Produtos Base</button>
-                        <button id="subBtnMenus" onclick="toggleAdminSub('menus')"><i class="fa fa-tags"></i> Categorias</button>
-                    </div>
-
-                    <div id="subAdminAcabamentos" class="admin-panel">
-                        <div class="gva-card">
-                            <div class="card-header" style="background:#2D3748; color:white;">Cadastrar Opção para a Grade</div>
-                            <div class="card-body gva-form-large" style="background:#F8FAFC;">
-                                <input type="hidden" id="editAcabId">
-                                
-                                <div class="form-row">
-                                    <div class="form-group" style="flex:2;">
-                                        <label>Nome (Ex: Sem Verniz / Frente e Verso PB / Adesivo Vinil):</label>
-                                        <input type="text" id="acabNome" placeholder="Descreva como aparecerá para o cliente">
-                                    </div>
-                                    <div class="form-group">
-                                        <label>Grupo no Menu (Ex: Cobertura, Tipo de Papel):</label>
-                                        <input type="text" id="acabGrupo" placeholder="Vazio = Checkbox Extra (Opcional)">
-                                    </div>
-                                </div>
-
-                                <div class="form-row">
-                                    <div class="form-group">
-                                        <label>Lógica Matemática da Variação (Como o sistema cobra isso?):</label>
-                                        <select id="acabMultiplicador" style="border-left: 4px solid var(--gva-azul);">
-                                            <optgroup label="COMUNICAÇÃO VISUAL">
-                                                <option value="cobrar_area_m2">Multiplicar por Metro Quadrado (m²)</option>
-                                                <option value="cobrar_area_cm2">Multiplicar por Centímetro Quadrado (cm²)</option>
-                                                <option value="cobrar_m_linear">Multiplicar por Metro Linear</option>
-                                            </optgroup>
-                                            <optgroup label="IMPRESSÃO DIGITAL (LIVROS/MANUAIS)">
-                                                <option value="cobrar_paginas_frente">Multiplicar pelas Páginas do Arquivo (Só Frente)</option>
-                                                <option value="cobrar_paginas_verso">Multiplicar pelas Páginas (Frente e Verso)</option>
-                                                <option value="cobrar_folhas">Multiplicar por Folhas Físicas (Custo de Papel)</option>
-                                                <option value="cobrar_fixo">Consultar Espessura mas cobrar 1x (Encadernações)</option>
-                                            </optgroup>
-                                            <optgroup label="OFFSET E PERSONALIZADOS">
-                                                <option value="unidade_simples">Fixo por Lote / Unidade (Ex: Verniz, Faca Especial)</option>
-                                            </optgroup>
-                                        </select>
-                                    </div>
-                                    <div class="form-group">
-                                        <label>Vincular a qual Categoria?</label>
-                                        <select id="acabCatVinculo"></select>
-                                    </div>
-                                </div>
-
-                                <div class="w2p-section-title">Tabela de Preços de Venda (Permite Escalonamento)</div>
-                                <div id="containerPrecosAcabamento" class="container-precos"></div>
-                                <button type="button" class="btn-gva" style="background:#4A5568; padding:8px 15px; margin-bottom:20px; font-size:13px;" onclick="adicionarFaixaPreco('containerPrecosAcabamento')">+ Adicionar Faixa de Preço</button>
-
-                                <div class="w2p-section-title" style="margin-top:10px;">Logística Interna</div>
-                                <div class="form-row" style="background:white; padding:15px; border-radius:8px; border:1px solid #E2E8F0;">
-                                    <div class="form-group">
-                                        <label style="color:#E53E3E;"><i class="fa fa-dollar-sign"></i> Preço de Custo (R$)</label>
-                                        <input type="number" id="acabPrecoCusto" step="0.001" value="0.00" placeholder="Para seu controle interno">
-                                    </div>
-                                    <div class="form-group">
-                                        <label><i class="fa fa-weight-hanging"></i> Peso Unitário/m² (kg)</label>
-                                        <input type="number" id="acabPeso" step="0.001" value="0.00">
-                                    </div>
-                                    <div class="form-group">
-                                        <label><i class="fa fa-clock"></i> Tempo de Produção (Dias)</label>
-                                        <input type="number" id="acabPrazo" value="0">
-                                    </div>
-                                </div>
-
-                                <button id="btnSalvarAcab" class="btn-success" style="margin-top:15px;" onclick="salvarAcabamento()"><i class="fa fa-save"></i> Salvar Variação na Grade</button>
-                                <button class="btn-gva" style="margin-top:15px; background:#CBD5E0; color:#2D3748;" onclick="limparFormAcabamento()">Limpar Formulário</button>
-                            </div>
-                        </div>
-
-                        <div class="gva-card">
-                            <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
-                                <span><i class="fa fa-list"></i> Banco de Variações e Acabamentos</span>
-                                <input type="text" id="filtroGrade" placeholder="Buscar opção..." style="padding:6px 12px; border-radius:6px; border:1px solid #ccc; font-size:12px;" oninput="renderizarListaAcabamentos()">
-                            </div>
-                            <div class="card-body" style="padding:0; overflow-x:auto;">
-                                <table class="wp-table-grid" id="tabelaGradeW2P"></table>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div id="subAdminProdutos" class="admin-panel" style="display:none;">
-                        <div class="gva-card">
-                            <div class="card-header">Produto Base (Casca)</div>
-                            <div class="card-body gva-form-large">
-                                <input type="hidden" id="editId">
-                                <div class="form-row">
-                                    <div class="form-group"><label>SKU:</label><input type="text" id="adminSku"></div>
-                                    <div class="form-group" style="flex:2;"><label>Nome do Produto Base (Ex: Cartão de Visita, Banner):</label><input type="text" id="adminNome"></div>
-                                </div>
-                                <div class="form-row">
-                                    <div class="form-group"><label>Categoria:</label><select id="adminCatSelect"></select></div>
-                                    <div class="form-group"><label>O que o cliente precisa preencher na loja?</label>
-                                        <select id="adminTipo" style="border-left: 4px solid var(--gva-azul);">
-                                            <option value="unidade">Quantidade Fechada (Offset, Personalizados)</option>
-                                            <option value="folha">Qtd de Páginas + Cópias (Digital)</option>
-                                            <option value="m2">Largura e Altura em Metros (Lonas, Adesivos m²)</option>
-                                            <option value="cm2">Largura e Altura em Centímetros (Adesivos Recorte/Pequenos)</option>
-                                            <option value="m_linear">Largura em Metros + Medida Linear</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="form-row">
-                                    <div class="form-group"><label>Qtds Fixas Permitidas (Ex: 500,1000 - Vazio para qtd livre):</label><input type="text" id="adminQtdsFixas"></div>
-                                    <div class="form-group"><label>URL da Imagem:</label><input type="text" id="adminImg"></div>
-                                </div>
-
-                                <div class="w2p-section-title">Tabela de Preços do Produto Base</div>
-                                <p style="font-size:13px; color:#718096; margin-top:0;">*Se o preço for formado só pela soma dos Acabamentos, deixe R$ 0,00.</p>
-                                <div id="containerPrecosProduto" class="container-precos"></div>
-                                <button type="button" class="btn-gva" style="background:#4A5568; padding:8px 15px; margin-bottom:20px; font-size:13px;" onclick="adicionarFaixaPreco('containerPrecosProduto')">+ Adicionar Faixa de Preço</button>
-
-                                <button id="btnSalvarProd" class="btn-success" onclick="salvarNovoProduto()">Salvar Produto Base</button>
-                            </div>
-                        </div>
-                        <div class="gva-card"><div class="card-header">Produtos Ativos</div><div id="listaGerenciarProdutos" class="card-body"></div></div>
-                    </div>
-
-                    <div id="subAdminMenus" class="admin-panel" style="display:none;">
-                        <div class="gva-card"><div class="card-body gva-form-large">
-                            <input type="hidden" id="editCatId">
-                            <input type="text" id="catNome" placeholder="Nova Categoria">
-                            <button id="btnSalvarCat" class="btn-gva" onclick="salvarCategoria()">Salvar</button>
-                        </div></div>
-                        <div class="gva-card"><div class="card-header">Categorias</div><div id="listaGerenciarCategorias" class="card-body"></div></div>
-                    </div>
-                </section>
-
-                <section id="abaLoja" class="content"><div id="listaProducao" class="prod-grid"></div></section>
+    <!-- INTERFACE PRINCIPAL -->
+    <div id="appInterface" class="hidden h-screen flex flex-col">
+        
+        <!-- HEADER -->
+        <header class="h-16 bg-[#0f172a] flex items-center justify-between px-6 shrink-0 shadow-md z-50">
+            <div class="flex items-center gap-4">
+                <img src="https://i.postimg.cc/1RCc58qN/gva-br-1-ERP-26.png" alt="GVA Gráfica" class="h-8 object-contain" />
+                <nav class="hidden md:flex gap-6 ml-10 text-slate-400 text-[11px] font-bold uppercase">
+                    <button type="button" onclick="mudarAba('loja', this)" class="hover:text-white transition">Vendas</button>
+                    <button type="button" onclick="mudarAba('producao', this)" class="hover:text-white transition">Produção</button>
+                    <button type="button" onclick="mudarAba('financeiro', this)" class="hover:text-white transition">Financeiro</button>
+                    <button type="button" onclick="mudarAba('cadastros', this)" class="hover:text-white transition">Configurações</button>
+                </nav>
             </div>
-        </main>
+            <div class="flex items-center gap-4 text-white">
+                <span class="text-[10px] font-bold opacity-50 uppercase">GVAsist v1.0</span>
+                <button type="button" onclick="sair()" class="bg-red-600 px-3 py-1 rounded text-[10px] font-bold uppercase hover:bg-red-700 transition">Sair</button>
+            </div>
+        </header>
+
+        <div class="flex flex-1 overflow-hidden">
+            <!-- SIDEBAR -->
+            <aside class="w-64 bg-white border-r border-slate-200 hidden md:flex flex-col shrink-0">
+                <div class="p-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Menu Principal</div>
+                <nav class="flex-1 space-y-1">
+                    <button type="button" onclick="mudarAba('loja', this)" class="aba-btn w-full flex items-center gap-3 p-4 font-bold text-slate-500 hover:bg-slate-50 active-aba">
+                        <i class="fa fa-shopping-cart"></i> Loja PDV
+                    </button>
+                    <button type="button" onclick="mudarAba('producao', this)" class="aba-btn w-full flex items-center gap-3 p-4 font-bold text-slate-500 hover:bg-slate-50">
+                        <i class="fa fa-tasks"></i> Produção
+                    </button>
+                    <button type="button" onclick="mudarAba('financeiro', this)" class="aba-btn w-full flex items-center gap-3 p-4 font-bold text-slate-500 hover:bg-slate-50">
+                        <i class="fa fa-chart-line"></i> Financeiro
+                    </button>
+                    <button type="button" onclick="mudarAba('cadastros', this)" class="aba-btn w-full flex items-center gap-3 p-4 font-bold text-slate-500 hover:bg-slate-50">
+                        <i class="fa fa-cog"></i> Configurações
+                    </button>
+                </nav>
+            </aside>
+
+            <!-- CONTEUDO (AQUI FOI REMOVIDO O SCROLL GERAL) -->
+            <main class="flex-1 p-6 overflow-hidden flex flex-col relative">
+
+                <!-- ABA LOJA -->
+                <section id="aba-loja" class="aba-content h-full overflow-y-auto pr-2">
+                    <div class="flex flex-col lg:flex-row gap-6">
+                        <div class="flex-1">
+                            <div id="menuFiltroCat" class="flex gap-2 mb-6 overflow-x-auto pb-2"></div>
+                            <div id="gradeProdutos" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6"></div>
+                        </div>
+
+                        <!-- CARRINHO -->
+                        <div class="w-full lg:w-[350px] bg-white p-6 rounded shadow-sm border border-slate-200 h-fit sticky top-0">
+                            <h3 class="text-lg font-bold mb-6 border-b pb-2 text-slate-800">Carrinho de Venda</h3>
+                            
+                            <div class="mb-6 space-y-1">
+                                <label class="text-[10px] font-bold text-slate-400 uppercase flex justify-between">
+                                    Cliente <span id="labelCreditoCli" class="text-emerald-600 font-bold">Saldo: R$ 0.00</span>
+                                </label>
+                                <select id="cartCliente" onchange="atualizarInfoCreditoCarrinho()" class="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs font-bold outline-none"></select>
+                            </div>
+
+                            <div id="listaCarrinho" class="space-y-3 mb-6 max-h-60 overflow-y-auto pr-1"></div>
+                            
+                            <div class="border-t border-slate-100 pt-4 space-y-3">
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div class="space-y-1">
+                                        <label class="text-[10px] font-bold text-slate-400 uppercase">Pagamento</label>
+                                        <select id="cartPagamento" onchange="toggleOpcoesPagamento()" class="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs font-bold outline-none">
+                                            <option value="Pix">Pix</option>
+                                            <option value="Dinheiro">Dinheiro</option>
+                                            <option value="Debito">Débito</option>
+                                            <option value="Credito_Vista">Crédito à Vista</option>
+                                            <option value="Credito_Parcelado">Crédito Parcelado</option>
+                                            <option value="Saldo_Cliente">Saldo de Crédito</option>
+                                        </select>
+                                    </div>
+                                    <div class="space-y-1" id="divParcelas" style="display:none;">
+                                        <label class="text-[10px] font-bold text-slate-400 uppercase">Parcelas</label>
+                                        <select id="cartParcelas" class="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs font-bold outline-none">
+                                            <option value="2">2x</option>
+                                            <option value="3">3x</option>
+                                            <option value="4">4x</option>
+                                            <option value="5">5x</option>
+                                            <option value="6">6x</option>
+                                            <option value="7">7x</option>
+                                            <option value="8">8x</option>
+                                            <option value="9">9x</option>
+                                            <option value="10">10x</option>
+                                            <option value="11">11x</option>
+                                            <option value="12">12x</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-2 gap-2 bg-slate-50 p-2 rounded border border-slate-100">
+                                    <div class="space-y-1">
+                                        <label class="text-[10px] font-bold text-slate-500 uppercase">Valor Pago</label>
+                                        <input type="number" id="cartValorPago" value="0" oninput="atualizarTotalFinal()" class="w-full p-1 bg-white border border-slate-200 rounded text-sm font-bold outline-none" />
+                                    </div>
+                                    <div class="space-y-1 text-right">
+                                        <label class="text-[10px] font-bold text-red-400 uppercase">Restante</label>
+                                        <div id="cartSaldoDevedor" class="text-sm font-black text-red-500">R$ 0.00</div>
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div class="space-y-1">
+                                        <label class="text-[10px] font-bold text-slate-400 uppercase">Entrega</label>
+                                        <select id="cartEntrega" onchange="toggleOpcoesEntrega()" class="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs font-bold outline-none">
+                                            <option value="Retirada">Retirada</option>
+                                            <option value="Motoboy">Motoboy</option>
+                                        </select>
+                                    </div>
+                                    <div class="space-y-1" id="divFrete" style="display:none;">
+                                        <label class="text-[10px] font-bold text-slate-400 uppercase">Frete R$</label>
+                                        <input type="number" id="cartFreteValor" value="0" oninput="atualizarTotalFinal()" class="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs font-bold outline-none" />
+                                    </div>
+                                </div>
+
+                                <div class="pt-4 border-t border-dashed border-slate-200">
+                                    <div class="flex justify-between text-slate-400 font-bold text-xs">
+                                        <span>Total Pedido:</span>
+                                        <span id="subtotalCart">R$ 0.00</span>
+                                    </div>
+                                    <div class="flex justify-between text-xl font-black text-slate-900 mt-1">
+                                        <span>A Pagar:</span>
+                                        <span id="totalCarrinho">R$ 0.00</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex gap-2 mt-6">
+                                <button type="button" onclick="enviarPedido(false)" class="w-1/3 bg-slate-200 text-slate-600 py-3 rounded font-bold text-xs hover:bg-slate-300 transition uppercase">Salvar</button>
+                                <button type="button" onclick="enviarPedido(true)" class="w-2/3 bg-emerald-600 text-white py-3 rounded font-bold text-xs hover:bg-emerald-700 transition shadow-md uppercase tracking-widest"><i class="fa fa-print"></i> Salvar e Imprimir</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ABA PRODUÇÃO (AGORA COM ALTURA TRAVADA E FLEX) -->
+                <section id="aba-producao" class="aba-content hidden flex flex-col h-full overflow-hidden">
+                    <h2 class="text-2xl font-bold text-slate-900 mb-6 uppercase italic tracking-tighter shrink-0">Painel de Produção</h2>
+                    <div id="kanbanContainer" class="flex-1 overflow-x-auto overflow-y-hidden flex gap-4 pb-2"></div>
+                </section>
+
+                <!-- ABA FINANCEIRO -->
+                <section id="aba-financeiro" class="aba-content hidden h-full overflow-y-auto pr-2">
+                    <h2 class="text-2xl font-bold text-slate-900 mb-6 uppercase italic tracking-tighter">Histórico de Pedidos</h2>
+                    <div class="bg-white rounded shadow-sm border border-slate-200 overflow-hidden">
+                        <table class="w-full text-left text-xs font-bold">
+                            <thead class="bg-slate-50 text-slate-400 uppercase tracking-wider">
+                                <tr>
+                                    <th class="p-4">Data</th>
+                                    <th class="p-4">Cliente</th>
+                                    <th class="p-4">Valor</th>
+                                    <th class="p-4 text-center">Status</th>
+                                    <th class="p-4 text-center">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="listaPedidosTab"></tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- ABA CONFIGURAÇÕES -->
+                <section id="aba-cadastros" class="aba-content hidden h-full overflow-y-auto pr-2">
+                    <div class="flex gap-8 border-b border-slate-200 mb-8 overflow-x-auto shrink-0">
+                        <button type="button" onclick="mudarSubAba('sub-cli', this)" class="sub-aba-btn pb-4 font-bold text-slate-400 active-sub">Clientes</button>
+                        <button type="button" onclick="mudarSubAba('sub-prod', this)" class="sub-aba-btn pb-4 font-bold text-slate-400">Produtos</button>
+                        <button type="button" onclick="mudarSubAba('sub-cat', this)" class="sub-aba-btn pb-4 font-bold text-slate-400">Categorias</button>
+                        <button type="button" onclick="mudarSubAba('sub-acab', this)" class="sub-aba-btn pb-4 font-bold text-slate-400">Acabamentos</button>
+                    </div>
+
+                    <!-- CLIENTES -->
+                    <div id="sub-cli" class="sub-aba-content block">
+                        <div class="bg-white p-6 rounded shadow-sm border border-slate-200 mb-8">
+                            <h3 id="tituloCliForm" class="font-bold text-slate-800 mb-6 uppercase text-xs tracking-widest">Informações do Cliente</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+                                <input type="hidden" id="cliId" />
+                                <div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">Nome</label><input type="text" id="cliNome" class="w-full p-2 bg-slate-50 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-indigo-500" /></div>
+                                <div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">CPF/CNPJ</label><input type="text" id="cliDoc" class="w-full p-2 bg-slate-50 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-indigo-500" /></div>
+                                <div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">WhatsApp</label><input type="text" id="cliTel" class="w-full p-2 bg-slate-50 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-indigo-500" /></div>
+                                <div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">Endereço</label><input type="text" id="cliEnd" class="w-full p-2 bg-slate-50 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-indigo-500" /></div>
+                                <div class="space-y-1"><label class="text-[10px] font-bold text-emerald-600 uppercase">Crédito R$</label><input type="number" id="cliCredito" value="0" step="0.01" class="w-full p-2 bg-emerald-50 border border-emerald-100 rounded font-bold text-emerald-700 outline-none focus:ring-2 focus:ring-emerald-500" /></div>
+                            </div>
+                            <div class="flex gap-2">
+                                <button type="button" id="btnSalvarCli" onclick="salvarCliente()" class="bg-slate-800 text-white px-8 py-2 rounded font-bold text-xs hover:bg-slate-700 transition">Salvar Cliente</button>
+                                <button type="button" onclick="limparFormCli()" class="bg-slate-100 text-slate-400 px-6 py-2 rounded font-bold text-xs hover:bg-slate-200 transition">Limpar</button>
+                            </div>
+                        </div>
+                        <div class="bg-white rounded shadow-sm border border-slate-200 overflow-hidden">
+                            <table class="w-full text-left text-xs font-bold">
+                                <thead class="bg-slate-50 text-slate-400 uppercase">
+                                    <tr><th class="p-4">Nome</th><th class="p-4">Crédito</th><th class="p-4 text-center">Ações</th></tr>
+                                </thead>
+                                <tbody id="listaClientesTab"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- PRODUTOS -->
+                    <div id="sub-prod" class="sub-aba-content hidden">
+                        <div class="bg-white p-6 rounded shadow-sm border border-slate-200 mb-8">
+                            <h3 class="font-bold text-slate-800 mb-6 uppercase text-xs tracking-widest">Informações do Produto</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                                <input type="hidden" id="prodId" />
+                                <div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">Nome do Produto</label><input type="text" id="prodNome" class="w-full p-2 bg-slate-50 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-indigo-500" /></div>
+                                <div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">Categoria</label><select id="prodCategoria" onchange="atualizarListaAcabamentosProduto()" class="w-full p-2 bg-slate-50 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-indigo-500"></select></div>
+                                <div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">Referência</label><input type="text" id="prodRef" class="w-full p-2 bg-slate-50 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-indigo-500" /></div>
+                                <div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">Tipo de Produto</label><select id="prodRegraPreco" onchange="ajustarCamposProduto()" class="w-full p-2 bg-slate-50 border border-slate-200 rounded outline-none font-bold focus:ring-2 focus:ring-indigo-500"><option value="unidade">Unitário</option><option value="m2">Por M²</option><option value="pacote">Pacotes Fechados</option><option value="progressivo">Desconto Progressivo</option></select></div>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                                <div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">Material</label><input type="text" id="prodMaterial" class="w-full p-2 bg-slate-50 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-indigo-500" /></div>
+                                <div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">Gramatura</label><input type="text" id="prodGramatura" class="w-full p-2 bg-slate-50 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-indigo-500" /></div>
+                                <div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">Prazo (Dias)</label><input type="number" id="prodPrazo" class="w-full p-2 bg-slate-50 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-indigo-500" /></div>
+                                <div class="space-y-1" id="boxPrecoBase"><label class="text-[10px] font-bold text-indigo-600 uppercase">Preço Base R$</label><input type="number" id="prodPreco" class="w-full p-2 bg-indigo-50 border border-indigo-200 rounded outline-none font-bold text-indigo-700 focus:ring-2 focus:ring-indigo-500" /></div>
+                            </div>
+
+                            <div id="boxMedidas" style="display:none;" class="bg-blue-50 p-4 rounded border border-blue-100 mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div class="space-y-1"><label class="text-[10px] font-bold text-blue-800 uppercase">Largura Bobina (m)</label><input type="number" id="prodLargBobina" step="0.01" class="w-full p-2 bg-white border border-blue-200 rounded outline-none font-bold focus:ring-2 focus:ring-blue-500" /></div>
+                                <div class="space-y-1"><label class="text-[10px] font-bold text-blue-800 uppercase">Largura Máx (m)</label><input type="number" id="prodLargMax" step="0.01" class="w-full p-2 bg-white border border-blue-200 rounded outline-none focus:ring-2 focus:ring-blue-500" /></div>
+                                <div class="space-y-1"><label class="text-[10px] font-bold text-blue-800 uppercase">Comprimento Máx (m)</label><input type="number" id="prodCompMax" step="0.01" class="w-full p-2 bg-white border border-blue-200 rounded outline-none focus:ring-2 focus:ring-blue-500" /></div>
+                            </div>
+
+                            <div id="boxPacotes" style="display:none;" class="bg-amber-50 p-4 rounded border border-amber-100 mb-6">
+                                <h4 class="font-bold text-amber-800 mb-4 text-[10px] uppercase tracking-widest">Grade de Pacotes</h4>
+                                <div id="listaGradePacotes" class="space-y-2"></div>
+                                <button type="button" onclick="addLinhaPacote()" class="mt-4 bg-white text-amber-600 border border-amber-200 px-4 py-1 rounded text-[10px] font-bold uppercase tracking-widest">+ Add Quantidade</button>
+                            </div>
+
+                            <div id="boxProgressivo" style="display:none;" class="bg-emerald-50 p-4 rounded border border-emerald-100 mb-6">
+                                <h4 class="font-bold text-emerald-800 mb-4 text-[10px] uppercase tracking-widest">Tabela Progressiva</h4>
+                                <div id="listaGradeProgressivo" class="space-y-2"></div>
+                                <button type="button" onclick="addLinhaProgressivo()" class="mt-4 bg-white text-emerald-600 border border-emerald-200 px-4 py-1 rounded text-[10px] font-bold uppercase tracking-widest">+ Add Faixa</button>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                                <div class="bg-slate-50 p-4 rounded border border-slate-100">
+                                    <h4 class="font-bold text-slate-400 mb-4 text-[10px] uppercase tracking-widest">Variações (Papel, Cor...)</h4>
+                                    <div id="listaAtributos" class="space-y-3"></div>
+                                    <button type="button" onclick="addAtributoManual()" class="mt-4 bg-white text-slate-600 border border-slate-200 px-4 py-1 rounded text-[10px] font-bold uppercase tracking-widest">+ Novo Grupo</button>
+                                </div>
+                                <div class="bg-slate-50 p-4 rounded border border-slate-100">
+                                    <h4 class="font-bold text-slate-400 mb-4 text-[10px] uppercase tracking-widest">Acabamentos Disponíveis</h4>
+                                    <div id="listaCheckAcabamentos" class="grid grid-cols-1 gap-2 max-h-40 overflow-y-auto pr-1"></div>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                                <div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">URL da Foto</label><input type="text" id="prodFoto" class="w-full p-2 bg-slate-50 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-indigo-500" /></div>
+                                <div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">Observações (Avisos, Prazos extras...)</label><textarea id="prodObs" rows="1" class="w-full p-2 bg-slate-50 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-indigo-500"></textarea></div>
+                            </div>
+                            
+                            <button type="button" onclick="salvarProduto()" class="bg-slate-800 text-white px-12 py-3 rounded font-bold text-xs hover:bg-slate-700 transition shadow-md uppercase tracking-widest">Salvar Produto</button>
+                        </div>
+
+                        <div class="bg-white rounded shadow-sm border border-slate-200 overflow-hidden">
+                            <table class="w-full text-left text-xs font-bold">
+                                <thead class="bg-slate-50 text-slate-400 uppercase tracking-wider">
+                                    <tr>
+                                        <th class="p-4">Produto</th>
+                                        <th class="p-4">Regra</th>
+                                        <th class="p-4 text-center">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="listaProdutosTab"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- CATEGORIAS -->
+                    <div id="sub-cat" class="sub-aba-content hidden">
+                        <div class="bg-white p-6 rounded shadow-sm border border-slate-200 max-w-md mb-6">
+                            <h3 class="font-bold text-slate-800 mb-4 uppercase text-xs tracking-widest">Categorias</h3>
+                            <div class="flex items-end gap-2">
+                                <input type="hidden" id="catId" />
+                                <div class="space-y-1 flex-1">
+                                    <label class="text-[10px] font-bold text-slate-400 uppercase">Nome da Categoria</label>
+                                    <input type="text" id="catNome" class="w-full p-2 bg-slate-50 border border-slate-200 rounded outline-none font-bold focus:ring-2 focus:ring-indigo-500" />
+                                </div>
+                                <button type="button" onclick="salvarCategoria()" class="bg-slate-800 text-white px-6 py-2 h-[38px] rounded font-bold text-xs hover:bg-slate-700 transition">Salvar</button>
+                            </div>
+                        </div>
+                        <div class="bg-white rounded shadow-sm border border-slate-200 max-w-md overflow-hidden">
+                            <table class="w-full text-left text-xs font-bold">
+                                <thead class="bg-slate-50 text-slate-400 uppercase tracking-wider">
+                                    <tr>
+                                        <th class="p-4">Categoria</th>
+                                        <th class="p-4 text-right">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="listaCategoriasTab"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- ACABAMENTOS -->
+                    <div id="sub-acab" class="sub-aba-content hidden">
+                        <div class="bg-white p-6 rounded shadow-sm border border-slate-200 mb-8">
+                            <h3 id="tituloAcabForm" class="font-bold text-slate-800 mb-6 uppercase text-xs tracking-widest">Novo Acabamento</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                                <input type="hidden" id="acabId" />
+                                <div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">Nome</label><input type="text" id="acabNome" class="w-full p-2 bg-slate-50 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-indigo-500" /></div>
+                                <div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">Grupo</label><input type="text" id="acabGrupo" class="w-full p-2 bg-slate-50 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-indigo-500" /></div>
+                                <div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">Categoria</label><select id="acabCategoria" class="w-full p-2 bg-slate-50 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-indigo-500"></select></div>
+                                <div class="space-y-1">
+                                    <label class="text-[10px] font-bold text-slate-400 uppercase">Regra</label>
+                                    <select id="acabRegra" class="w-full p-2 bg-slate-50 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-indigo-500">
+                                        <option value="unidade">Por Unidade</option><option value="lote">Fixo por Lote</option><option value="m2">Por M²</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4 max-w-md mb-6">
+                                <div class="space-y-1"><label class="text-[10px] font-bold text-emerald-600 uppercase">Preço Venda R$</label><input type="number" id="acabPrecoVenda" class="w-full p-2 bg-emerald-50 border border-emerald-100 rounded font-bold text-emerald-700 outline-none focus:ring-2 focus:ring-emerald-500" /></div>
+                                <div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">Custo R$</label><input type="number" id="acabCusto" class="w-full p-2 bg-slate-50 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-indigo-500" /></div>
+                            </div>
+                            <div class="flex gap-2">
+                                <button type="button" id="btnSalvarAcab" onclick="salvarAcabamento()" class="bg-slate-800 text-white px-10 py-2 rounded font-bold text-xs hover:bg-slate-700 transition">Salvar Acabamento</button>
+                                <button type="button" onclick="limparFormAcab()" class="bg-slate-100 text-slate-400 px-6 py-2 rounded font-bold text-xs hover:bg-slate-200 transition">Limpar</button>
+                            </div>
+                        </div>
+                        <div class="bg-white rounded shadow-sm border border-slate-200 overflow-hidden">
+                            <table class="w-full text-left text-xs font-bold">
+                                <thead class="bg-slate-50 text-slate-400 uppercase tracking-wider">
+                                    <tr>
+                                        <th class="p-4">Acabamento</th>
+                                        <th class="p-4 text-center">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="listaAcabamentosTab"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+            </main>
+        </div>
     </div>
 
-    <div id="modalFundo"><div id="modalConteudo" class="modal-w2p"></div></div>
-    <div id="alertaFundo"><div id="alertaCaixa"><p id="alertaTexto"></p><button class="btn-gva" onclick="fecharAlerta()">Ok</button></div></div>
+    <!-- MODAL W2P PDV (FECHA AO CLICAR FORA) -->
+    <div id="modalW2P" onclick="fecharModalFora(event)" class="fixed inset-0 bg-slate-900/80 hidden z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-5xl max-h-[90vh] rounded-xl overflow-hidden flex flex-col shadow-2xl">
+            
+            <div class="flex justify-between items-center p-6 border-b border-slate-100 bg-white">
+                <h2 id="modalNomeProd" class="text-2xl font-black text-slate-800 uppercase tracking-tight"></h2>
+                <button type="button" onclick="fecharModal()" class="text-slate-400 hover:text-red-500 transition text-2xl leading-none">&times;</button>
+            </div>
+
+            <div class="flex flex-col md:flex-row flex-1 overflow-hidden bg-slate-50/50">
+                
+                <div class="w-full md:w-2/5 p-8 border-r border-slate-100 flex flex-col items-center justify-start bg-white">
+                    <div id="modalHeaderImg" class="w-full h-64 bg-contain bg-no-repeat bg-center rounded-lg mb-6"></div>
+                    
+                    <div id="modalObs" class="hidden w-full bg-blue-50 text-blue-700 p-4 rounded border border-blue-100 text-xs mb-4"></div>
+
+                    <div id="avisoBobina" class="hidden w-full bg-amber-50 text-amber-700 p-4 rounded border border-amber-200 text-xs font-bold flex items-start gap-3 shadow-sm">
+                        <i class="fa fa-exclamation-triangle text-lg mt-0.5"></i>
+                        <span>Atenção: O menor lado excede a largura da bobina. O material terá emenda.</span>
+                    </div>
+                </div>
+
+                <div class="w-full md:w-3/5 p-8 overflow-y-auto">
+                    <input type="hidden" id="modalProdId" />
+                    <input type="hidden" id="modalProdPrecoBase" />
+                    <input type="hidden" id="modalProdRegra" />
+                    
+                    <h4 class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Medidas e Quantidade</h4>
+                    <div id="modalCorpoMedidas" class="grid grid-cols-2 gap-4 mb-8"></div>
+                    
+                    <h4 id="tituloVariacoes" class="hidden text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4 border-t border-slate-200 pt-6">Variações do Produto</h4>
+                    <div id="modalCorpoVariacoes" class="grid grid-cols-2 gap-4 mb-8"></div>
+                    
+                    <h4 id="tituloAcabamentos" class="hidden text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4 border-t border-slate-200 pt-6">Acabamentos Extras</h4>
+                    <div id="modalCorpoAcabamentos" class="flex flex-wrap gap-2 mb-4"></div>
+                </div>
+            </div>
+
+            <div class="p-6 border-t border-slate-200 flex flex-col md:flex-row justify-between items-center bg-white gap-4">
+                <div>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase">Investimento Total</p>
+                    <p id="modalSubtotal" class="text-4xl font-black text-indigo-600">R$ 0.00</p>
+                </div>
+                <button type="button" onclick="confirmarAdicaoCarrinho()" class="w-full md:w-auto bg-indigo-600 text-white px-12 py-4 rounded font-bold text-lg shadow-lg hover:bg-indigo-700 transition-all uppercase tracking-widest">Adicionar ao Pedido</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL HISTÓRICO -->
+    <div id="modalHistoricoCli" class="fixed inset-0 bg-slate-900/60 hidden z-50 flex items-center justify-center p-4 backdrop-blur-md">
+        <div class="bg-white w-full max-w-2xl max-h-[80vh] rounded-lg shadow-2xl flex flex-col p-10 overflow-hidden">
+            <div class="flex justify-between items-center mb-6">
+                <h3 id="histNomeCli" class="text-2xl font-black text-slate-900 uppercase tracking-tighter">Histórico</h3>
+                <button type="button" onclick="document.getElementById('modalHistoricoCli').classList.add('hidden')" class="text-slate-300 hover:text-red-500 font-bold">✕ FECHAR</button>
+            </div>
+            <div id="corpoHistoricoCli" class="overflow-y-auto space-y-4"></div>
+        </div>
+    </div>
 
     <script src="script.js"></script>
 </body>
