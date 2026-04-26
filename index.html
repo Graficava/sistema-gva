@@ -85,13 +85,18 @@
                     <div class="flex flex-col lg:flex-row gap-6">
                         <div class="flex-1">
                             
-                            <!-- BARRA DE BUSCA E FILTROS -->
+                            <!-- BARRA DE BUSCA E FILTROS FIXOS -->
                             <div class="flex flex-col md:flex-row gap-4 mb-6">
                                 <div class="w-full md:w-1/3 relative">
                                     <i class="fa fa-search absolute left-3 top-3 text-slate-400"></i>
                                     <input type="text" id="buscaProduto" onkeyup="renderVitrine(categoriaAtual)" placeholder="Buscar produto..." class="w-full pl-9 p-2 border border-slate-200 rounded text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500" />
                                 </div>
-                                <div id="menuFiltroCat" class="flex gap-2 overflow-x-auto pb-2 flex-1"></div>
+                                <div class="flex gap-2 overflow-x-auto pb-2 flex-1">
+                                    <button type="button" onclick="renderVitrine('Todos')" class="px-5 py-2 bg-white border border-slate-200 rounded font-bold text-xs hover:bg-slate-800 hover:text-white transition shadow-sm">Todos</button>
+                                    <button type="button" onclick="renderVitrine('Gráfico')" class="px-5 py-2 bg-yellow-100 text-yellow-800 border border-yellow-200 rounded font-bold text-xs hover:bg-yellow-200 transition shadow-sm">Gráfico</button>
+                                    <button type="button" onclick="renderVitrine('Com. Visual')" class="px-5 py-2 bg-amber-100 text-amber-800 border border-amber-200 rounded font-bold text-xs hover:bg-amber-200 transition shadow-sm">Com. Visual</button>
+                                    <button type="button" onclick="renderVitrine('Outros')" class="px-5 py-2 bg-teal-100 text-teal-800 border border-teal-200 rounded font-bold text-xs hover:bg-teal-200 transition shadow-sm">Outros</button>
+                                </div>
                             </div>
 
                             <div id="gradeProdutos" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6"></div>
@@ -105,7 +110,6 @@
                                 <label class="text-[10px] font-bold text-slate-400 uppercase flex justify-between">
                                     Cliente <span id="labelCreditoCli" class="text-emerald-600 font-bold">Saldo: R$ 0.00</span>
                                 </label>
-                                <!-- CAMPO DE BUSCA DE CLIENTE -->
                                 <input type="text" id="cartClienteInput" list="listaClientesDatalist" onchange="atualizarInfoCreditoCarrinho()" placeholder="Digite para buscar cliente..." class="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500" />
                                 <datalist id="listaClientesDatalist"></datalist>
                                 <input type="hidden" id="cartClienteId" />
@@ -149,7 +153,6 @@
                                     </div>
                                 </div>
 
-                                <!-- CAMPO DE DESCONTO -->
                                 <div class="grid grid-cols-2 gap-2">
                                     <div class="space-y-1">
                                         <label class="text-[10px] font-bold text-red-400 uppercase">Desconto R$</label>
@@ -193,21 +196,59 @@
                     <div id="kanbanContainer" class="flex-1 overflow-x-auto overflow-y-hidden flex gap-4 pb-2"></div>
                 </section>
 
-                <!-- ABA FINANCEIRO -->
+                <!-- ABA FINANCEIRO (NOVO FLUXO DE CAIXA) -->
                 <section id="aba-financeiro" class="aba-content hidden h-full overflow-y-auto pr-2">
-                    <h2 class="text-2xl font-bold text-slate-900 mb-6 uppercase italic tracking-tighter">Histórico de Pedidos</h2>
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                        <h2 class="text-2xl font-bold text-slate-900 uppercase italic tracking-tighter">Fluxo de Caixa</h2>
+                        <div class="flex items-center gap-2 bg-white p-2 rounded border border-slate-200 shadow-sm">
+                            <label class="text-[10px] font-bold text-slate-400 uppercase">Movimento do Dia:</label>
+                            <input type="date" id="finDataFiltro" onchange="renderFinanceiro()" class="p-1 border-none bg-transparent font-bold text-sm outline-none text-indigo-600" />
+                        </div>
+                    </div>
+
+                    <!-- CARDS DE RESUMO -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                        <div class="bg-emerald-50 p-6 rounded border border-emerald-100 shadow-sm">
+                            <p class="text-[10px] font-bold text-emerald-600 uppercase tracking-widest mb-1">Entradas (Pedidos)</p>
+                            <p id="finEntradas" class="text-3xl font-black text-emerald-700">R$ 0.00</p>
+                        </div>
+                        <div class="bg-red-50 p-6 rounded border border-red-100 shadow-sm">
+                            <p class="text-[10px] font-bold text-red-600 uppercase tracking-widest mb-1">Saídas (Despesas)</p>
+                            <p id="finSaidas" class="text-3xl font-black text-red-700">R$ 0.00</p>
+                        </div>
+                        <div class="bg-indigo-50 p-6 rounded border border-indigo-100 shadow-sm">
+                            <p class="text-[10px] font-bold text-indigo-600 uppercase tracking-widest mb-1">Saldo do Dia</p>
+                            <p id="finSaldo" class="text-3xl font-black text-indigo-700">R$ 0.00</p>
+                        </div>
+                    </div>
+
+                    <!-- REGISTRAR NOVA DESPESA -->
+                    <div class="bg-white p-6 rounded shadow-sm border border-slate-200 mb-6">
+                        <h3 class="font-bold text-slate-800 mb-4 uppercase text-xs tracking-widest">Registrar Nova Saída/Despesa</h3>
+                        <div class="flex flex-col md:flex-row gap-4 items-end">
+                            <div class="flex-1 space-y-1">
+                                <label class="text-[10px] font-bold text-slate-400 uppercase">Descrição da Despesa</label>
+                                <input type="text" id="finDesc" placeholder="Ex: Conta de Luz, Compra de Material, Pagamento..." class="w-full p-3 bg-slate-50 border border-slate-200 rounded text-sm outline-none focus:ring-2 focus:ring-red-500" />
+                            </div>
+                            <div class="w-full md:w-48 space-y-1">
+                                <label class="text-[10px] font-bold text-slate-400 uppercase">Valor R$</label>
+                                <input type="number" id="finValor" placeholder="0.00" class="w-full p-3 bg-slate-50 border border-slate-200 rounded text-sm font-bold outline-none focus:ring-2 focus:ring-red-500" />
+                            </div>
+                            <button type="button" onclick="salvarDespesa()" class="w-full md:w-auto bg-red-600 text-white px-8 py-3 rounded font-bold text-xs hover:bg-red-700 transition uppercase tracking-widest shadow-md">Registrar Saída</button>
+                        </div>
+                    </div>
+
+                    <!-- TABELA DE TRANSAÇÕES -->
                     <div class="bg-white rounded shadow-sm border border-slate-200 overflow-hidden">
                         <table class="w-full text-left text-xs font-bold">
                             <thead class="bg-slate-50 text-slate-400 uppercase tracking-wider">
                                 <tr>
-                                    <th class="p-4">Data</th>
-                                    <th class="p-4">Cliente</th>
-                                    <th class="p-4">Valor</th>
-                                    <th class="p-4 text-center">Status</th>
-                                    <th class="p-4 text-center">Ações</th>
+                                    <th class="p-4">Hora</th>
+                                    <th class="p-4">Descrição</th>
+                                    <th class="p-4 text-right">Valor</th>
                                 </tr>
                             </thead>
-                            <tbody id="listaPedidosTab"></tbody>
+                            <tbody id="listaFinanceiroTab"></tbody>
                         </table>
                     </div>
                 </section>
@@ -239,7 +280,6 @@
                             </div>
                         </div>
                         
-                        <!-- BUSCA CLIENTES TABELA -->
                         <div class="mb-4 relative max-w-md">
                             <i class="fa fa-search absolute left-3 top-3 text-slate-400"></i>
                             <input type="text" id="buscaClienteTab" onkeyup="renderCliTable()" placeholder="Buscar cliente por nome ou documento..." class="w-full pl-9 p-2 border border-slate-200 rounded text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500" />
@@ -259,12 +299,24 @@
                     <div id="sub-prod" class="sub-aba-content hidden">
                         <div class="bg-white p-6 rounded shadow-sm border border-slate-200 mb-8">
                             <h3 class="font-bold text-slate-800 mb-6 uppercase text-xs tracking-widest">Informações do Produto</h3>
-                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
                                 <input type="hidden" id="prodId" />
                                 <div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">Nome do Produto</label><input type="text" id="prodNome" class="w-full p-2 bg-slate-50 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-indigo-500" /></div>
+                                
+                                <!-- NOVO CAMPO: TIPO DE PRODUTO (SETOR) -->
+                                <div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">Tipo de Produto</label>
+                                    <select id="prodSetor" class="w-full p-2 bg-slate-50 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-indigo-500">
+                                        <option value="Gráfico">Gráfico</option>
+                                        <option value="Com. Visual">Com. Visual</option>
+                                        <option value="Outros">Outros</option>
+                                    </select>
+                                </div>
+
                                 <div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">Categoria</label><select id="prodCategoria" onchange="atualizarListaAcabamentosProduto()" class="w-full p-2 bg-slate-50 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-indigo-500"></select></div>
                                 <div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">Referência</label><input type="text" id="prodRef" class="w-full p-2 bg-slate-50 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-indigo-500" /></div>
-                                <div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">Tipo de Produto</label><select id="prodRegraPreco" onchange="ajustarCamposProduto()" class="w-full p-2 bg-slate-50 border border-slate-200 rounded outline-none font-bold focus:ring-2 focus:ring-indigo-500"><option value="unidade">Unitário</option><option value="m2">Por M²</option><option value="pacote">Pacotes Fechados</option><option value="progressivo">Desconto Progressivo</option></select></div>
+                                
+                                <!-- ANTIGO TIPO DE PRODUTO AGORA É REGRA DE PREÇO -->
+                                <div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">Regra de Preço</label><select id="prodRegraPreco" onchange="ajustarCamposProduto()" class="w-full p-2 bg-slate-50 border border-slate-200 rounded outline-none font-bold focus:ring-2 focus:ring-indigo-500"><option value="unidade">Unitário</option><option value="m2">Por M²</option><option value="pacote">Pacotes Fechados</option><option value="progressivo">Desconto Progressivo</option></select></div>
                             </div>
                             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                                 <div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">Material</label><input type="text" id="prodMaterial" class="w-full p-2 bg-slate-50 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-indigo-500" /></div>
@@ -316,7 +368,7 @@
                                 <thead class="bg-slate-50 text-slate-400 uppercase tracking-wider">
                                     <tr>
                                         <th class="p-4">Produto</th>
-                                        <th class="p-4">Regra</th>
+                                        <th class="p-4">Setor</th>
                                         <th class="p-4 text-center">Ações</th>
                                     </tr>
                                 </thead>
