@@ -13,8 +13,8 @@ const db = firebase.firestore();
 
 let bdCategorias = [];
 let bdProdutos = [];
-let bdClientes = [];
-let bdPedidos =[];
+let bdClientes =[];
+let bdPedidos = [];
 let bdDespesas = [];
 let bdAcabamentos = [];
 let carrinho =[];
@@ -94,9 +94,12 @@ function renderKanbanProducao() {
     const container = document.getElementById('kanbanContainer');
     if(!container) return;
 
+    // Filtra os pedidos que NÃO estão arquivados
+    const pedidosAtivos = bdPedidos.filter(p => !p.arquivado);
+
     let html = '';
     STATUSES.forEach(status => {
-        const pedidosDoStatus = bdPedidos.filter(p => p.status === status);
+        const pedidosDoStatus = pedidosAtivos.filter(p => p.status === status);
         html += `
             <div class="bg-slate-100 rounded-xl p-4 w-80 flex-shrink-0 flex flex-col h-full border border-slate-200">
                 <div class="flex justify-between items-center mb-4 shrink-0">
@@ -124,6 +127,11 @@ function gerarCardPedido(p) {
     if(p.status === 'Entregue') corBorda = 'border-l-emerald-600';
     if(p.status === 'Cancelado / Estorno') corBorda = 'border-l-red-500';
 
+    let btnArquivar = '';
+    if (p.status === 'Entregue' || p.status === 'Cancelado / Estorno') {
+        btnArquivar = `<button type="button" onclick="arquivarPedido('${p.id}')" class="bg-slate-200 text-slate-600 px-3 rounded hover:bg-slate-300 transition" title="Arquivar Pedido (Remover da Tela)"><i class="fa fa-archive"></i></button>`;
+    }
+
     return `
         <div class="bg-white p-4 rounded-lg shadow-sm border border-slate-200 border-l-4 ${corBorda}">
             <div class="flex justify-between items-start mb-2">
@@ -138,6 +146,7 @@ function gerarCardPedido(p) {
                 <select onchange="mudarStatusPedido('${p.id}', this.value)" class="flex-1 p-2 bg-slate-50 border border-slate-200 rounded text-[10px] font-bold outline-none focus:ring-2 focus:ring-indigo-500">
                     ${options}
                 </select>
+                ${btnArquivar}
                 <button type="button" onclick="imprimirRecibo('${p.id}')" class="bg-slate-800 text-white px-3 rounded hover:bg-slate-700 transition" title="Imprimir Recibo"><i class="fa fa-print"></i></button>
             </div>
         </div>
@@ -147,6 +156,13 @@ function gerarCardPedido(p) {
 async function mudarStatusPedido(id, novoStatus) {
     try { await db.collection("pedidos").doc(id).update({ status: novoStatus }); } 
     catch(e) { console.error(e); alert("Erro ao atualizar status."); }
+}
+
+async function arquivarPedido(id) {
+    if(confirm("Deseja remover este pedido do painel de produção? Ele continuará salvo no Financeiro e no Histórico do Cliente.")) {
+        try { await db.collection("pedidos").doc(id).update({ arquivado: true }); } 
+        catch(e) { console.error(e); alert("Erro ao arquivar pedido."); }
+    }
 }
 
 // --- IMPRESSÃO DE RECIBO (2 VIAS) ---
@@ -512,7 +528,7 @@ function renderVitrine() {
 
     if (filtroCategoria !== 'Todas') prods = prods.filter(p => p.categoria === filtroCategoria);
 
-    const subcats = [...new Set(prods.map(p => p.subcategoria).filter(sc => sc))];
+    const subcats =[...new Set(prods.map(p => p.subcategoria).filter(sc => sc))];
     const menuSubCat = document.getElementById('menuFiltroSubCat');
     if(subcats.length > 0 && filtroCategoria !== 'Todas') {
         menuSubCat.innerHTML = `<button onclick="setFiltroSubcategoria('Todas')" class="px-4 py-1 rounded text-xs font-bold ${filtroSubcategoria==='Todas'?'bg-indigo-600 text-white':'bg-white border border-slate-200 text-slate-600'}">Todas as Subcategorias</button>` + 
@@ -567,6 +583,10 @@ function abrirConfigurador(id) {
     document.getElementById('modalProdRegra').value = p.regraPreco;
     document.getElementById('modalHeaderImg').style.backgroundImage = `url('${p.foto || 'https://via.placeholder.com/400'}')`;
     
+    // Limpa o campo de nome do arquivo
+    const inputNomeArq = document.getElementById('w2pNomeArquivo');
+    if(inputNomeArq) inputNomeArq.value = '';
+
     const divObs = document.getElementById('modalObs');
     if (p.obs && p.obs.trim() !== '') {
         divObs.innerHTML = `<strong>Aviso:</strong> ${p.obs}`;
@@ -768,9 +788,16 @@ function confirmarAdicaoCarrinho() {
         const nomeAcab = selAcab.options[selAcab.selectedIndex].text.split(" (+")[0];
         varsEscolhidas.push(`Acab: ${nomeAcab}`);
     }
+
+    // Pega o nome do arquivo se o usuário digitou
+    const nomeArquivo = document.getElementById('w2pNomeArquivo')?.value.trim();
+    let nomeFinal = p.nome;
+    if (nomeArquivo) {
+        nomeFinal += ` (${nomeArquivo})`;
+    }
     
     carrinho.push({ 
-        nome: p.nome, 
+        nome: nomeFinal, 
         valorUnitario: totalItem, 
         qtdCarrinho: 1,
         valor: totalItem, 
@@ -846,7 +873,8 @@ async function enviarPedido(imprimir = false) {
         valorPago: pago,
         saldoDevedor: saldo,
         data: new Date(),
-        status: statusInicial
+        status: statusInicial,
+        arquivado: false
     };
     
     const docRef = await db.collection("pedidos").add(pedido);
@@ -865,7 +893,7 @@ async function enviarPedido(imprimir = false) {
     if(imprimir) imprimirReciboDireto(docRef.id, pedido);
 }
 
-// --- FLUXO DE CAIXA (FINANCEIRO) ---
+// --- FLUXO DE CAIXA (FINANCEIRO) E DETALHES ---
 function renderFinanceiro() {
     const dataFiltroInput = document.getElementById('finDataFiltro');
     if (!dataFiltroInput) return;
@@ -888,7 +916,8 @@ function renderFinanceiro() {
                 dataObj: dataObj,
                 desc: `Pedido: ${p.clienteNome}`,
                 tipo: 'entrada',
-                valor: p.valorPago
+                valor: p.valorPago,
+                id: p.id
             });
         }
     });
@@ -925,10 +954,63 @@ function renderFinanceiro() {
             <td class="p-4 font-bold text-slate-700">${t.desc}</td>
             <td class="p-4 font-black text-right ${t.tipo === 'entrada' ? 'text-emerald-600' : 'text-red-600'}">
                 ${t.tipo === 'entrada' ? '+' : '-'} R$ ${t.valor.toFixed(2)}
+                ${t.tipo === 'entrada' ? `<button onclick="abrirDetalhesPedido('${t.id}')" class="ml-3 text-indigo-400 hover:text-indigo-600" title="Ver Detalhes do Pedido"><i class="fa fa-eye"></i></button>` : ''}
                 ${t.tipo === 'saida' ? `<button onclick="excluirDespesa('${t.id}')" class="ml-3 text-red-300 hover:text-red-600" title="Excluir Saída"><i class="fa fa-trash"></i></button>` : ''}
             </td>
         </tr>
     `).join('');
+}
+
+function abrirDetalhesPedido(id) {
+    const p = bdPedidos.find(x => x.id === id);
+    if(!p) return;
+    
+    const dataFormatada = p.data.toDate ? p.data.toDate().toLocaleString('pt-BR') : new Date(p.data).toLocaleString('pt-BR');
+    
+    let html = `
+        <div class="flex justify-between items-start mb-4 border-b border-slate-100 pb-4">
+            <div>
+                <p class="text-[10px] font-bold text-slate-400 uppercase">Cliente</p>
+                <p class="font-bold text-slate-800">${p.clienteNome}</p>
+            </div>
+            <div class="text-right">
+                <p class="text-[10px] font-bold text-slate-400 uppercase">Data</p>
+                <p class="font-bold text-slate-800 text-sm">${dataFormatada}</p>
+            </div>
+        </div>
+        
+        <div class="mb-4">
+            <p class="text-[10px] font-bold text-slate-400 uppercase mb-2">Status Atual</p>
+            <span class="bg-indigo-50 text-indigo-600 px-3 py-1 rounded text-[10px] font-black uppercase">${p.status}</span>
+        </div>
+
+        <div class="mb-4">
+            <p class="text-[10px] font-bold text-slate-400 uppercase mb-2">Itens do Pedido</p>
+            <div class="space-y-2 bg-slate-50 p-3 rounded border border-slate-100 max-h-40 overflow-y-auto">
+                ${p.itens.map(i => `
+                    <div class="flex justify-between text-xs">
+                        <span class="font-bold text-slate-700">${i.qtdCarrinho}x ${i.nome} <br/><span class="font-normal text-[9px] text-slate-500">${i.desc}</span></span>
+                        <span class="font-black text-indigo-600">R$ ${i.valor.toFixed(2)}</span>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+        
+        <div class="space-y-1 border-t border-slate-100 pt-4">
+            <div class="flex justify-between text-xs font-bold text-slate-500"><span>Subtotal:</span> <span>R$ ${(p.total + (p.desconto || 0)).toFixed(2)}</span></div>
+            ${p.desconto > 0 ? `<div class="flex justify-between text-xs font-bold text-red-500"><span>Desconto:</span> <span>- R$ ${p.desconto.toFixed(2)}</span></div>` : ''}
+            <div class="flex justify-between text-sm font-black text-slate-800 mt-1"><span>Total:</span> <span>R$ ${p.total.toFixed(2)}</span></div>
+            <div class="flex justify-between text-xs font-bold text-emerald-600 mt-1"><span>Valor Pago:</span> <span>R$ ${(p.valorPago || 0).toFixed(2)}</span></div>
+            <div class="flex justify-between text-xs font-bold text-red-500 mt-1"><span>Saldo Devedor:</span> <span>R$ ${(p.saldoDevedor || 0).toFixed(2)}</span></div>
+        </div>
+        
+        <div class="mt-6 flex gap-2">
+            <button type="button" onclick="imprimirRecibo('${p.id}')" class="flex-1 bg-indigo-600 text-white py-3 rounded font-bold text-xs hover:bg-indigo-700 transition uppercase tracking-widest shadow-md"><i class="fa fa-print"></i> Reimprimir Recibo</button>
+        </div>
+    `;
+    
+    document.getElementById('corpoDetalhesPedido').innerHTML = html;
+    document.getElementById('modalDetalhesPedido').classList.remove('hidden');
 }
 
 async function salvarDespesa() {
@@ -1018,7 +1100,32 @@ function renderCliTable() {
 
 async function salvarCategoria() { const id = document.getElementById('catId').value; const nome = document.getElementById('catNome').value; if(!nome) return; if(id) await db.collection("categorias").doc(id).update({nome: nome}); else await db.collection("categorias").add({nome: nome}); document.getElementById('catId').value = ''; document.getElementById('catNome').value = ''; }
 function editCat(id) { const c = bdCategorias.find(x => x.id === id); document.getElementById('catId').value = c.id; document.getElementById('catNome').value = c.nome; }
-function verHistoricoCliente(idCli) { const cliente = bdClientes.find(x => x.id === idCli); const pedidosCli = bdPedidos.filter(p => p.clienteId === idCli); document.getElementById('histNomeCli').innerText = `Pedidos de: ${cliente.nome}`; const corpo = document.getElementById('corpoHistoricoCli'); corpo.innerHTML = pedidosCli.length === 0 ? "<p class='text-center text-slate-400 py-10'>Nenhum pedido.</p>" : pedidosCli.map(p => `<div class="bg-slate-50 p-4 rounded border border-slate-100"><div class="flex justify-between font-bold text-indigo-900 mb-2"><span>${p.data.toDate().toLocaleDateString('pt-BR')}</span><span>R$ ${p.total.toFixed(2)}</span></div><div class="text-xs text-slate-500 mb-2">${p.itens.map(i => `• ${i.qtdCarrinho}x ${i.nome}`).join('<br/>')}</div><button type="button" onclick="imprimirRecibo('${p.id}')" class="text-[10px] font-bold text-indigo-500 uppercase hover:underline"><i class="fa fa-print"></i> Imprimir Recibo</button></div>`).join(''); document.getElementById('modalHistoricoCli').classList.remove('hidden'); }
+
+function verHistoricoCliente(idCli) { 
+    const cliente = bdClientes.find(x => x.id === idCli); 
+    const pedidosCli = bdPedidos.filter(p => p.clienteId === idCli); 
+    document.getElementById('histNomeCli').innerText = `Pedidos de: ${cliente.nome}`; 
+    const corpo = document.getElementById('corpoHistoricoCli'); 
+    corpo.innerHTML = pedidosCli.length === 0 
+        ? "<p class='text-center text-slate-400 py-10'>Nenhum pedido.</p>" 
+        : pedidosCli.map(p => `
+            <div class="bg-slate-50 p-4 rounded border border-slate-100">
+                <div class="flex justify-between font-bold text-indigo-900 mb-2">
+                    <span>${p.data.toDate().toLocaleDateString('pt-BR')}</span>
+                    <span>R$ ${p.total.toFixed(2)}</span>
+                </div>
+                <div class="text-xs text-slate-500 mb-3">
+                    ${p.itens.map(i => `• ${i.qtdCarrinho}x ${i.nome}`).join('<br/>')}
+                </div>
+                <div class="flex gap-4">
+                    <button type="button" onclick="abrirDetalhesPedido('${p.id}')" class="text-[10px] font-bold text-indigo-500 uppercase hover:underline"><i class="fa fa-eye"></i> Ver Detalhes</button>
+                    <button type="button" onclick="imprimirRecibo('${p.id}')" class="text-[10px] font-bold text-indigo-500 uppercase hover:underline"><i class="fa fa-print"></i> Imprimir Recibo</button>
+                </div>
+            </div>
+        `).join(''); 
+    document.getElementById('modalHistoricoCli').classList.remove('hidden'); 
+}
+
 async function salvarCliente() { const id = document.getElementById('cliId').value; const d = { nome: document.getElementById('cliNome').value, documento: document.getElementById('cliDoc').value, telefone: document.getElementById('cliTel').value, endereco: document.getElementById('cliEnd').value, credito: parseFloat(document.getElementById('cliCredito').value) || 0 }; if(!d.nome) return alert("Nome obrigatório"); if(id) await db.collection("clientes").doc(id).update(d); else await db.collection("clientes").add(d); limparFormCli(); }
 function editCli(id) { const c = bdClientes.find(x => x.id === id); document.getElementById('cliId').value = c.id; document.getElementById('cliNome').value = c.nome; document.getElementById('cliDoc').value = c.documento || ''; document.getElementById('cliTel').value = c.telefone || ''; document.getElementById('cliEnd').value = c.endereco || ''; document.getElementById('cliCredito').value = c.credito || 0; document.getElementById('tituloCliForm').innerText = "Editar Cadastro"; }
 function limparFormCli() { document.querySelectorAll('#sub-cli input').forEach(i => i.value = ''); document.getElementById('cliId').value = ''; document.getElementById('tituloCliForm').innerText = "Novo Cliente"; }
