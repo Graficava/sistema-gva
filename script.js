@@ -37,7 +37,6 @@ auth.onAuthStateChanged(user => {
         appInterface.classList.remove('hidden');
         iniciarLeitura();
         
-        // Seta a data de hoje no financeiro ao logar
         const dataFiltro = document.getElementById('finDataFiltro');
         if(dataFiltro && !dataFiltro.value) {
             dataFiltro.valueAsDate = new Date();
@@ -236,10 +235,21 @@ function addOpcaoAtrib(container, n = '', p = '') {
     container.appendChild(div);
 }
 
-function addAtributo(nome = '', opcoes =[]) {
+function addAtributo(nome = '', tipo = 'multiplica', opcoes =[]) {
     const div = document.createElement('div');
     div.className = "bg-white p-4 rounded border border-slate-100 shadow-sm item-atrib";
-    div.innerHTML = `<div class="flex gap-2 mb-3"><input type="text" placeholder="Grupo (ex: Papel)" value="${nome}" class="atrib-nome flex-1 font-bold text-sm p-2 border-b-2 border-indigo-50 outline-none focus:border-indigo-500" /><button type="button" onclick="this.parentElement.parentElement.remove()" class="text-red-300">✕</button></div><div class="lista-opcoes space-y-2"></div><button type="button" class="btn-add-op mt-3 text-[10px] font-bold uppercase text-indigo-400 hover:text-indigo-600">+ Add Opção</button>`;
+    div.innerHTML = `
+        <div class="flex gap-2 mb-3">
+            <input type="text" placeholder="Grupo (ex: Papel)" value="${nome}" class="atrib-nome flex-1 font-bold text-sm p-2 border-b-2 border-indigo-50 outline-none focus:border-indigo-500" />
+            <select class="atrib-tipo text-xs p-2 border-b-2 border-indigo-50 outline-none text-slate-500 font-bold">
+                <option value="multiplica" ${tipo === 'multiplica' ? 'selected' : ''}>Multiplica pela Qtd</option>
+                <option value="fixo" ${tipo === 'fixo' ? 'selected' : ''}>Fixo no Pedido</option>
+            </select>
+            <button type="button" onclick="this.parentElement.parentElement.remove()" class="text-red-300">✕</button>
+        </div>
+        <div class="lista-opcoes space-y-2"></div>
+        <button type="button" class="btn-add-op mt-3 text-[10px] font-bold uppercase text-indigo-400 hover:text-indigo-600">+ Add Opção</button>
+    `;
     document.getElementById('listaAtributos').appendChild(div);
     const containerOpcoes = div.querySelector('.lista-opcoes');
     div.querySelector('.btn-add-op').onclick = () => addOpcaoAtrib(containerOpcoes);
@@ -247,7 +257,7 @@ function addAtributo(nome = '', opcoes =[]) {
     else addOpcaoAtrib(containerOpcoes);
 }
 
-function addAtributoManual() { addAtributo('',[]); }
+function addAtributoManual() { addAtributo('', 'multiplica',[]); }
 
 function ajustarCamposProduto() {
     const r = document.getElementById('prodRegraPreco').value;
@@ -296,7 +306,8 @@ async function salvarProduto() {
             if (n) ops.push({ nome: n, preco: p });
         });
         const nomeAtrib = caixa.querySelector('.atrib-nome').value;
-        if (nomeAtrib) atributos.push({ nome: nomeAtrib, opcoes: ops });
+        const tipoAtrib = caixa.querySelector('.atrib-tipo').value;
+        if (nomeAtrib) atributos.push({ nome: nomeAtrib, tipo: tipoAtrib, opcoes: ops });
     });
 
     let acabList =[];
@@ -374,7 +385,7 @@ function editProd(id) {
     document.getElementById('prodObs').value = p.obs || '';
     
     document.getElementById('listaAtributos').innerHTML = '';
-    if (p.atributos) p.atributos.forEach(a => addAtributo(a.nome, a.opcoes));
+    if (p.atributos) p.atributos.forEach(a => addAtributo(a.nome, a.tipo || 'multiplica', a.opcoes));
     
     document.getElementById('listaGradePacotes').innerHTML = '';
     if (p.pacotes) p.pacotes.forEach(pct => addLinhaPacote(pct.qtd, pct.preco));
@@ -394,8 +405,6 @@ function renderVitrine(filtro = 'Todos') {
     if (!grid) return;
     
     const termo = document.getElementById('buscaProduto')?.value.toLowerCase() || '';
-    
-    // Filtra pelo SETOR (Gráfico, Com. Visual, Outros)
     let prods = filtro === 'Todos' ? bdProdutos : bdProdutos.filter(p => p.setor === filtro);
     
     if (termo) {
@@ -410,13 +419,28 @@ function renderVitrine(filtro = 'Todos') {
             precoExibicao = Math.min(...p.progressivo.map(prg => prg.p));
         }
 
+        // CORES PASTÉIS BASEADAS NO SETOR
+        let bgClass = 'bg-white border-slate-200';
+        let tagClass = 'text-slate-400';
+        
+        if (p.setor === 'Gráfico') {
+            bgClass = 'bg-yellow-50 border-yellow-200';
+            tagClass = 'text-yellow-600';
+        } else if (p.setor === 'Com. Visual') {
+            bgClass = 'bg-blue-50 border-blue-200';
+            tagClass = 'text-blue-600';
+        } else if (p.setor === 'Outros') {
+            bgClass = 'bg-emerald-50 border-emerald-200';
+            tagClass = 'text-emerald-600';
+        }
+
         return `
-        <div onclick="abrirConfigurador('${p.id}')" class="bg-white p-6 rounded border border-slate-200 shadow-sm hover:shadow-xl cursor-pointer transition-all group">
-            <div class="h-44 bg-slate-50 rounded mb-5 bg-contain bg-no-repeat bg-center transition group-hover:scale-105" style="background-image:url('${p.foto || 'https://via.placeholder.com/200'}')"></div>
+        <div onclick="abrirConfigurador('${p.id}')" class="${bgClass} p-6 rounded border shadow-sm hover:shadow-xl cursor-pointer transition-all group">
+            <div class="h-44 bg-white rounded mb-5 bg-contain bg-no-repeat bg-center transition group-hover:scale-105 shadow-sm" style="background-image:url('${p.foto || 'https://via.placeholder.com/200'}')"></div>
             <h4 class="font-bold text-slate-800 text-sm mb-1 truncate">${p.nome}</h4>
-            <p class="text-[10px] font-bold text-slate-400 uppercase mb-4">${p.categoria}</p>
+            <p class="text-[10px] font-bold ${tagClass} uppercase mb-4">${p.categoria}</p>
             <p class="text-xl font-black text-indigo-600">
-                <span class="text-[10px] text-slate-400 font-bold uppercase">A partir de</span> 
+                <span class="text-[10px] text-slate-500 font-bold uppercase">A partir de</span> 
                 R$ ${precoExibicao.toFixed(2)}
             </p>
         </div>
@@ -464,7 +488,7 @@ function abrirConfigurador(id) {
         divVariacoes.innerHTML = p.atributos.map(a => `
             <div class="space-y-1">
                 <label class="text-[10px] font-bold text-slate-400 uppercase">${a.nome}</label>
-                <select class="sel-var w-full p-3 border border-slate-200 rounded bg-slate-50 font-bold text-xs outline-none focus:ring-2 focus:ring-indigo-500" onchange="calcularPrecoAoVivo()">
+                <select class="sel-var w-full p-3 border border-slate-200 rounded bg-slate-50 font-bold text-xs outline-none focus:ring-2 focus:ring-indigo-500" data-tipo="${a.tipo || 'multiplica'}" onchange="calcularPrecoAoVivo()">
                     ${a.opcoes.map(o => `<option value="${o.preco}">${o.nome} ${o.preco > 0 ? '(+ R$ ' + o.preco.toFixed(2) + ')' : '(Grátis)'}</option>`).join('')}
                 </select>
             </div>
@@ -480,12 +504,20 @@ function abrirConfigurador(id) {
     
     if (acabPermitidos.length > 0) {
         tituloAcabamentos.classList.remove('hidden');
-        divAcabamentos.innerHTML = acabPermitidos.map(obj => {
+        
+        let optionsAcab = `<option value="" data-preco="0" data-regra="unidade">Nenhum</option>`;
+        acabPermitidos.forEach(obj => {
             const a = bdAcabamentos.find(x => x.id === (obj.id || obj));
-            if (!a) return '';
-            const sel = obj.padrao ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-slate-200';
-            return `<button type="button" onclick="this.classList.toggle('bg-indigo-600'); this.classList.toggle('text-white'); this.classList.toggle('border-indigo-600'); this.classList.toggle('bg-white'); this.classList.toggle('text-slate-600'); this.classList.toggle('border-slate-200'); calcularPrecoAoVivo()" data-id="${a.id}" data-preco="${a.venda}" data-regra="${a.regra}" class="acab-btn-modal px-3 py-2 rounded border font-bold text-[10px] uppercase transition-all ${sel}">${a.nome} (+ R$ ${a.venda.toFixed(2)})</button>`;
-        }).join('');
+            if (!a) return;
+            const selected = obj.padrao ? 'selected' : '';
+            optionsAcab += `<option value="${a.id}" data-preco="${a.venda}" data-regra="${a.regra}" ${selected}>${a.nome} (+ R$ ${a.venda.toFixed(2)})</option>`;
+        });
+
+        divAcabamentos.innerHTML = `
+            <select id="selAcabamentoUnico" class="w-full p-3 border border-slate-200 rounded bg-slate-50 font-bold text-xs outline-none focus:ring-2 focus:ring-indigo-500" onchange="calcularPrecoAoVivo()">
+                ${optionsAcab}
+            </select>
+        `;
     } else {
         tituloAcabamentos.classList.add('hidden');
         divAcabamentos.innerHTML = '';
@@ -501,8 +533,17 @@ function calcularPrecoAoVivo() {
     const regra = document.getElementById('modalProdRegra').value;
     const base = parseFloat(document.getElementById('modalProdPrecoBase').value) || 0;
     
-    let extraVar = 0;
-    document.querySelectorAll('.sel-var').forEach(s => extraVar += parseFloat(s.value));
+    let extraVarMultiplica = 0;
+    let extraVarFixo = 0;
+    
+    document.querySelectorAll('.sel-var').forEach(s => {
+        const val = parseFloat(s.value) || 0;
+        if (s.dataset.tipo === 'fixo') {
+            extraVarFixo += val;
+        } else {
+            extraVarMultiplica += val;
+        }
+    });
 
     let qtd = 1; let totalBase = 0; let m2 = 1;
     let bloqueado = false;
@@ -535,11 +576,11 @@ function calcularPrecoAoVivo() {
         m2 = l * a; 
         if (m2 < 0.5 && m2 > 0) m2 = 0.5; 
 
-        totalBase = (base + extraVar) * m2 * qtd;
+        totalBase = ((base + extraVarMultiplica) * m2 * qtd) + extraVarFixo;
     } else if (regra === 'pacote') {
         const sel = document.getElementById('w2pPacote');
         qtd = 1; 
-        totalBase = (parseFloat(sel?.options[sel.selectedIndex]?.dataset.preco) || 0) + (extraVar * qtd);
+        totalBase = (parseFloat(sel?.options[sel.selectedIndex]?.dataset.preco) || 0) + (extraVarMultiplica * qtd) + extraVarFixo;
     } else if (regra === 'progressivo') {
         qtd = parseInt(document.getElementById('w2pQtd')?.value) || 1;
         let precoUnit = base;
@@ -548,17 +589,22 @@ function calcularPrecoAoVivo() {
             let faixa = faixas.find(f => qtd >= f.q);
             if (faixa) precoUnit = faixa.p;
         }
-        totalBase = (precoUnit + extraVar) * qtd;
+        totalBase = ((precoUnit + extraVarMultiplica) * qtd) + extraVarFixo;
     } else {
         qtd = parseInt(document.getElementById('w2pQtd')?.value) || 1;
-        totalBase = (base + extraVar) * qtd;
+        totalBase = ((base + extraVarMultiplica) * qtd) + extraVarFixo;
     }
 
     let totalAcab = 0;
-    document.querySelectorAll('.acab-btn-modal.bg-indigo-600').forEach(btn => {
-        const pA = parseFloat(btn.dataset.preco); const rA = btn.dataset.regra;
-        if (rA === 'm2') totalAcab += pA * m2 * qtd; else if (rA === 'lote') totalAcab += pA; else totalAcab += pA * qtd;
-    });
+    const selAcab = document.getElementById('selAcabamentoUnico');
+    if (selAcab && selAcab.value !== "") {
+        const opt = selAcab.options[selAcab.selectedIndex];
+        const pA = parseFloat(opt.dataset.preco) || 0;
+        const rA = opt.dataset.regra;
+        if (rA === 'm2') totalAcab += pA * m2 * qtd; 
+        else if (rA === 'lote') totalAcab += pA; 
+        else totalAcab += pA * qtd;
+    }
 
     document.getElementById('modalSubtotal').innerText = "R$ " + (totalBase + totalAcab).toFixed(2);
 
@@ -585,6 +631,12 @@ function confirmarAdicaoCarrinho() {
 
     let varsEscolhidas =[];
     document.querySelectorAll('.sel-var').forEach(s => varsEscolhidas.push(s.options[s.selectedIndex].text.split(" (+")[0].split(" (Grátis)")[0]));
+    
+    const selAcab = document.getElementById('selAcabamentoUnico');
+    if (selAcab && selAcab.value !== "") {
+        const nomeAcab = selAcab.options[selAcab.selectedIndex].text.split(" (+")[0];
+        varsEscolhidas.push(`Acab: ${nomeAcab}`);
+    }
     
     carrinho.push({ 
         nome: p.nome, 
@@ -687,14 +739,13 @@ function renderFinanceiro() {
     const dataFiltroInput = document.getElementById('finDataFiltro');
     if (!dataFiltroInput) return;
     
-    const dataSelecionada = dataFiltroInput.value; // YYYY-MM-DD
+    const dataSelecionada = dataFiltroInput.value; 
     if (!dataSelecionada) return;
 
     let entradasTotal = 0;
     let saidasTotal = 0;
     let transacoes =[];
 
-    // Processar Pedidos (Entradas)
     bdPedidos.forEach(p => {
         if (!p.data) return;
         const dataObj = p.data.toDate ? p.data.toDate() : new Date(p.data);
@@ -711,7 +762,6 @@ function renderFinanceiro() {
         }
     });
 
-    // Processar Despesas (Saídas)
     bdDespesas.forEach(d => {
         if (!d.data) return;
         const dataObj = d.data.toDate ? d.data.toDate() : new Date(d.data);
@@ -729,7 +779,6 @@ function renderFinanceiro() {
         }
     });
 
-    // Ordenar por hora (mais recente primeiro)
     transacoes.sort((a, b) => b.dataObj - a.dataObj);
 
     document.getElementById('finEntradas').innerText = `R$ ${entradasTotal.toFixed(2)}`;
