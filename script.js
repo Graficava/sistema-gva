@@ -15,8 +15,9 @@ let bdCategorias =[];
 let bdProdutos = [];
 let bdClientes =[];
 let bdPedidos =[];
+let bdDespesas =[];
 let bdAcabamentos =[];
-let carrinho = [];
+let carrinho =[];
 let categoriaAtual = 'Todos';
 
 const STATUSES =[
@@ -35,6 +36,12 @@ auth.onAuthStateChanged(user => {
         telaLogin.classList.add('hidden');
         appInterface.classList.remove('hidden');
         iniciarLeitura();
+        
+        // Seta a data de hoje no financeiro ao logar
+        const dataFiltro = document.getElementById('finDataFiltro');
+        if(dataFiltro && !dataFiltro.value) {
+            dataFiltro.valueAsDate = new Date();
+        }
     } else {
         telaLogin.classList.remove('hidden');
         appInterface.classList.add('hidden');
@@ -55,7 +62,7 @@ function sair() { auth.signOut(); }
 function iniciarLeitura() {
     db.collection("categorias").onSnapshot(s => { 
         bdCategorias = s.docs.map(d => ({id: d.id, ...d.data()}));
-        renderCat(); renderFiltrosVitrine();
+        renderCat(); 
     });
     db.collection("produtos").onSnapshot(s => { 
         bdProdutos = s.docs.map(d => ({id: d.id, ...d.data()}));
@@ -69,9 +76,13 @@ function iniciarLeitura() {
         bdAcabamentos = s.docs.map(d => ({id: d.id, ...d.data()}));
         renderAcabTable(); atualizarListaAcabamentosProduto();
     });
-    db.collection("pedidos").orderBy("data", "desc").limit(50).onSnapshot(s => {
+    db.collection("pedidos").orderBy("data", "desc").limit(200).onSnapshot(s => {
         bdPedidos = s.docs.map(d => ({id: d.id, ...d.data()}));
-        renderPedidosFinanceiro(); renderKanbanProducao();
+        renderFinanceiro(); renderKanbanProducao();
+    });
+    db.collection("despesas").orderBy("data", "desc").limit(200).onSnapshot(s => {
+        bdDespesas = s.docs.map(d => ({id: d.id, ...d.data()}));
+        renderFinanceiro();
     });
 }
 
@@ -309,6 +320,7 @@ async function salvarProduto() {
 
     const d = {
         nome: document.getElementById('prodNome').value,
+        setor: document.getElementById('prodSetor').value,
         categoria: document.getElementById('prodCategoria').value,
         regraPreco: document.getElementById('prodRegraPreco').value,
         preco: parseFloat(document.getElementById('prodPreco').value) || 0,
@@ -347,6 +359,7 @@ function editProd(id) {
     if (!p) return;
     document.getElementById('prodId').value = p.id;
     document.getElementById('prodNome').value = p.nome || '';
+    document.getElementById('prodSetor').value = p.setor || 'Gráfico';
     document.getElementById('prodCategoria').value = p.categoria || '';
     document.getElementById('prodRegraPreco').value = p.regraPreco || 'unidade';
     document.getElementById('prodPreco').value = p.preco || 0;
@@ -381,7 +394,9 @@ function renderVitrine(filtro = 'Todos') {
     if (!grid) return;
     
     const termo = document.getElementById('buscaProduto')?.value.toLowerCase() || '';
-    let prods = filtro === 'Todos' ? bdProdutos : bdProdutos.filter(p => p.categoria === filtro);
+    
+    // Filtra pelo SETOR (Gráfico, Com. Visual, Outros)
+    let prods = filtro === 'Todos' ? bdProdutos : bdProdutos.filter(p => p.setor === filtro);
     
     if (termo) {
         prods = prods.filter(p => p.nome.toLowerCase().includes(termo));
@@ -504,7 +519,6 @@ function calcularPrecoAoVivo() {
         const menorLado = Math.min(l, a);
         const maiorLado = Math.max(l, a);
         
-        // Trava se passar da largura máxima
         if (p && p.larguraMax > 0 && menorLado > p.larguraMax) {
             erroMax.classList.remove('hidden');
             bloqueado = true;
@@ -512,7 +526,6 @@ function calcularPrecoAoVivo() {
             erroMax.classList.add('hidden');
         }
 
-        // Aviso de emenda
         if (!bloqueado && p && p.larguraBobina > 0 && menorLado > p.larguraBobina) {
             avisoBobina.classList.remove('hidden');
         } else {
@@ -520,7 +533,7 @@ function calcularPrecoAoVivo() {
         }
         
         m2 = l * a; 
-        if (m2 < 0.5 && m2 > 0) m2 = 0.5; // Cobrar no mínimo 0.5m2
+        if (m2 < 0.5 && m2 > 0) m2 = 0.5; 
 
         totalBase = (base + extraVar) * m2 * qtd;
     } else if (regra === 'pacote') {
@@ -669,6 +682,103 @@ async function enviarPedido(imprimir = false) {
     if(imprimir) imprimirReciboDireto(docRef.id, pedido);
 }
 
+// --- FLUXO DE CAIXA (FINANCEIRO) ---
+function renderFinanceiro() {
+    const dataFiltroInput = document.getElementById('finDataFiltro');
+    if (!dataFiltroInput) return;
+    
+    const dataSelecionada = dataFiltroInput.value; // YYYY-MM-DD
+    if (!dataSelecionada) return;
+
+    let entradasTotal = 0;
+    let saidasTotal = 0;
+    let transacoes =[];
+
+    // Processar Pedidos (Entradas)
+    bdPedidos.forEach(p => {
+        if (!p.data) return;
+        const dataObj = p.data.toDate ? p.data.toDate() : new Date(p.data);
+        const dataStr = dataObj.toISOString().split('T')[0];
+        
+        if (dataStr === dataSelecionada && p.valorPago > 0) {
+            entradasTotal += p.valorPago;
+            transacoes.push({
+                dataObj: dataObj,
+                desc: `Pedido: ${p.clienteNome}`,
+                tipo: 'entrada',
+                valor: p.valorPago
+            });
+        }
+    });
+
+    // Processar Despesas (Saídas)
+    bdDespesas.forEach(d => {
+        if (!d.data) return;
+        const dataObj = d.data.toDate ? d.data.toDate() : new Date(d.data);
+        const dataStr = dataObj.toISOString().split('T')[0];
+        
+        if (dataStr === dataSelecionada) {
+            saidasTotal += d.valor;
+            transacoes.push({
+                dataObj: dataObj,
+                desc: d.descricao,
+                tipo: 'saida',
+                valor: d.valor,
+                id: d.id
+            });
+        }
+    });
+
+    // Ordenar por hora (mais recente primeiro)
+    transacoes.sort((a, b) => b.dataObj - a.dataObj);
+
+    document.getElementById('finEntradas').innerText = `R$ ${entradasTotal.toFixed(2)}`;
+    document.getElementById('finSaidas').innerText = `R$ ${saidasTotal.toFixed(2)}`;
+    document.getElementById('finSaldo').innerText = `R$ ${(entradasTotal - saidasTotal).toFixed(2)}`;
+
+    const tab = document.getElementById('listaFinanceiroTab');
+    tab.innerHTML = transacoes.length === 0 
+        ? `<tr><td colspan="3" class="p-4 text-center text-slate-400 font-normal">Nenhuma movimentação neste dia.</td></tr>`
+        : transacoes.map(t => `
+        <tr class="border-b border-slate-50 hover:bg-slate-50 transition">
+            <td class="p-4 text-slate-400 font-medium">${t.dataObj.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})}</td>
+            <td class="p-4 font-bold text-slate-700">${t.desc}</td>
+            <td class="p-4 font-black text-right ${t.tipo === 'entrada' ? 'text-emerald-600' : 'text-red-600'}">
+                ${t.tipo === 'entrada' ? '+' : '-'} R$ ${t.valor.toFixed(2)}
+                ${t.tipo === 'saida' ? `<button onclick="excluirDespesa('${t.id}')" class="ml-3 text-red-300 hover:text-red-600" title="Excluir Saída"><i class="fa fa-trash"></i></button>` : ''}
+            </td>
+        </tr>
+    `).join('');
+}
+
+async function salvarDespesa() {
+    const desc = document.getElementById('finDesc').value;
+    const valor = parseFloat(document.getElementById('finValor').value);
+    const dataFiltro = document.getElementById('finDataFiltro').value;
+    
+    if (!desc || !valor) return alert("Preencha a descrição e o valor da saída.");
+    
+    const hoje = new Date();
+    const[ano, mes, dia] = dataFiltro.split('-');
+    const dataRegistro = new Date(ano, mes - 1, dia, hoje.getHours(), hoje.getMinutes(), hoje.getSeconds());
+
+    await db.collection("despesas").add({
+        descricao: desc,
+        valor: valor,
+        data: dataRegistro
+    });
+    
+    document.getElementById('finDesc').value = '';
+    document.getElementById('finValor').value = '';
+    alert("Saída registrada com sucesso!");
+}
+
+async function excluirDespesa(id) {
+    if(confirm("Tem certeza que deseja excluir esta saída?")) {
+        await db.collection("despesas").doc(id).delete();
+    }
+}
+
 // --- AUXILIARES GERAIS ---
 function mudarAba(aba, btn) { 
     document.querySelectorAll('.aba-content').forEach(el => { el.classList.add('hidden'); el.classList.remove('flex', 'block'); }); 
@@ -709,10 +819,8 @@ function atualizarInfoCreditoCarrinho() {
 function toggleOpcoesPagamento() { document.getElementById('divParcelas').style.display = (document.getElementById('cartPagamento').value === 'Credito_Parcelado') ? 'block' : 'none'; }
 function toggleOpcoesEntrega() { const v = document.getElementById('cartEntrega').value; document.getElementById('divFrete').style.display = (v === 'Retirada') ? 'none' : 'block'; atualizarTotalFinal(); }
 function renderAcabTable() { const tab = document.getElementById('listaAcabamentosTab'); if(tab) tab.innerHTML = bdAcabamentos.map(a => `<tr class="border-b border-slate-50"><td class="p-4 font-bold text-slate-600">${a.nome} (${a.grupo})</td><td class="p-4 text-center"><button type="button" onclick="editAcab('${a.id}')" class="text-indigo-500 mr-3 font-bold text-[10px] uppercase">Editar</button><button type="button" onclick="db.collection('acabamentos').doc('${a.id}').delete()" class="text-red-300 font-bold text-[10px]">X</button></td></tr>`).join(''); }
-function renderFiltrosVitrine() { const div = document.getElementById('menuFiltroCat'); if(!div) return; div.innerHTML = `<button type="button" onclick="renderVitrine('Todos')" class="px-5 py-2 bg-white border border-slate-200 rounded font-bold text-xs hover:bg-slate-800 hover:text-white transition shadow-sm">Todos</button>` + bdCategorias.map(c => `<button type="button" onclick="renderVitrine('${c.nome}')" class="px-5 py-2 bg-white border border-slate-200 rounded font-bold text-xs hover:bg-slate-800 hover:text-white transition shadow-sm">${c.nome}</button>`).join(''); }
-function renderPedidosFinanceiro() { const tab = document.getElementById('listaPedidosTab'); if(!tab) return; tab.innerHTML = bdPedidos.map(p => `<tr class="border-b border-slate-50 hover:bg-slate-50 transition"><td class="p-4 text-slate-400 font-medium">${p.data.toDate().toLocaleDateString('pt-BR')}</td><td class="p-4 font-bold text-slate-700">${p.clienteNome}</td><td class="p-4 font-black text-indigo-600">R$ ${p.total.toFixed(2)}</td><td class="p-4 text-center"><span class="bg-indigo-50 text-indigo-500 px-3 py-1 rounded text-[10px] font-black uppercase">${p.status}</span><button type="button" onclick="imprimirRecibo('${p.id}')" class="ml-2 text-slate-400 hover:text-indigo-600" title="Imprimir Recibo"><i class="fa fa-print"></i></button></td></tr>`).join(''); }
 
-function renderProdTable() { const tab = document.getElementById('listaProdutosTab'); if(!tab) return; tab.innerHTML = bdProdutos.map(p => `<tr class="border-b border-slate-50 hover:bg-slate-50 transition"><td class="p-4 font-bold text-slate-700">${p.nome}</td><td class="p-4 text-slate-400 text-[10px] uppercase">${p.regraPreco}</td><td class="p-4 text-center"><button type="button" onclick="editProd('${p.id}')" class="text-indigo-500 mr-3 font-bold text-[10px] uppercase">Editar</button><button type="button" onclick="db.collection('produtos').doc('${p.id}').delete()" class="text-red-300 font-bold text-[10px]">X</button></td></tr>`).join(''); }
+function renderProdTable() { const tab = document.getElementById('listaProdutosTab'); if(!tab) return; tab.innerHTML = bdProdutos.map(p => `<tr class="border-b border-slate-50 hover:bg-slate-50 transition"><td class="p-4 font-bold text-slate-700">${p.nome}</td><td class="p-4 text-slate-400 text-[10px] uppercase">${p.setor || 'Gráfico'}</td><td class="p-4 text-center"><button type="button" onclick="editProd('${p.id}')" class="text-indigo-500 mr-3 font-bold text-[10px] uppercase">Editar</button><button type="button" onclick="db.collection('produtos').doc('${p.id}').delete()" class="text-red-300 font-bold text-[10px]">X</button></td></tr>`).join(''); }
 
 function renderCliTable() { 
     const tab = document.getElementById('listaClientesTab'); 
