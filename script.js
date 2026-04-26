@@ -11,14 +11,18 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-let bdCategorias =[];
+let bdCategorias = [];
 let bdProdutos = [];
-let bdClientes =[];
+let bdClientes = [];
 let bdPedidos =[];
-let bdDespesas =[];
-let bdAcabamentos =[];
+let bdDespesas = [];
+let bdAcabamentos = [];
 let carrinho =[];
-let categoriaAtual = 'Todos';
+
+// Variáveis de Filtro da Vitrine
+let filtroSetor = 'Todos';
+let filtroCategoria = 'Todas';
+let filtroSubcategoria = 'Todas';
 
 const STATUSES =[
     "Aguardando pagamento",
@@ -65,7 +69,7 @@ function iniciarLeitura() {
     });
     db.collection("produtos").onSnapshot(s => { 
         bdProdutos = s.docs.map(d => ({id: d.id, ...d.data()}));
-        renderVitrine(categoriaAtual); renderProdTable();
+        renderVitrine(); renderProdTable();
     });
     db.collection("clientes").orderBy("nome").onSnapshot(s => { 
         bdClientes = s.docs.map(d => ({id: d.id, ...d.data()}));
@@ -227,7 +231,7 @@ function imprimirRecibo(idPedido) {
     imprimirReciboDireto(idPedido, null);
 }
 
-// --- LÓGICA DE ATRIBUTOS ---
+// --- LÓGICA DE ATRIBUTOS E COMBINAÇÕES ---
 function addOpcaoAtrib(container, n = '', p = '') {
     const div = document.createElement('div');
     div.className = "flex gap-2 item-opcao";
@@ -261,9 +265,10 @@ function addAtributoManual() { addAtributo('', 'multiplica',[]); }
 
 function ajustarCamposProduto() {
     const r = document.getElementById('prodRegraPreco').value;
-    document.getElementById('boxPrecoBase').style.display = (r === 'pacote' || r === 'progressivo') ? 'none' : 'block';
+    document.getElementById('boxPrecoBase').style.display = (r === 'pacote' || r === 'progressivo' || r === 'combinacao') ? 'none' : 'block';
     document.getElementById('boxPacotes').style.display = r === 'pacote' ? 'block' : 'none';
     document.getElementById('boxProgressivo').style.display = r === 'progressivo' ? 'block' : 'none';
+    document.getElementById('boxCombinacoes').style.display = r === 'combinacao' ? 'block' : 'none';
     document.getElementById('boxMedidas').style.display = r === 'm2' ? 'grid' : 'none';
 }
 
@@ -279,6 +284,28 @@ function addLinhaProgressivo(q='', p='') {
     div.className = "flex gap-2";
     div.innerHTML = `<input type="number" placeholder="Qtd Mín" value="${q}" class="q w-full p-2 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-emerald-500" /><input type="number" placeholder="Unit R$" value="${p}" class="p w-full p-2 border border-slate-200 rounded font-bold text-emerald-600 text-xs outline-none focus:ring-2 focus:ring-emerald-500" /><button type="button" onclick="this.parentElement.remove()" class="text-red-300">✕</button>`;
     document.getElementById('listaGradeProgressivo').appendChild(div);
+}
+
+function gerarGradeCombinacoes() {
+    const v1 = document.getElementById('combValores1').value.split(',').map(s=>s.trim()).filter(s=>s);
+    const v2 = document.getElementById('combValores2').value.split(',').map(s=>s.trim()).filter(s=>s);
+    const container = document.getElementById('listaGradeCombinacoes');
+    container.innerHTML = '';
+    
+    if(v1.length === 0 || v2.length === 0) return alert("Preencha os valores separados por vírgula nos dois atributos.");
+
+    v1.forEach(op1 => {
+        v2.forEach(op2 => {
+            const div = document.createElement('div');
+            div.className = "flex gap-2 items-center item-combinacao";
+            div.innerHTML = `
+                <input type="text" readonly value="${op1}" class="c-op1 w-1/3 p-2 border border-purple-200 rounded text-xs bg-white outline-none font-bold text-slate-600" />
+                <input type="text" readonly value="${op2}" class="c-op2 w-1/3 p-2 border border-purple-200 rounded text-xs bg-white outline-none font-bold text-slate-600" />
+                <input type="number" placeholder="Preço R$" class="c-preco w-1/3 p-2 border border-purple-200 rounded font-bold text-purple-700 text-xs outline-none focus:ring-2 focus:ring-purple-500" />
+            `;
+            container.appendChild(div);
+        });
+    });
 }
 
 function atualizarListaAcabamentosProduto(salvos =[]) {
@@ -297,6 +324,8 @@ function atualizarListaAcabamentosProduto(salvos =[]) {
 
 async function salvarProduto() {
     const id = document.getElementById('prodId').value;
+    const regra = document.getElementById('prodRegraPreco').value;
+    
     let atributos =[];
     document.querySelectorAll('.item-atrib').forEach(caixa => {
         let ops =[];
@@ -329,11 +358,29 @@ async function salvarProduto() {
         if (q && p) progressivo.push({ q: q, p: p });
     });
 
+    let combinacoes = null;
+    if (regra === 'combinacao') {
+        const n1 = document.getElementById('combNome1').value;
+        const n2 = document.getElementById('combNome2').value;
+        const v1 = document.getElementById('combValores1').value;
+        const v2 = document.getElementById('combValores2').value;
+        let precos =[];
+        document.querySelectorAll('.item-combinacao').forEach(d => {
+            precos.push({
+                op1: d.querySelector('.c-op1').value,
+                op2: d.querySelector('.c-op2').value,
+                preco: parseFloat(d.querySelector('.c-preco').value) || 0
+            });
+        });
+        combinacoes = { nome1: n1, nome2: n2, valores1: v1, valores2: v2, precos: precos };
+    }
+
     const d = {
         nome: document.getElementById('prodNome').value,
         setor: document.getElementById('prodSetor').value,
         categoria: document.getElementById('prodCategoria').value,
-        regraPreco: document.getElementById('prodRegraPreco').value,
+        subcategoria: document.getElementById('prodSubcategoria').value || '',
+        regraPreco: regra,
         preco: parseFloat(document.getElementById('prodPreco').value) || 0,
         foto: document.getElementById('prodFoto').value || '',
         ref: document.getElementById('prodRef').value || '',
@@ -347,7 +394,8 @@ async function salvarProduto() {
         atributos: atributos,
         acabamentos: acabList,
         pacotes: pacotes,
-        progressivo: progressivo
+        progressivo: progressivo,
+        combinacoes: combinacoes
     };
 
     if (!d.nome) return alert("Nome obrigatório!");
@@ -372,6 +420,7 @@ function editProd(id) {
     document.getElementById('prodNome').value = p.nome || '';
     document.getElementById('prodSetor').value = p.setor || 'Gráfico';
     document.getElementById('prodCategoria').value = p.categoria || '';
+    document.getElementById('prodSubcategoria').value = p.subcategoria || '';
     document.getElementById('prodRegraPreco').value = p.regraPreco || 'unidade';
     document.getElementById('prodPreco').value = p.preco || 0;
     document.getElementById('prodFoto').value = p.foto || '';
@@ -393,23 +442,90 @@ function editProd(id) {
     document.getElementById('listaGradeProgressivo').innerHTML = '';
     if (p.progressivo) p.progressivo.forEach(prg => addLinhaProgressivo(prg.q, prg.p));
 
+    if (p.combinacoes) {
+        document.getElementById('combNome1').value = p.combinacoes.nome1 || '';
+        document.getElementById('combNome2').value = p.combinacoes.nome2 || '';
+        document.getElementById('combValores1').value = p.combinacoes.valores1 || '';
+        document.getElementById('combValores2').value = p.combinacoes.valores2 || '';
+        const container = document.getElementById('listaGradeCombinacoes');
+        container.innerHTML = '';
+        p.combinacoes.precos.forEach(c => {
+            const div = document.createElement('div');
+            div.className = "flex gap-2 items-center item-combinacao";
+            div.innerHTML = `
+                <input type="text" readonly value="${c.op1}" class="c-op1 w-1/3 p-2 border border-purple-200 rounded text-xs bg-white outline-none font-bold text-slate-600" />
+                <input type="text" readonly value="${c.op2}" class="c-op2 w-1/3 p-2 border border-purple-200 rounded text-xs bg-white outline-none font-bold text-slate-600" />
+                <input type="number" placeholder="Preço R$" value="${c.preco}" class="c-preco w-1/3 p-2 border border-purple-200 rounded font-bold text-purple-700 text-xs outline-none focus:ring-2 focus:ring-purple-500" />
+            `;
+            container.appendChild(div);
+        });
+    } else {
+        document.getElementById('combNome1').value = '';
+        document.getElementById('combNome2').value = '';
+        document.getElementById('combValores1').value = '';
+        document.getElementById('combValores2').value = '';
+        document.getElementById('listaGradeCombinacoes').innerHTML = '';
+    }
+
     ajustarCamposProduto();
     atualizarListaAcabamentosProduto(p.acabamentos ||[]);
     mudarSubAba('sub-prod', document.querySelectorAll('.sub-aba-btn')[1]);
 }
 
 // --- PDV E MODAL ---
-function renderVitrine(filtro = 'Todos') {
-    categoriaAtual = filtro;
+function setFiltroSetor(s) { 
+    filtroSetor = s; 
+    filtroCategoria = 'Todas'; 
+    filtroSubcategoria = 'Todas'; 
+    renderVitrine(); 
+}
+function setFiltroCategoria(c) { 
+    filtroCategoria = c; 
+    filtroSubcategoria = 'Todas'; 
+    renderVitrine(); 
+}
+function setFiltroSubcategoria(sc) { 
+    filtroSubcategoria = sc; 
+    renderVitrine(); 
+}
+
+function renderVitrine() {
     const grid = document.getElementById('gradeProdutos');
     if (!grid) return;
     
-    const termo = document.getElementById('buscaProduto')?.value.toLowerCase() || '';
-    let prods = filtro === 'Todos' ? bdProdutos : bdProdutos.filter(p => p.setor === filtro);
+    document.querySelectorAll('.btn-setor').forEach(b => b.classList.remove('ring-2', 'ring-slate-400'));
+    const activeBtn = document.querySelector(`.data-setor-${filtroSetor.replace('. ','')}`);
+    if(activeBtn) activeBtn.classList.add('ring-2', 'ring-slate-400');
+
+    let prods = bdProdutos;
+    if (filtroSetor !== 'Todos') prods = prods.filter(p => p.setor === filtroSetor);
     
-    if (termo) {
-        prods = prods.filter(p => p.nome.toLowerCase().includes(termo));
+    const cats =[...new Set(prods.map(p => p.categoria).filter(c => c))];
+    const menuCat = document.getElementById('menuFiltroCat');
+    if(cats.length > 0) {
+        menuCat.innerHTML = `<button onclick="setFiltroCategoria('Todas')" class="px-4 py-1 rounded text-xs font-bold ${filtroCategoria==='Todas'?'bg-slate-800 text-white':'bg-white border border-slate-200 text-slate-600'}">Todas as Categorias</button>` + 
+            cats.map(c => `<button onclick="setFiltroCategoria('${c}')" class="px-4 py-1 rounded text-xs font-bold ${filtroCategoria===c?'bg-slate-800 text-white':'bg-white border border-slate-200 text-slate-600'}">${c}</button>`).join('');
+        menuCat.classList.remove('hidden');
+    } else {
+        menuCat.classList.add('hidden');
     }
+
+    if (filtroCategoria !== 'Todas') prods = prods.filter(p => p.categoria === filtroCategoria);
+
+    const subcats = [...new Set(prods.map(p => p.subcategoria).filter(sc => sc))];
+    const menuSubCat = document.getElementById('menuFiltroSubCat');
+    if(subcats.length > 0 && filtroCategoria !== 'Todas') {
+        menuSubCat.innerHTML = `<button onclick="setFiltroSubcategoria('Todas')" class="px-4 py-1 rounded text-xs font-bold ${filtroSubcategoria==='Todas'?'bg-indigo-600 text-white':'bg-white border border-slate-200 text-slate-600'}">Todas as Subcategorias</button>` + 
+            subcats.map(sc => `<button onclick="setFiltroSubcategoria('${sc}')" class="px-4 py-1 rounded text-xs font-bold ${filtroSubcategoria===sc?'bg-indigo-600 text-white':'bg-white border border-slate-200 text-slate-600'}">${sc}</button>`).join('');
+        menuSubCat.classList.remove('hidden');
+    } else {
+        menuSubCat.classList.add('hidden');
+    }
+
+    if (filtroSubcategoria !== 'Todas') prods = prods.filter(p => p.subcategoria === filtroSubcategoria);
+
+    const termo = document.getElementById('buscaProduto')?.value.toLowerCase() || '';
+    if (termo) prods = prods.filter(p => p.nome.toLowerCase().includes(termo));
     
     grid.innerHTML = prods.map(p => {
         let precoExibicao = p.preco || 0;
@@ -417,28 +533,22 @@ function renderVitrine(filtro = 'Todos') {
             precoExibicao = Math.min(...p.pacotes.map(pct => pct.preco));
         } else if (p.regraPreco === 'progressivo' && p.progressivo && p.progressivo.length > 0) {
             precoExibicao = Math.min(...p.progressivo.map(prg => prg.p));
+        } else if (p.regraPreco === 'combinacao' && p.combinacoes && p.combinacoes.precos.length > 0) {
+            precoExibicao = Math.min(...p.combinacoes.precos.map(c => c.preco));
         }
 
-        // CORES PASTÉIS BASEADAS NO SETOR
         let bgClass = 'bg-white border-slate-200';
         let tagClass = 'text-slate-400';
         
-        if (p.setor === 'Gráfico') {
-            bgClass = 'bg-yellow-50 border-yellow-200';
-            tagClass = 'text-yellow-600';
-        } else if (p.setor === 'Com. Visual') {
-            bgClass = 'bg-blue-50 border-blue-200';
-            tagClass = 'text-blue-600';
-        } else if (p.setor === 'Outros') {
-            bgClass = 'bg-emerald-50 border-emerald-200';
-            tagClass = 'text-emerald-600';
-        }
+        if (p.setor === 'Gráfico') { bgClass = 'bg-yellow-50 border-yellow-200'; tagClass = 'text-yellow-600'; } 
+        else if (p.setor === 'Com. Visual') { bgClass = 'bg-blue-50 border-blue-200'; tagClass = 'text-blue-600'; } 
+        else if (p.setor === 'Outros') { bgClass = 'bg-emerald-50 border-emerald-200'; tagClass = 'text-emerald-600'; }
 
         return `
         <div onclick="abrirConfigurador('${p.id}')" class="${bgClass} p-6 rounded border shadow-sm hover:shadow-xl cursor-pointer transition-all group">
             <div class="h-44 bg-white rounded mb-5 bg-contain bg-no-repeat bg-center transition group-hover:scale-105 shadow-sm" style="background-image:url('${p.foto || 'https://via.placeholder.com/200'}')"></div>
             <h4 class="font-bold text-slate-800 text-sm mb-1 truncate">${p.nome}</h4>
-            <p class="text-[10px] font-bold ${tagClass} uppercase mb-4">${p.categoria}</p>
+            <p class="text-[10px] font-bold ${tagClass} uppercase mb-4">${p.categoria} ${p.subcategoria ? ' > '+p.subcategoria : ''}</p>
             <p class="text-xl font-black text-indigo-600">
                 <span class="text-[10px] text-slate-500 font-bold uppercase">A partir de</span> 
                 R$ ${precoExibicao.toFixed(2)}
@@ -477,6 +587,14 @@ function abrirConfigurador(id) {
     } else if (regra === 'pacote') {
         let opts = (p.pacotes ||[]).map(pct => `<option value="${pct.qtd}" data-preco="${pct.preco}">${pct.qtd} - R$ ${pct.preco.toFixed(2)}</option>`).join('');
         divMedidas.innerHTML = `<div class="col-span-2 space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">Escolha o Pacote</label><select id="w2pPacote" onchange="calcularPrecoAoVivo()" class="w-full p-3 border border-slate-200 rounded bg-slate-50 font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500">${opts}</select></div>`;
+    } else if (regra === 'combinacao' && p.combinacoes) {
+        let opts1 = p.combinacoes.valores1.split(',').map(s => `<option value="${s.trim()}">${s.trim()}</option>`).join('');
+        let opts2 = p.combinacoes.valores2.split(',').map(s => `<option value="${s.trim()}">${s.trim()}</option>`).join('');
+        divMedidas.innerHTML = `
+            <div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">${p.combinacoes.nome1}</label><select id="w2pComb1" onchange="calcularPrecoAoVivo()" class="w-full p-3 border border-slate-200 rounded bg-slate-50 font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500">${opts1}</select></div>
+            <div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">${p.combinacoes.nome2}</label><select id="w2pComb2" onchange="calcularPrecoAoVivo()" class="w-full p-3 border border-slate-200 rounded bg-slate-50 font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500">${opts2}</select></div>
+            <div class="space-y-1 col-span-2"><label class="text-[10px] font-bold text-slate-400 uppercase">Quantidade de Lotes</label><input type="number" id="w2pQtd" value="1" min="1" oninput="calcularPrecoAoVivo()" class="w-full p-3 border border-slate-200 rounded bg-slate-50 font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500" /></div>
+        `;
     } else {
         divMedidas.innerHTML = `<div class="col-span-2 space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">Quantidade</label><input type="number" id="w2pQtd" value="1" min="1" oninput="calcularPrecoAoVivo()" class="w-full p-3 border border-slate-200 rounded bg-slate-50 font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500" /></div>`;
     }
@@ -581,6 +699,15 @@ function calcularPrecoAoVivo() {
         const sel = document.getElementById('w2pPacote');
         qtd = 1; 
         totalBase = (parseFloat(sel?.options[sel.selectedIndex]?.dataset.preco) || 0) + (extraVarMultiplica * qtd) + extraVarFixo;
+    } else if (regra === 'combinacao' && p.combinacoes) {
+        qtd = parseInt(document.getElementById('w2pQtd')?.value) || 1;
+        const v1 = document.getElementById('w2pComb1')?.value;
+        const v2 = document.getElementById('w2pComb2')?.value;
+        let precoComb = base;
+        const comb = p.combinacoes.precos.find(c => c.op1 === v1 && c.op2 === v2);
+        if (comb) precoComb = comb.preco;
+        
+        totalBase = ((precoComb + extraVarMultiplica) * qtd) + extraVarFixo;
     } else if (regra === 'progressivo') {
         qtd = parseInt(document.getElementById('w2pQtd')?.value) || 1;
         let precoUnit = base;
@@ -625,6 +752,10 @@ function confirmarAdicaoCarrinho() {
     if (p.regraPreco === 'pacote') {
         const sel = document.getElementById('w2pPacote');
         qtdTexto = sel?.value || "1";
+    } else if (p.regraPreco === 'combinacao' && p.combinacoes) {
+        const v1 = document.getElementById('w2pComb1')?.value;
+        const v2 = document.getElementById('w2pComb2')?.value;
+        qtdTexto = `${qtdTexto}x (${v1} | ${v2})`;
     } else {
         qtdTexto = qtdTexto + " un.";
     }
@@ -808,7 +939,7 @@ async function salvarDespesa() {
     if (!desc || !valor) return alert("Preencha a descrição e o valor da saída.");
     
     const hoje = new Date();
-    const[ano, mes, dia] = dataFiltro.split('-');
+    const [ano, mes, dia] = dataFiltro.split('-');
     const dataRegistro = new Date(ano, mes - 1, dia, hoje.getHours(), hoje.getMinutes(), hoje.getSeconds());
 
     await db.collection("despesas").add({
