@@ -1,3 +1,669 @@
+const firebaseConfig = {
+    apiKey: "AIzaSyC4pkjSYpuz4iF0ijF50VxaZ2npsYCi7II",
+    authDomain: "app-graficava.firebaseapp.com",
+    projectId: "app-graficava",
+    storageBucket: "app-graficava.firebasestorage.app",
+    messagingSenderId: "37941958808",
+    appId: "1:37941958808:web:b321e78b2191fd1d83d8ed"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+let bdCategorias =[];
+let bdProdutos =[];
+let bdClientes =[];
+let bdPedidos = [];
+let bdDespesas =[];
+let bdAcabamentos = [];
+let carrinho =[];
+
+// Variáveis de Filtro da Vitrine
+let filtroSetor = 'Todos';
+let filtroCategoria = 'Todas';
+let filtroSubcategoria = 'Todas';
+
+// NOVO: Adicionado "Orçamento" na lista de status
+const STATUSES =[
+    "Orçamento",
+    "Aguardando pagamento",
+    "Em produção",
+    "Acabamento",
+    "Pronto para Retirada",
+    "Entregue",
+    "Cancelado / Estorno"
+];
+
+auth.onAuthStateChanged(user => {
+    const telaLogin = document.getElementById('telaLogin');
+    const appInterface = document.getElementById('appInterface');
+    if (user) {
+        telaLogin.classList.add('hidden');
+        appInterface.classList.remove('hidden');
+        iniciarLeitura();
+        
+        const dataFiltro = document.getElementById('finDataFiltro');
+        if(dataFiltro && !dataFiltro.value) {
+            dataFiltro.valueAsDate = new Date();
+        }
+    } else {
+        telaLogin.classList.remove('hidden');
+        appInterface.classList.add('hidden');
+    }
+});
+
+function entrar() {
+    const e = document.getElementById('email').value;
+    const s = document.getElementById('senha').value;
+    if (!e || !s) return;
+    auth.signInWithEmailAndPassword(e, s).catch(() => {
+        document.getElementById('msgErro').classList.remove('hidden');
+    });
+}
+
+function sair() { auth.signOut(); }
+
+function iniciarLeitura() {
+    db.collection("categorias").onSnapshot(s => { 
+        bdCategorias = s.docs.map(d => ({id: d.id, ...d.data()}));
+        renderCat(); 
+    });
+    db.collection("produtos").onSnapshot(s => { 
+        bdProdutos = s.docs.map(d => ({id: d.id, ...d.data()}));
+        renderVitrine(); renderProdTable();
+    });
+    db.collection("clientes").orderBy("nome").onSnapshot(s => { 
+        bdClientes = s.docs.map(d => ({id: d.id, ...d.data()}));
+        renderCliTable(); renderCliSelectCart();
+    });
+    db.collection("acabamentos").onSnapshot(s => {
+        bdAcabamentos = s.docs.map(d => ({id: d.id, ...d.data()}));
+        renderAcabTable(); atualizarListaAcabamentosProduto();
+    });
+    db.collection("pedidos").orderBy("data", "desc").limit(200).onSnapshot(s => {
+        bdPedidos = s.docs.map(d => ({id: d.id, ...d.data()}));
+        renderFinanceiro(); renderKanbanProducao();
+    });
+    db.collection("despesas").orderBy("data", "desc").limit(200).onSnapshot(s => {
+        bdDespesas = s.docs.map(d => ({id: d.id, ...d.data()}));
+        renderFinanceiro();
+    });
+}
+
+// --- KANBAN DE PRODUÇÃO ---
+function renderKanbanProducao() {
+    const container = document.getElementById('kanbanContainer');
+    if(!container) return;
+
+    const pedidosAtivos = bdPedidos.filter(p => !p.arquivado);
+
+    let html = '';
+    STATUSES.forEach(status => {
+        const pedidosDoStatus = pedidosAtivos.filter(p => p.status === status);
+        html += `
+            <div class="bg-slate-100 rounded-xl p-4 w-80 flex-shrink-0 flex flex-col h-full border border-slate-200">
+                <div class="flex justify-between items-center mb-4 shrink-0">
+                    <h3 class="font-bold text-slate-700 uppercase text-[10px] tracking-widest">${status}</h3>
+                    <span class="bg-slate-200 text-slate-600 text-[10px] font-black px-2 py-1 rounded-full">${pedidosDoStatus.length}</span>
+                </div>
+                <div class="flex-1 overflow-y-auto space-y-3 pr-1 no-scrollbar">
+                    ${pedidosDoStatus.map(p => gerarCardPedido(p)).join('')}
+                </div>
+            </div>
+        `;
+    });
+    container.innerHTML = html;
+}
+
+function gerarCardPedido(p) {
+    const dataFormatada = p.data.toDate().toLocaleDateString('pt-BR') + ' ' + p.data.toDate().toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
+    let options = STATUSES.map(s => `<option value="${s}" ${p.status === s ? 'selected' : ''}>${s}</option>`).join('');
+
+    let corBorda = 'border-l-slate-400';
+    if(p.status === 'Orçamento') corBorda = 'border-l-blue-400';
+    if(p.status === 'Aguardando pagamento') corBorda = 'border-l-amber-400';
+    if(p.status === 'Em produção') corBorda = 'border-l-blue-500';
+    if(p.status === 'Acabamento') corBorda = 'border-l-indigo-500';
+    if(p.status === 'Pronto para Retirada') corBorda = 'border-l-emerald-400';
+    if(p.status === 'Entregue') corBorda = 'border-l-emerald-600';
+    if(p.status === 'Cancelado / Estorno') corBorda = 'border-l-red-500';
+
+    let btnArquivar = '';
+    if (p.status === 'Entregue' || p.status === 'Cancelado / Estorno') {
+        btnArquivar = `<button type="button" onclick="arquivarPedido('${p.id}')" class="bg-slate-200 text-slate-600 px-3 rounded hover:bg-slate-300 transition" title="Arquivar Pedido (Remover da Tela)"><i class="fa fa-archive"></i></button>`;
+    }
+
+    return `
+        <div class="bg-white p-4 rounded-lg shadow-sm border border-slate-200 border-l-4 ${corBorda}">
+            <div class="flex justify-between items-start mb-2">
+                <span class="text-[9px] font-bold text-slate-400">${dataFormatada}</span>
+                <span class="text-[10px] font-black text-indigo-600">R$ ${p.total.toFixed(2)}</span>
+            </div>
+            <h4 class="font-bold text-slate-800 text-xs mb-2">${p.clienteNome}</h4>
+            <div class="text-[9px] text-slate-500 mb-3 space-y-1">
+                ${p.itens.map(i => `<p>• ${i.qtdCarrinho}x ${i.nome} <span class="opacity-70">(${i.desc})</span></p>`).join('')}
+            </div>
+            <div class="mt-3 pt-3 border-t border-slate-100 flex gap-2">
+                <select onchange="mudarStatusPedido('${p.id}', this.value)" class="flex-1 p-2 bg-slate-50 border border-slate-200 rounded text-[10px] font-bold outline-none focus:ring-2 focus:ring-indigo-500">
+                    ${options}
+                </select>
+                ${btnArquivar}
+                <button type="button" onclick="enviarWhatsApp('${p.id}', '${p.status === 'Pronto para Retirada' ? 'retirada' : (p.status === 'Orçamento' ? 'orcamento' : 'recibo')}')" class="bg-green-500 text-white px-3 rounded hover:bg-green-600 transition" title="Enviar WhatsApp"><i class="fab fa-whatsapp"></i></button>
+                <button type="button" onclick="${p.status === 'Orçamento' ? `imprimirOrcamento('${p.id}')` : `imprimirRecibo('${p.id}')`}" class="bg-slate-800 text-white px-3 rounded hover:bg-slate-700 transition" title="${p.status === 'Orçamento' ? 'Gerar PDF' : 'Imprimir Recibo'}"><i class="${p.status === 'Orçamento' ? 'fa fa-file-pdf' : 'fa fa-print'}"></i></button>
+            </div>
+        </div>
+    `;
+}
+
+async function mudarStatusPedido(id, novoStatus) {
+    try { await db.collection("pedidos").doc(id).update({ status: novoStatus }); } 
+    catch(e) { console.error(e); alert("Erro ao atualizar status."); }
+}
+
+async function arquivarPedido(id) {
+    if(confirm("Deseja remover este pedido do painel de produção? Ele continuará salvo no Financeiro e no Histórico do Cliente.")) {
+        try { await db.collection("pedidos").doc(id).update({ arquivado: true }); } 
+        catch(e) { console.error(e); alert("Erro ao arquivar pedido."); }
+    }
+}
+
+// --- INTEGRAÇÃO WHATSAPP COM MODAL ---
+function enviarWhatsApp(idPedido, tipo, objPedido = null) {
+    const p = objPedido || bdPedidos.find(x => x.id === idPedido);
+    if (!p) return;
+
+    let telefone = "";
+    if (p.clienteId && p.clienteId !== "Consumidor Final") {
+        const cli = bdClientes.find(c => c.id === p.clienteId);
+        if (cli && cli.telefone) {
+            telefone = cli.telefone.replace(/\D/g, '');
+        }
+    }
+
+    const itensTexto = p.itens.map(i => `▫️ ${i.qtdCarrinho}x ${i.nome} - R$ ${i.valor.toFixed(2)}`).join('\n');
+    const totalStr = p.total.toFixed(2);
+
+    let texto = "";
+    if (tipo === 'orcamento') {
+        texto = `Olá *${p.clienteNome}*! Tudo bem?\n\nSegue o seu orçamento da *GVA Gráfica*:\n\n${itensTexto}\n\n*Total: R$ ${totalStr}*\n\nQualquer dúvida, estamos à disposição! Para aprovar, é só responder esta mensagem.`;
+    } else if (tipo === 'retirada') {
+        texto = `Olá *${p.clienteNome}*!\n\nSó passando para avisar que o seu pedido (Ref: ${idPedido.substring(0,6).toUpperCase()}) já está *PRONTO PARA RETIRADA* aqui na GVA Gráfica! 🚀\n\nTotal do pedido: R$ ${totalStr}\n${p.saldoDevedor > 0 ? `Saldo a pagar na retirada: *R$ ${p.saldoDevedor.toFixed(2)}*\n` : ''}Te esperamos!`;
+    } else if (tipo === 'recibo') {
+        texto = `Olá *${p.clienteNome}*!\n\nSeu pedido foi registrado com sucesso na *GVA Gráfica*! (Ref: ${idPedido.substring(0,6).toUpperCase()})\n\n*Resumo:*\n${itensTexto}\n\n*Total: R$ ${totalStr}*\nValor Pago: R$ ${(p.valorPago || 0).toFixed(2)}\n${p.saldoDevedor > 0 ? `Saldo a pagar: R$ ${p.saldoDevedor.toFixed(2)}\n` : ''}Acompanharemos a produção e avisaremos quando estiver pronto!`;
+    }
+
+    // Preenche o modal
+    document.getElementById('zapTelefone').value = telefone;
+    document.getElementById('zapMensagem').value = texto;
+    
+    // Abre o modal
+    document.getElementById('modalWhatsApp').classList.remove('hidden');
+}
+
+function confirmarEnvioWhatsApp() {
+    let telefone = document.getElementById('zapTelefone').value.replace(/\D/g, '');
+    let texto = document.getElementById('zapMensagem').value;
+
+    if (!telefone || telefone.length < 10) {
+        return alert("Por favor, insira um número de telefone válido com DDD.");
+    }
+    
+    // Adiciona o 55 do Brasil se a pessoa digitou apenas DDD + Número
+    if (telefone.length === 10 || telefone.length === 11) {
+        telefone = "55" + telefone;
+    }
+
+    const textoEncoded = encodeURIComponent(texto);
+    window.open(`https://wa.me/${telefone}?text=${textoEncoded}`, '_blank');
+    
+    document.getElementById('modalWhatsApp').classList.add('hidden');
+}
+
+// --- IMPRESSÃO DE RECIBO (2 VIAS TÉRMICA) ---
+function imprimirReciboDireto(idPedido, objPedido) {
+    const p = objPedido || bdPedidos.find(x => x.id === idPedido);
+    if(!p) return;
+    
+    const janela = window.open('', '', 'width=350,height=800');
+    let html = `
+        <html><head><style>
+            body { font-family: monospace; width: 80mm; margin: 0; padding: 10px; color: #000; font-size: 12px; }
+            .center { text-align: center; }
+            .bold { font-weight: bold; }
+            .linha { border-bottom: 1px dashed #000; margin: 8px 0; }
+            table { width: 100%; font-size: 12px; border-collapse: collapse; }
+            th, td { text-align: left; padding: 2px 0; vertical-align: top; }
+            .right { text-align: right; }
+            img.logo { max-width: 150px; margin: 0 auto 10px auto; display: block; }
+            .prod-item { font-size: 14px; font-weight: bold; margin-bottom: 4px; }
+            .prod-desc { font-size: 12px; margin-bottom: 10px; padding-left: 10px; }
+            @media print { .quebra-pagina { page-break-before: always; } }
+        </style></head><body>
+
+        <!-- VIA DO CLIENTE -->
+        <img src="https://i.postimg.cc/GtwRkLBF/gva-pr-ERP-26.png" class="logo" alt="GVA Gráfica" />
+        <div class="center bold" style="font-size: 14px;">Gráfica Venom Arts LTDA</div>
+        <div class="center" style="font-size: 10px; margin-bottom: 10px;">
+            CNPJ: 17.184.159/0001-06<br/>
+            IM: 2231694 | IE: 14.623.58-2<br/>
+            Rua Lopes Trovão nº 474 Lojas 202 e 201<br/>
+            Icaraí, Niterói - RJ 24220-071<br/>
+            www.graficava.com.br<br/>
+            WhatsApp: 21 99993-0190<br/>
+            Insta: @grafica.venomarts
+        </div>
+        <div class="linha"></div>
+        <div class="center bold" style="font-size: 14px;">Pedido: ${idPedido.substring(0,6).toUpperCase()}</div>
+        <div class="center">Data: ${p.data.toDate ? p.data.toDate().toLocaleDateString('pt-BR') : p.data.toLocaleDateString('pt-BR')} ${p.data.toDate ? p.data.toDate().toLocaleTimeString('pt-BR') : p.data.toLocaleTimeString('pt-BR')}</div>
+        <div class="linha"></div>
+        <div>Cliente: ${p.clienteNome}</div>
+        <div class="linha"></div>
+        <table>
+            <tr><th>Qtd/Item</th><th class="right">Valor</th></tr>
+            ${p.itens.map(i => `<tr><td>${i.qtdCarrinho}x ${i.nome}<br/><small>${i.desc}</small></td><td class="right">R$ ${i.valor.toFixed(2)}</td></tr>`).join('')}
+        </table>
+        <div class="linha"></div>
+        <div class="right bold">Subtotal: R$ ${(p.total - (p.taxaPagto || 0) - (p.frete || 0) + (p.desconto || 0)).toFixed(2)}</div>
+        ${p.taxaPagto ? `<div class="right ${p.taxaPagto > 0 ? 'text-red-500' : 'text-emerald-500'}">Taxa/Desc. Pgto: ${p.taxaPagto > 0 ? '+' : ''} R$ ${p.taxaPagto.toFixed(2)}</div>` : ''}
+        ${p.frete > 0 ? `<div class="right">Frete: + R$ ${p.frete.toFixed(2)}</div>` : ''}
+        ${p.desconto > 0 ? `<div class="right text-red-500">Desconto Manual: - R$ ${p.desconto.toFixed(2)}</div>` : ''}
+        <div class="right bold">Total: R$ ${p.total.toFixed(2)}</div>
+        <div class="right">Valor Pago: R$ ${(p.valorPago || 0).toFixed(2)}</div>
+        <div class="right bold">Saldo: R$ ${(p.saldoDevedor || 0).toFixed(2)}</div>
+        <div class="linha"></div>
+        <div class="center">Obrigado pela preferência!</div>
+
+        <!-- QUEBRA DE PÁGINA PARA A IMPRESSORA TÉRMICA -->
+        <div class="quebra-pagina"></div>
+
+        <!-- VIA DA PRODUÇÃO -->
+        <div class="center bold" style="font-size: 16px; margin-bottom: 10px;">VIA DA PRODUÇÃO</div>
+        <div class="center bold" style="font-size: 14px;">Pedido: ${idPedido.substring(0,6).toUpperCase()}</div>
+        <div class="center">Data: ${p.data.toDate ? p.data.toDate().toLocaleDateString('pt-BR') : p.data.toLocaleDateString('pt-BR')} ${p.data.toDate ? p.data.toDate().toLocaleTimeString('pt-BR') : p.data.toLocaleTimeString('pt-BR')}</div>
+        <div class="linha"></div>
+        <div class="bold" style="font-size: 14px;">Cliente: ${p.clienteNome}</div>
+        <div class="linha"></div>
+        ${p.itens.map(i => `
+            <div class="prod-item">[ ] ${i.qtdCarrinho}x ${i.nome}</div>
+            <div class="prod-desc">${i.desc.replace(/\|/g, '<br/>')}</div>
+        `).join('')}
+        <div class="linha"></div>
+        <div class="center">Fim da Ordem de Serviço</div>
+
+        <script>
+            setTimeout(() => { window.print(); window.close(); }, 500);
+        </script>
+        </body></html>
+    `;
+    janela.document.write(html);
+    janela.document.close();
+}
+
+function imprimirRecibo(idPedido) {
+    imprimirReciboDireto(idPedido, null);
+}
+
+// --- IMPRESSÃO DE ORÇAMENTO (A4 PDF) ---
+function imprimirOrcamento(idPedido, objPedido) {
+    const p = objPedido || bdPedidos.find(x => x.id === idPedido);
+    if(!p) return;
+    
+    const janela = window.open('', '', 'width=800,height=900');
+    
+    const dataPedido = p.data.toDate ? p.data.toDate() : new Date(p.data);
+    const dataValidade = new Date(dataPedido);
+    dataValidade.setDate(dataValidade.getDate() + 7);
+    
+    let html = `
+        <html><head><title>Orçamento - ${idPedido.substring(0,6).toUpperCase()}</title>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+        <style>
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 40px; color: #334155; }
+            .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 20px; margin-bottom: 30px; }
+            .logo { max-width: 180px; }
+            .company-info { text-align: right; font-size: 12px; color: #64748b; line-height: 1.6; }
+            .company-info strong { color: #0f172a; font-size: 14px; }
+            .info-section { display: flex; justify-content: space-between; margin-bottom: 30px; background: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid #f1f5f9; }
+            .info-block { flex: 1; }
+            .info-label { font-size: 10px; font-weight: bold; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
+            .info-value { font-size: 16px; font-weight: bold; color: #0f172a; margin: 0; }
+            table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+            th { background: #f1f5f9; color: #475569; text-align: left; padding: 12px; font-size: 12px; text-transform: uppercase; border-bottom: 2px solid #cbd5e1; }
+            td { padding: 15px 12px; border-bottom: 1px solid #e2e8f0; font-size: 14px; vertical-align: top; }
+            .text-right { text-align: right; }
+            .totals { width: 320px; margin-left: auto; background: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid #f1f5f9; }
+            .total-line { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px; color: #475569; }
+            .total-line.grand-total { font-size: 22px; font-weight: 900; color: #0f172a; border-top: 2px solid #cbd5e1; padding-top: 15px; margin-top: 15px; }
+            .footer { margin-top: 50px; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 20px; }
+            .validade { display: inline-block; background: #fef3c7; color: #b45309; padding: 10px 20px; border-radius: 6px; font-weight: bold; font-size: 13px; margin-top: 20px; border: 1px solid #fde68a; }
+            @media print { body { padding: 0; } .validade { border: 1px solid #000; } }
+        </style>
+        </head><body>
+        
+        <div class="header">
+            <div>
+                <img src="https://i.postimg.cc/1RCc58qN/gva-br-1-ERP-26.png" class="logo" alt="GVA Gráfica" />
+            </div>
+            <div class="company-info">
+                <strong>Gráfica Venom Arts LTDA</strong><br/>
+                CNPJ: 17.184.159/0001-06<br/>
+                Rua Lopes Trovão nº 474 Lojas 202 e 201<br/>
+                Icaraí, Niterói - RJ 24220-071<br/>
+                WhatsApp: 21 99993-0190
+            </div>
+        </div>
+
+        <div class="info-section">
+            <div class="info-block">
+                <div class="info-label">Orçamento preparado para:</div>
+                <div class="info-value">${p.clienteNome}</div>
+            </div>
+            <div class="info-block text-right">
+                <div class="info-label">Nº do Orçamento</div>
+                <div class="info-value">#${idPedido.substring(0,6).toUpperCase()}</div>
+                <div class="info-label" style="margin-top: 15px;">Data de Emissão</div>
+                <div class="info-value" style="font-size: 14px;">${dataPedido.toLocaleDateString('pt-BR')}</div>
+            </div>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Item / Descrição</th>
+                    <th class="text-right" style="width: 80px;">Qtd</th>
+                    <th class="text-right" style="width: 120px;">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${p.itens.map(i => `
+                    <tr>
+                        <td>
+                            <strong style="color: #0f172a;">${i.nome}</strong><br/>
+                            <span style="color: #64748b; font-size: 12px; line-height: 1.4; display: inline-block; margin-top: 4px;">${i.desc.replace(/\|/g, '<br/>')}</span>
+                        </td>
+                        <td class="text-right font-bold">${i.qtdCarrinho}</td>
+                        <td class="text-right font-bold">R$ ${i.valor.toFixed(2)}</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+
+        <div class="totals">
+            <div class="total-line">
+                <span>Subtotal:</span>
+                <span>R$ ${(p.total - (p.taxaPagto || 0) - (p.frete || 0) + (p.desconto || 0)).toFixed(2)}</span>
+            </div>
+            ${p.taxaPagto ? `<div class="total-line" style="color: ${p.taxaPagto > 0 ? '#ef4444' : '#10b981'}"><span>Taxa/Desc. Pgto:</span><span>${p.taxaPagto > 0 ? '+' : ''} R$ ${p.taxaPagto.toFixed(2)}</span></div>` : ''}
+            ${p.frete > 0 ? `<div class="total-line"><span>Frete:</span><span>+ R$ ${p.frete.toFixed(2)}</span></div>` : ''}
+            ${p.desconto > 0 ? `<div class="total-line" style="color: #ef4444"><span>Desconto:</span><span>- R$ ${p.desconto.toFixed(2)}</span></div>` : ''}
+            
+            <div class="total-line grand-total">
+                <span>Total Final:</span>
+                <span>R$ ${p.total.toFixed(2)}</span>
+            </div>
+        </div>
+
+        <div style="text-align: center;">
+            <div class="validade">
+                <i class="fa fa-clock"></i> Este orçamento é válido até ${dataValidade.toLocaleDateString('pt-BR')} (7 dias).
+            </div>
+        </div>
+
+        <div class="footer">
+            Agradecemos a oportunidade de apresentar nossa proposta.<br/>
+            Para aprovar este orçamento, por favor entre em contato conosco via WhatsApp.
+        </div>
+
+        <script>
+            setTimeout(() => { window.print(); window.close(); }, 800);
+        </script>
+        </body></html>
+    `;
+    janela.document.write(html);
+    janela.document.close();
+}
+// --- LÓGICA DE ATRIBUTOS E COMBINAÇÕES ---
+function addOpcaoAtrib(container, n = '', p = '') {
+    const div = document.createElement('div');
+    div.className = "flex gap-2 item-opcao";
+    div.innerHTML = `<input type="text" placeholder="Opção" value="${n}" class="op-nome flex-1 text-xs p-2 border border-slate-200 rounded bg-slate-50 outline-none focus:ring-2 focus:ring-indigo-500" /><input type="number" placeholder="R$" value="${p}" class="op-preco w-20 text-xs p-2 border border-slate-200 rounded bg-slate-50 font-bold outline-none focus:ring-2 focus:ring-indigo-500" /><button type="button" onclick="this.parentElement.remove()" class="text-slate-300 hover:text-red-500">✕</button>`;
+    container.appendChild(div);
+}
+
+function addAtributo(nome = '', tipo = 'multiplica', opcoes =[]) {
+    const div = document.createElement('div');
+    div.className = "bg-white p-4 rounded border border-slate-100 shadow-sm item-atrib";
+    div.innerHTML = `
+        <div class="flex gap-2 mb-3">
+            <input type="text" placeholder="Grupo (ex: Papel)" value="${nome}" class="atrib-nome flex-1 font-bold text-sm p-2 border-b-2 border-indigo-50 outline-none focus:border-indigo-500" />
+            <select class="atrib-tipo text-xs p-2 border-b-2 border-indigo-50 outline-none text-slate-500 font-bold">
+                <option value="multiplica" ${tipo === 'multiplica' ? 'selected' : ''}>Multiplica pela Qtd</option>
+                <option value="fixo" ${tipo === 'fixo' ? 'selected' : ''}>Fixo no Pedido</option>
+            </select>
+            <button type="button" onclick="this.parentElement.parentElement.remove()" class="text-red-300">✕</button>
+        </div>
+        <div class="lista-opcoes space-y-2"></div>
+        <button type="button" class="btn-add-op mt-3 text-[10px] font-bold uppercase text-indigo-400 hover:text-indigo-600">+ Add Opção</button>
+    `;
+    document.getElementById('listaAtributos').appendChild(div);
+    const containerOpcoes = div.querySelector('.lista-opcoes');
+    div.querySelector('.btn-add-op').onclick = () => addOpcaoAtrib(containerOpcoes);
+    if (opcoes && opcoes.length > 0) opcoes.forEach(o => addOpcaoAtrib(containerOpcoes, o.nome, o.preco));
+    else addOpcaoAtrib(containerOpcoes);
+}
+
+function addAtributoManual() { addAtributo('', 'multiplica',[]); }
+
+function ajustarCamposProduto() {
+    const r = document.getElementById('prodRegraPreco').value;
+    document.getElementById('boxPrecoBase').style.display = (r === 'pacote' || r === 'progressivo' || r === 'combinacao') ? 'none' : 'block';
+    document.getElementById('boxPacotes').style.display = r === 'pacote' ? 'block' : 'none';
+    document.getElementById('boxProgressivo').style.display = r === 'progressivo' ? 'block' : 'none';
+    document.getElementById('boxCombinacoes').style.display = r === 'combinacao' ? 'block' : 'none';
+    document.getElementById('boxMedidas').style.display = r === 'm2' ? 'grid' : 'none';
+}
+
+function addLinhaPacote(q='', p='') {
+    const div = document.createElement('div');
+    div.className = "flex gap-2";
+    div.innerHTML = `<input type="text" placeholder="Qtd (ex: 1.000 Cartões)" value="${q}" class="q w-full p-2 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-amber-500" /><input type="number" placeholder="Total R$" value="${p}" class="p w-full p-2 border border-slate-200 rounded font-bold text-amber-600 text-xs outline-none focus:ring-2 focus:ring-amber-500" /><button type="button" onclick="this.parentElement.remove()" class="text-red-300">✕</button>`;
+    document.getElementById('listaGradePacotes').appendChild(div);
+}
+
+function addLinhaProgressivo(q='', p='') {
+    const div = document.createElement('div');
+    div.className = "flex gap-2";
+    div.innerHTML = `<input type="number" placeholder="Qtd Mín" value="${q}" class="q w-full p-2 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-emerald-500" /><input type="number" placeholder="Unit R$" value="${p}" class="p w-full p-2 border border-slate-200 rounded font-bold text-emerald-600 text-xs outline-none focus:ring-2 focus:ring-emerald-500" /><button type="button" onclick="this.parentElement.remove()" class="text-red-300">✕</button>`;
+    document.getElementById('listaGradeProgressivo').appendChild(div);
+}
+
+function gerarGradeCombinacoes() {
+    const v1 = document.getElementById('combValores1').value.split(',').map(s=>s.trim()).filter(s=>s);
+    const v2 = document.getElementById('combValores2').value.split(',').map(s=>s.trim()).filter(s=>s);
+    const container = document.getElementById('listaGradeCombinacoes');
+    container.innerHTML = '';
+    
+    if(v1.length === 0 || v2.length === 0) return alert("Preencha os valores separados por vírgula nos dois atributos.");
+
+    v1.forEach(op1 => {
+        v2.forEach(op2 => {
+            const div = document.createElement('div');
+            div.className = "flex gap-2 items-center item-combinacao";
+            div.innerHTML = `
+                <input type="text" readonly value="${op1}" class="c-op1 w-1/3 p-2 border border-purple-200 rounded text-xs bg-white outline-none font-bold text-slate-600" />
+                <input type="text" readonly value="${op2}" class="c-op2 w-1/3 p-2 border border-purple-200 rounded text-xs bg-white outline-none font-bold text-slate-600" />
+                <input type="number" placeholder="Preço R$" class="c-preco w-1/3 p-2 border border-purple-200 rounded font-bold text-purple-700 text-xs outline-none focus:ring-2 focus:ring-purple-500" />
+            `;
+            container.appendChild(div);
+        });
+    });
+}
+
+function atualizarListaAcabamentosProduto(salvos =[]) {
+    const container = document.getElementById('listaCheckAcabamentos');
+    const catSelect = document.getElementById('prodCategoria');
+    if(!container || !catSelect) return;
+    const cat = catSelect.value;
+    const filtrados = bdAcabamentos.filter(a => a.categoria === cat || a.categoria === "Geral");
+    container.innerHTML = filtrados.map(a => {
+        const obj = salvos.find(s => (s.id || s) === a.id);
+        const checked = obj ? 'checked' : '';
+        const starAtiva = (obj && obj.padrao) ? 'text-amber-400' : 'text-slate-200';
+        return `<div class="flex items-center justify-between p-2 bg-white border border-slate-200 rounded"><label class="text-[10px] font-bold flex items-center gap-2 cursor-pointer"><input type="checkbox" class="check-acab-prod" value="${a.id}" ${checked} /> ${a.nome}</label><i class="fa fa-star cursor-pointer star-padrao ${starAtiva}" onclick="this.classList.toggle('text-amber-400'); this.classList.toggle('text-slate-200')"></i></div>`;
+    }).join('');
+}
+
+async function salvarProduto() {
+    const id = document.getElementById('prodId').value;
+    const regra = document.getElementById('prodRegraPreco').value;
+    
+    let atributos =[];
+    document.querySelectorAll('.item-atrib').forEach(caixa => {
+        let ops =[];
+        caixa.querySelectorAll('.item-opcao').forEach(l => {
+            const n = l.querySelector('.op-nome').value;
+            const p = parseFloat(l.querySelector('.op-preco').value) || 0;
+            if (n) ops.push({ nome: n, preco: p });
+        });
+        const nomeAtrib = caixa.querySelector('.atrib-nome').value;
+        const tipoAtrib = caixa.querySelector('.atrib-tipo').value;
+        if (nomeAtrib) atributos.push({ nome: nomeAtrib, tipo: tipoAtrib, opcoes: ops });
+    });
+
+    let acabList =[];
+    document.querySelectorAll('.check-acab-prod:checked').forEach(chk => {
+        const star = chk.closest('div').querySelector('.star-padrao');
+        acabList.push({ id: chk.value, padrao: star.classList.contains('text-amber-400') });
+    });
+
+    let pacotes =[];
+    document.querySelectorAll('#listaGradePacotes > div').forEach(d => {
+        const q = d.querySelector('.q').value; 
+        const p = parseFloat(d.querySelector('.p').value);
+        if (q && p) pacotes.push({ qtd: q, preco: p });
+    });
+
+    let progressivo =[];
+    document.querySelectorAll('#listaGradeProgressivo > div').forEach(d => {
+        const q = parseInt(d.querySelector('.q').value); const p = parseFloat(d.querySelector('.p').value);
+        if (q && p) progressivo.push({ q: q, p: p });
+    });
+
+    let combinacoes = null;
+    if (regra === 'combinacao') {
+        const n1 = document.getElementById('combNome1').value;
+        const n2 = document.getElementById('combNome2').value;
+        const v1 = document.getElementById('combValores1').value;
+        const v2 = document.getElementById('combValores2').value;
+        let precos =[];
+        document.querySelectorAll('.item-combinacao').forEach(d => {
+            precos.push({
+                op1: d.querySelector('.c-op1').value,
+                op2: d.querySelector('.c-op2').value,
+                preco: parseFloat(d.querySelector('.c-preco').value) || 0
+            });
+        });
+        combinacoes = { nome1: n1, nome2: n2, valores1: v1, valores2: v2, precos: precos };
+    }
+
+    const d = {
+        nome: document.getElementById('prodNome').value,
+        setor: document.getElementById('prodSetor').value,
+        categoria: document.getElementById('prodCategoria').value,
+        subcategoria: document.getElementById('prodSubcategoria').value || '',
+        regraPreco: regra,
+        preco: parseFloat(document.getElementById('prodPreco').value) || 0,
+        foto: document.getElementById('prodFoto').value || '',
+        ref: document.getElementById('prodRef').value || '',
+        material: document.getElementById('prodMaterial').value || '',
+        gramatura: document.getElementById('prodGramatura').value || '',
+        prazo: parseInt(document.getElementById('prodPrazo').value) || 0,
+        larguraBobina: parseFloat(document.getElementById('prodLargBobina').value) || 0,
+        larguraMax: parseFloat(document.getElementById('prodLargMax').value) || 0,
+        compMax: parseFloat(document.getElementById('prodCompMax').value) || 0,
+        obs: document.getElementById('prodObs').value || '',
+        atributos: atributos,
+        acabamentos: acabList,
+        pacotes: pacotes,
+        progressivo: progressivo,
+        combinacoes: combinacoes
+    };
+
+    if (!d.nome) return alert("Nome obrigatório!");
+    
+    try {
+        if (id) await db.collection("produtos").doc(id).update(d); 
+        else await db.collection("produtos").add(d);
+        
+        alert("Produto salvo com sucesso!");
+        document.getElementById('prodId').value = '';
+        mudarSubAba('sub-prod', document.querySelectorAll('.sub-aba-btn')[1]);
+    } catch (error) {
+        console.error("Erro ao salvar:", error);
+        alert("Erro ao salvar produto.");
+    }
+}
+
+function editProd(id) {
+    const p = bdProdutos.find(x => x.id === id);
+    if (!p) return;
+    document.getElementById('prodId').value = p.id;
+    document.getElementById('prodNome').value = p.nome || '';
+    document.getElementById('prodSetor').value = p.setor || 'Gráfico';
+    document.getElementById('prodCategoria').value = p.categoria || '';
+    document.getElementById('prodSubcategoria').value = p.subcategoria || '';
+    document.getElementById('prodRegraPreco').value = p.regraPreco || 'unidade';
+    document.getElementById('prodPreco').value = p.preco || 0;
+    document.getElementById('prodFoto').value = p.foto || '';
+    document.getElementById('prodRef').value = p.ref || '';
+    document.getElementById('prodMaterial').value = p.material || '';
+    document.getElementById('prodGramatura').value = p.gramatura || '';
+    document.getElementById('prodPrazo').value = p.prazo || 0;
+    document.getElementById('prodLargBobina').value = p.larguraBobina || 0;
+    document.getElementById('prodLargMax').value = p.larguraMax || 0;
+    document.getElementById('prodCompMax').value = p.compMax || 0;
+    document.getElementById('prodObs').value = p.obs || '';
+    
+    document.getElementById('listaAtributos').innerHTML = '';
+    if (p.atributos) p.atributos.forEach(a => addAtributo(a.nome, a.tipo || 'multiplica', a.opcoes));
+    
+    document.getElementById('listaGradePacotes').innerHTML = '';
+    if (p.pacotes) p.pacotes.forEach(pct => addLinhaPacote(pct.qtd, pct.preco));
+
+    document.getElementById('listaGradeProgressivo').innerHTML = '';
+    if (p.progressivo) p.progressivo.forEach(prg => addLinhaProgressivo(prg.q, prg.p));
+
+    if (p.combinacoes) {
+        document.getElementById('combNome1').value = p.combinacoes.nome1 || '';
+        document.getElementById('combNome2').value = p.combinacoes.nome2 || '';
+        document.getElementById('combValores1').value = p.combinacoes.valores1 || '';
+        document.getElementById('combValores2').value = p.combinacoes.valores2 || '';
+        const container = document.getElementById('listaGradeCombinacoes');
+        container.innerHTML = '';
+        p.combinacoes.precos.forEach(c => {
+            const div = document.createElement('div');
+            div.className = "flex gap-2 items-center item-combinacao";
+            div.innerHTML = `
+                <input type="text" readonly value="${c.op1}" class="c-op1 w-1/3 p-2 border border-purple-200 rounded text-xs bg-white outline-none font-bold text-slate-600" />
+                <input type="text" readonly value="${c.op2}" class="c-op2 w-1/3 p-2 border border-purple-200 rounded text-xs bg-white outline-none font-bold text-slate-600" />
+                <input type="number" placeholder="Preço R$" value="${c.preco}" class="c-preco w-1/3 p-2 border border-purple-200 rounded font-bold text-purple-700 text-xs outline-none focus:ring-2 focus:ring-purple-500" />
+            `;
+            container.appendChild(div);
+        });
+    } else {
+        document.getElementById('combNome1').value = '';
+        document.getElementById('combNome2').value = '';
+        document.getElementById('combValores1').value = '';
+        document.getElementById('combValores2').value = '';
+        document.getElementById('listaGradeCombinacoes').innerHTML = '';
+    }
+
+    ajustarCamposProduto();
+    atualizarListaAcabamentosProduto(p.acabamentos ||[]);
+    mudarSubAba('sub-prod', document.querySelectorAll('.sub-aba-btn')[1]);
+}
+
 // --- PDV E MODAL ---
 function setFiltroSetor(s) { 
     filtroSetor = s; 
@@ -429,9 +1095,7 @@ async function enviarPedido(imprimir = false, isOrcamento = false) {
     alert(isOrcamento ? "ORÇAMENTO SALVO COM SUCESSO!" : "PEDIDO SALVO!");
     
     if (isOrcamento) {
-        if(confirm("Deseja enviar este orçamento para o WhatsApp do cliente?")) {
-            enviarWhatsApp(docRef.id, 'orcamento', pedido);
-        }
+        imprimirOrcamento(docRef.id, pedido);
     } else if(imprimir) {
         imprimirReciboDireto(docRef.id, pedido);
     }
@@ -673,7 +1337,7 @@ function abrirDetalhesPedido(id) {
         <div class="mt-6 flex gap-2">
             ${btnReceber}
             <button type="button" onclick="enviarWhatsApp('${p.id}', '${p.status === 'Orçamento' ? 'orcamento' : 'recibo'}')" class="flex-1 bg-green-500 text-white py-3 rounded font-bold text-xs hover:bg-green-600 transition uppercase tracking-widest shadow-md"><i class="fab fa-whatsapp"></i> Zap</button>
-            <button type="button" onclick="imprimirRecibo('${p.id}')" class="flex-1 bg-indigo-600 text-white py-3 rounded font-bold text-xs hover:bg-indigo-700 transition uppercase tracking-widest shadow-md"><i class="fa fa-print"></i> Imprimir</button>
+            <button type="button" onclick="${p.status === 'Orçamento' ? `imprimirOrcamento('${p.id}')` : `imprimirRecibo('${p.id}')`}" class="flex-1 bg-indigo-600 text-white py-3 rounded font-bold text-xs hover:bg-indigo-700 transition uppercase tracking-widest shadow-md"><i class="${p.status === 'Orçamento' ? 'fa fa-file-pdf' : 'fa fa-print'}"></i> ${p.status === 'Orçamento' ? 'Gerar PDF' : 'Imprimir'}</button>
         </div>
     `;
     
@@ -689,7 +1353,7 @@ async function salvarDespesa() {
     if (!desc || !valor) return alert("Preencha a descrição e o valor da saída.");
     
     const hoje = new Date();
-    const [ano, mes, dia] = dataFiltro.split('-');
+    const[ano, mes, dia] = dataFiltro.split('-');
     const dataRegistro = new Date(ano, mes - 1, dia, hoje.getHours(), hoje.getMinutes(), hoje.getSeconds());
 
     await db.collection("despesas").add({
@@ -790,7 +1454,7 @@ function verHistoricoCliente(idCli) {
                 </div>
                 <div class="flex gap-4">
                     <button type="button" onclick="abrirDetalhesPedido('${p.id}')" class="text-[10px] font-bold text-indigo-500 uppercase hover:underline"><i class="fa fa-eye"></i> Ver Detalhes</button>
-                    <button type="button" onclick="imprimirRecibo('${p.id}')" class="text-[10px] font-bold text-indigo-500 uppercase hover:underline"><i class="fa fa-print"></i> Imprimir Recibo</button>
+                    <button type="button" onclick="${p.status === 'Orçamento' ? `imprimirOrcamento('${p.id}')` : `imprimirRecibo('${p.id}')`}" class="text-[10px] font-bold text-indigo-500 uppercase hover:underline"><i class="${p.status === 'Orçamento' ? 'fa fa-file-pdf' : 'fa fa-print'}"></i> ${p.status === 'Orçamento' ? 'Gerar PDF' : 'Imprimir Recibo'}</button>
                 </div>
             </div>
         `).join(''); 
