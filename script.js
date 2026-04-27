@@ -13,8 +13,8 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 
 // Banco de Dados Local (Memória)
-let bdCategorias = [];
-let bdProdutos =[];
+let bdCategorias =[];
+let bdProdutos = [];
 let bdClientes =[];
 let bdPedidos =[];
 let bdDespesas =[];
@@ -48,7 +48,6 @@ auth.onAuthStateChanged(async user => {
     const btnEntrar = document.getElementById('btnEntrar');
     
     if (user) {
-        // DESTRAVA A TELA IMEDIATAMENTE PARA NÃO FICAR PRESO
         telaLogin.classList.add('hidden');
         appInterface.classList.remove('hidden');
         if (btnEntrar) { btnEntrar.innerText = "Entrar no Sistema"; btnEntrar.disabled = false; }
@@ -105,12 +104,10 @@ function aplicarPermissoes() {
 
     if (role === 'admin') {[...btnLoja, ...btnProducao, ...btnFinanceiro, ...btnConfig, ...btnDashboard].forEach(b => b.classList.remove('hidden'));[btnSubCli, btnSubProd, btnSubCat, btnSubAcab, btnSubUsuarios].forEach(b => { if(b) b.classList.remove('hidden'); });
         mudarAba('dashboard');
-    } else if (role === 'vendedor') {
-        [...btnLoja, ...btnProducao, ...btnFinanceiro, ...btnConfig].forEach(b => b.classList.remove('hidden'));
+    } else if (role === 'vendedor') {[...btnLoja, ...btnProducao, ...btnFinanceiro, ...btnConfig].forEach(b => b.classList.remove('hidden'));
         if(btnSubCli) btnSubCli.classList.remove('hidden'); 
         mudarAba('loja'); mudarSubAba('sub-cli');
-    } else if (role === 'producao') {
-        [...btnProducao].forEach(b => b.classList.remove('hidden')); mudarAba('producao');
+    } else if (role === 'producao') {[...btnProducao].forEach(b => b.classList.remove('hidden')); mudarAba('producao');
     }
 }
 
@@ -180,7 +177,7 @@ function imprimirDashboard() {
     janela.document.close();
 }
 
-// --- KANBAN DE PRODUÇÃO (MINIMIZADO) ---
+// --- KANBAN DE PRODUÇÃO (MINIMIZADO E COM BOTÃO DE RECEBER) ---
 function renderKanbanProducao() {
     const container = document.getElementById('kanbanContainer');
     if(!container) return;
@@ -210,11 +207,21 @@ function gerarCardPedido(p) {
     if(p.status === 'Cancelado / Estorno') corBorda = 'border-l-red-500';
 
     let btnArquivar = (p.status === 'Entregue' || p.status === 'Cancelado / Estorno') ? `<button type="button" onclick="arquivarPedido('${p.id}')" class="bg-slate-200 text-slate-600 px-3 rounded hover:bg-slate-300 transition" title="Arquivar Pedido"><i class="fa fa-archive"></i></button>` : '';
+    
     let visualizaPrecos = (!usuarioAtual || usuarioAtual.role !== 'producao');
+    
+    // NOVO: Botão de Receber Pagamento direto no Kanban
+    let btnReceber = (visualizaPrecos && p.saldoDevedor > 0) ? `<button type="button" onclick="receberSaldo('${p.id}')" class="bg-emerald-500 text-white px-3 rounded hover:bg-emerald-600 transition" title="Receber Saldo (Falta R$ ${p.saldoDevedor.toFixed(2)})"><i class="fa fa-hand-holding-usd"></i></button>` : '';
+
     let btnZAP = !visualizaPrecos ? '' : `<button type="button" onclick="enviarWhatsApp('${p.id}', '${p.status === 'Pronto para Retirada' ? 'retirada' : (p.status === 'Orçamento' ? 'orcamento' : 'recibo')}')" class="bg-green-500 text-white px-3 rounded hover:bg-green-600 transition" title="Enviar WhatsApp"><i class="fab fa-whatsapp"></i></button>`;
     let btnImprimir = !visualizaPrecos ? '' : `<button type="button" onclick="${p.status === 'Orçamento' ? `imprimirOrcamento('${p.id}')` : `imprimirRecibo('${p.id}')`}" class="bg-slate-800 text-white px-3 rounded hover:bg-slate-700 transition" title="${p.status === 'Orçamento' ? 'Gerar PDF' : 'Imprimir Recibo'}"><i class="${p.status === 'Orçamento' ? 'fa fa-file-pdf' : 'fa fa-print'}"></i></button>`;
 
-    return `<div class="bg-white p-4 rounded-lg shadow-sm border border-slate-200 border-l-4 ${corBorda}"><div class="flex justify-between items-start mb-2"><span class="text-[9px] font-bold text-slate-400">${dataFormatada}</span><span class="text-[10px] font-black text-indigo-600">${visualizaPrecos ? 'R$ ' + p.total.toFixed(2) : ''}</span></div><h4 class="font-bold text-slate-800 text-xs mb-2">${p.clienteNome}</h4><div class="text-[9px] text-slate-500 mb-3 space-y-1">${p.itens.map(i => `<p>• ${i.qtdCarrinho}x ${i.nome} <span class="opacity-70">(${i.desc})</span></p>`).join('')}</div><div class="mt-3 pt-3 border-t border-slate-100 flex gap-2"><select onchange="mudarStatusPedido('${p.id}', this.value)" class="flex-1 p-2 bg-slate-50 border border-slate-200 rounded text-[10px] font-bold outline-none focus:ring-2 focus:ring-indigo-500">${options}</select>${btnArquivar}${btnZAP}${btnImprimir}</div></div>`;
+    // NOVO: Etiqueta vermelha de FALTA R$ no topo do card
+    let etiquetaFalta = (p.saldoDevedor > 0 && visualizaPrecos) ? `<div class="absolute -top-2 -right-2 bg-red-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full shadow-md">FALTA R$ ${p.saldoDevedor.toFixed(2)}</div>` : '';
+
+    return `<div class="bg-white p-4 rounded-lg shadow-sm border border-slate-200 border-l-4 ${corBorda} relative">
+        ${etiquetaFalta}
+        <div class="flex justify-between items-start mb-2"><span class="text-[9px] font-bold text-slate-400">${dataFormatada}</span><span class="text-[10px] font-black text-indigo-600">${visualizaPrecos ? 'R$ ' + p.total.toFixed(2) : ''}</span></div><h4 class="font-bold text-slate-800 text-xs mb-2">${p.clienteNome}</h4><div class="text-[9px] text-slate-500 mb-3 space-y-1">${p.itens.map(i => `<p>• ${i.qtdCarrinho}x ${i.nome} <span class="opacity-70">(${i.desc})</span></p>`).join('')}</div><div class="mt-3 pt-3 border-t border-slate-100 flex gap-2"><select onchange="mudarStatusPedido('${p.id}', this.value)" class="flex-1 p-2 bg-slate-50 border border-slate-200 rounded text-[10px] font-bold outline-none focus:ring-2 focus:ring-indigo-500">${options}</select>${btnReceber}${btnArquivar}${btnZAP}${btnImprimir}</div></div>`;
 }
 
 async function mudarStatusPedido(id, novoStatus) { try { await db.collection("pedidos").doc(id).update({ status: novoStatus }); } catch(e) { alert("Erro ao atualizar status."); } }
