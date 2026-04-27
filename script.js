@@ -11,10 +11,10 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-let bdCategorias = [];
+let bdCategorias =[];
 let bdProdutos =[];
 let bdClientes = [];
-let bdPedidos = [];
+let bdPedidos =[];
 let bdDespesas =[];
 let bdAcabamentos = [];
 let carrinho =[];
@@ -24,7 +24,9 @@ let filtroSetor = 'Todos';
 let filtroCategoria = 'Todas';
 let filtroSubcategoria = 'Todas';
 
+// NOVO: Adicionado "Orçamento" na lista de status
 const STATUSES =[
+    "Orçamento",
     "Aguardando pagamento",
     "Em produção",
     "Acabamento",
@@ -119,6 +121,7 @@ function gerarCardPedido(p) {
     let options = STATUSES.map(s => `<option value="${s}" ${p.status === s ? 'selected' : ''}>${s}</option>`).join('');
 
     let corBorda = 'border-l-slate-400';
+    if(p.status === 'Orçamento') corBorda = 'border-l-blue-400';
     if(p.status === 'Aguardando pagamento') corBorda = 'border-l-amber-400';
     if(p.status === 'Em produção') corBorda = 'border-l-blue-500';
     if(p.status === 'Acabamento') corBorda = 'border-l-indigo-500';
@@ -146,6 +149,7 @@ function gerarCardPedido(p) {
                     ${options}
                 </select>
                 ${btnArquivar}
+                <button type="button" onclick="enviarWhatsApp('${p.id}', '${p.status === 'Pronto para Retirada' ? 'retirada' : (p.status === 'Orçamento' ? 'orcamento' : 'recibo')}')" class="bg-green-500 text-white px-3 rounded hover:bg-green-600 transition" title="Enviar WhatsApp"><i class="fab fa-whatsapp"></i></button>
                 <button type="button" onclick="imprimirRecibo('${p.id}')" class="bg-slate-800 text-white px-3 rounded hover:bg-slate-700 transition" title="Imprimir Recibo"><i class="fa fa-print"></i></button>
             </div>
         </div>
@@ -162,6 +166,43 @@ async function arquivarPedido(id) {
         try { await db.collection("pedidos").doc(id).update({ arquivado: true }); } 
         catch(e) { console.error(e); alert("Erro ao arquivar pedido."); }
     }
+}
+
+// --- INTEGRAÇÃO WHATSAPP ---
+function enviarWhatsApp(idPedido, tipo, objPedido = null) {
+    const p = objPedido || bdPedidos.find(x => x.id === idPedido);
+    if (!p) return;
+
+    let telefone = "";
+    if (p.clienteId && p.clienteId !== "Consumidor Final") {
+        const cli = bdClientes.find(c => c.id === p.clienteId);
+        if (cli && cli.telefone) {
+            telefone = cli.telefone.replace(/\D/g, '');
+        }
+    }
+
+    if (!telefone) {
+        telefone = prompt("Não encontramos o WhatsApp no cadastro do cliente.\nDigite o número com DDD (ex: 11999999999):");
+        if (!telefone) return;
+        telefone = telefone.replace(/\D/g, '');
+    }
+
+    if (telefone.length < 10) return alert("Número de telefone inválido.");
+    if (telefone.length === 10 || telefone.length === 11) telefone = "55" + telefone;
+
+    let texto = "";
+    const itensTexto = p.itens.map(i => `▫️ ${i.qtdCarrinho}x ${i.nome} - R$ ${i.valor.toFixed(2)}`).join('%0A');
+    const totalStr = p.total.toFixed(2);
+
+    if (tipo === 'orcamento') {
+        texto = `Olá *${p.clienteNome}*! Tudo bem?%0A%0ASegue o seu orçamento da *GVA Gráfica*:%0A%0A${itensTexto}%0A%0A*Total: R$ ${totalStr}*%0A%0AQualquer dúvida, estamos à disposição! Para aprovar, é só responder esta mensagem.`;
+    } else if (tipo === 'retirada') {
+        texto = `Olá *${p.clienteNome}*!%0A%0ASó passando para avisar que o seu pedido (Ref: ${idPedido.substring(0,6).toUpperCase()}) já está *PRONTO PARA RETIRADA* aqui na GVA Gráfica! 🚀%0A%0ATotal do pedido: R$ ${totalStr}%0A${p.saldoDevedor > 0 ? `Saldo a pagar na retirada: *R$ ${p.saldoDevedor.toFixed(2)}*%0A` : ''}%0ATe esperamos!`;
+    } else if (tipo === 'recibo') {
+        texto = `Olá *${p.clienteNome}*!%0A%0ASeu pedido foi registrado com sucesso na *GVA Gráfica*! (Ref: ${idPedido.substring(0,6).toUpperCase()})%0A%0A*Resumo:*%0A${itensTexto}%0A%0A*Total: R$ ${totalStr}*%0AValor Pago: R$ ${(p.valorPago || 0).toFixed(2)}%0A${p.saldoDevedor > 0 ? `Saldo a pagar: R$ ${p.saldoDevedor.toFixed(2)}%0A` : ''}%0AAcompanharemos a produção e avisaremos quando estiver pronto!`;
+    }
+
+    window.open(`https://wa.me/${telefone}?text=${texto}`, '_blank');
 }
 
 // --- IMPRESSÃO DE RECIBO (2 VIAS) ---
@@ -198,7 +239,7 @@ function imprimirReciboDireto(idPedido, objPedido) {
             Insta: @grafica.venomarts
         </div>
         <div class="linha"></div>
-        <div class="center bold" style="font-size: 14px;">Pedido: ${idPedido.substring(0,6).toUpperCase()}</div>
+        <div class="center bold" style="font-size: 14px;">${p.status === 'Orçamento' ? 'ORÇAMENTO' : 'Pedido'}: ${idPedido.substring(0,6).toUpperCase()}</div>
         <div class="center">Data: ${p.data.toDate ? p.data.toDate().toLocaleDateString('pt-BR') : p.data.toLocaleDateString('pt-BR')} ${p.data.toDate ? p.data.toDate().toLocaleTimeString('pt-BR') : p.data.toLocaleTimeString('pt-BR')}</div>
         <div class="linha"></div>
         <div>Cliente: ${p.clienteNome}</div>
@@ -213,8 +254,10 @@ function imprimirReciboDireto(idPedido, objPedido) {
         ${p.frete > 0 ? `<div class="right">Frete: + R$ ${p.frete.toFixed(2)}</div>` : ''}
         ${p.desconto > 0 ? `<div class="right text-red-500">Desconto Manual: - R$ ${p.desconto.toFixed(2)}</div>` : ''}
         <div class="right bold">Total: R$ ${p.total.toFixed(2)}</div>
-        <div class="right">Valor Pago: R$ ${(p.valorPago || 0).toFixed(2)}</div>
-        <div class="right bold">Saldo: R$ ${(p.saldoDevedor || 0).toFixed(2)}</div>
+        ${p.status !== 'Orçamento' ? `
+            <div class="right">Valor Pago: R$ ${(p.valorPago || 0).toFixed(2)}</div>
+            <div class="right bold">Saldo: R$ ${(p.saldoDevedor || 0).toFixed(2)}</div>
+        ` : ''}
         <div class="linha"></div>
         <div class="center">Obrigado pela preferência!</div>
 
@@ -223,7 +266,7 @@ function imprimirReciboDireto(idPedido, objPedido) {
 
         <!-- VIA DA PRODUÇÃO -->
         <div class="center bold" style="font-size: 16px; margin-bottom: 10px;">VIA DA PRODUÇÃO</div>
-        <div class="center bold" style="font-size: 14px;">Pedido: ${idPedido.substring(0,6).toUpperCase()}</div>
+        <div class="center bold" style="font-size: 14px;">${p.status === 'Orçamento' ? 'ORÇAMENTO' : 'Pedido'}: ${idPedido.substring(0,6).toUpperCase()}</div>
         <div class="center">Data: ${p.data.toDate ? p.data.toDate().toLocaleDateString('pt-BR') : p.data.toLocaleDateString('pt-BR')} ${p.data.toDate ? p.data.toDate().toLocaleTimeString('pt-BR') : p.data.toLocaleTimeString('pt-BR')}</div>
         <div class="linha"></div>
         <div class="bold" style="font-size: 14px;">Cliente: ${p.clienteNome}</div>
@@ -664,7 +707,6 @@ function abrirConfigurador(id) {
     document.getElementById('modalW2P').classList.remove('hidden');
     calcularPrecoAoVivo();
 }
-
 function calcularPrecoAoVivo() {
     const idProd = document.getElementById('modalProdId').value;
     const p = bdProdutos.find(x => x.id === idProd);
@@ -732,7 +774,7 @@ function calcularPrecoAoVivo() {
         qtd = parseInt(document.getElementById('w2pQtd')?.value) || 1;
         let precoUnit = base;
         if (p && p.progressivo) {
-            let faixas = [...p.progressivo].sort((a,b) => b.q - a.q);
+            let faixas =[...p.progressivo].sort((a,b) => b.q - a.q);
             let faixa = faixas.find(f => qtd >= f.q);
             if (faixa) precoUnit = faixa.p;
         }
@@ -868,20 +910,32 @@ function atualizarTotalFinal() {
     document.getElementById('cartSaldoDevedor').innerText = "R$ " + saldo.toFixed(2);
 }
 
-async function enviarPedido(imprimir = false) {
+// NOVO: Função atualizada para aceitar Orçamentos
+async function enviarPedido(imprimir = false, isOrcamento = false) {
     if (carrinho.length === 0) return alert("Carrinho vazio!");
     
     const idCli = document.getElementById('cartClienteId').value;
     const nomeCliInput = document.getElementById('cartClienteInput').value;
     const total = parseFloat(document.getElementById('totalCarrinho').innerText.replace("R$ ",""));
-    const pago = parseFloat(document.getElementById('cartValorPago').value) || 0;
+    
+    let pago = parseFloat(document.getElementById('cartValorPago').value) || 0;
+    let formaPagto = document.getElementById('cartPagamento').value;
+    
+    // Se for orçamento, não tem valor pago nem forma de pagamento confirmada ainda
+    if (isOrcamento) {
+        pago = 0;
+        formaPagto = '';
+    }
+
     const desconto = parseFloat(document.getElementById('cartDesconto').value) || 0;
-    const formaPagto = document.getElementById('cartPagamento').value;
     const taxaPagto = parseFloat(document.getElementById('cartTaxaPagto').innerText.replace("R$ ","")) || 0;
     const frete = parseFloat(document.getElementById('cartFreteValor').value) || 0;
 
     const saldo = total - pago;
-    const statusInicial = saldo > 0 ? "Aguardando pagamento" : "Em produção";
+    
+    let statusInicial = "Em produção";
+    if (isOrcamento) statusInicial = "Orçamento";
+    else if (saldo > 0) statusInicial = "Aguardando pagamento";
 
     const pedido = {
         clienteId: idCli || "Consumidor Final",
@@ -897,17 +951,26 @@ async function enviarPedido(imprimir = false) {
         data: new Date(),
         status: statusInicial,
         arquivado: false,
-        pagamentos: pago > 0 ?[{ data: new Date(), valor: pago, forma: formaPagto }] :[]
+        pagamentos: pago > 0 ? [{ data: new Date(), valor: pago, forma: formaPagto }] :[]
     };
     
     const docRef = await db.collection("pedidos").add(pedido);
     
-    if (idCli && formaPagto === "Saldo_Cliente") {
+    if (!isOrcamento && idCli && formaPagto === "Saldo_Cliente") {
         const c = bdClientes.find(x => x.id === idCli);
         await db.collection("clientes").doc(idCli).update({ credito: (c.credito || 0) - pago });
     }
     
-    alert("PEDIDO SALVO!");
+    alert(isOrcamento ? "ORÇAMENTO SALVO COM SUCESSO!" : "PEDIDO SALVO!");
+    
+    if (isOrcamento) {
+        if(confirm("Deseja enviar este orçamento para o WhatsApp do cliente?")) {
+            enviarWhatsApp(docRef.id, 'orcamento', pedido);
+        }
+    } else if(imprimir) {
+        imprimirReciboDireto(docRef.id, pedido);
+    }
+
     carrinho =[]; 
     document.getElementById('cartValorPago').value = 0; 
     document.getElementById('cartDesconto').value = 0; 
@@ -915,8 +978,6 @@ async function enviarPedido(imprimir = false) {
     document.getElementById('cartPagamento').value = 'Pix';
     toggleOpcoesPagamento();
     renderCarrinho();
-    
-    if(imprimir) imprimirReciboDireto(docRef.id, pedido);
 }
 
 // --- FLUXO DE CAIXA (FINANCEIRO) E DETALHES ---
@@ -1040,7 +1101,8 @@ async function confirmarRecebimentoSaldo() {
     let novoSaldo = p.saldoDevedor - valorRecebido;
     if (novoSaldo < 0) novoSaldo = 0;
     
-    const novoStatus = (novoSaldo === 0 && p.status === 'Aguardando pagamento') ? 'Em produção' : p.status;
+    // Se quitou tudo e estava aguardando pagamento ou era orçamento, joga pra produção
+    const novoStatus = (novoSaldo === 0 && (p.status === 'Aguardando pagamento' || p.status === 'Orçamento')) ? 'Em produção' : p.status;
 
     const novoPagamento = {
         data: new Date(),
@@ -1101,6 +1163,9 @@ function abrirDetalhesPedido(id) {
         `;
     }
 
+    // Botão de receber saldo direto no modal de detalhes
+    let btnReceber = p.saldoDevedor > 0 ? `<button type="button" onclick="receberSaldo('${p.id}'); document.getElementById('modalDetalhesPedido').classList.add('hidden');" class="flex-1 bg-emerald-600 text-white py-3 rounded font-bold text-xs hover:bg-emerald-700 transition uppercase tracking-widest shadow-md"><i class="fa fa-hand-holding-usd"></i> Receber</button>` : '';
+
     let html = `
         <div class="flex justify-between items-start mb-4 border-b border-slate-100 pb-4">
             <div>
@@ -1143,7 +1208,9 @@ function abrirDetalhesPedido(id) {
         </div>
         
         <div class="mt-6 flex gap-2">
-            <button type="button" onclick="imprimirRecibo('${p.id}')" class="flex-1 bg-indigo-600 text-white py-3 rounded font-bold text-xs hover:bg-indigo-700 transition uppercase tracking-widest shadow-md"><i class="fa fa-print"></i> Reimprimir Recibo</button>
+            ${btnReceber}
+            <button type="button" onclick="enviarWhatsApp('${p.id}', '${p.status === 'Orçamento' ? 'orcamento' : 'recibo'}')" class="flex-1 bg-green-500 text-white py-3 rounded font-bold text-xs hover:bg-green-600 transition uppercase tracking-widest shadow-md"><i class="fab fa-whatsapp"></i> Zap</button>
+            <button type="button" onclick="imprimirRecibo('${p.id}')" class="flex-1 bg-indigo-600 text-white py-3 rounded font-bold text-xs hover:bg-indigo-700 transition uppercase tracking-widest shadow-md"><i class="fa fa-print"></i> Imprimir</button>
         </div>
     `;
     
