@@ -31,7 +31,7 @@
                 <input type="email" id="email" placeholder="E-mail" class="w-full p-3 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-slate-500" />
                 <input type="password" id="senha" placeholder="Senha" class="w-full p-3 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-slate-500" />
                 
-                <button type="button" onclick="entrar()" class="w-full bg-[#1e293b] text-white font-bold py-3 rounded hover:bg-slate-800 transition shadow-lg">Entrar no Sistema</button>
+                <button type="button" id="btnEntrar" onclick="entrar()" class="w-full bg-[#1e293b] text-white font-bold py-3 rounded hover:bg-slate-800 transition shadow-lg">Entrar no Sistema</button>
                 
                 <p id="msgErro" class="text-red-500 text-xs hidden font-bold">Acesso negado. Verifique os dados.</p>
             </div>
@@ -534,7 +534,7 @@
                         </div>
                     </div>
 
-                    <!-- USUÁRIOS E PERMISSÕES (ATUALIZADO) -->
+                    <!-- USUÁRIOS E PERMISSÕES -->
                     <div id="sub-usuarios" class="sub-aba-content hidden">
                         <div class="bg-white p-6 rounded shadow-sm border border-slate-200 mb-8 max-w-4xl">
                             <h3 class="font-bold text-slate-800 mb-6 uppercase text-xs tracking-widest">Controle de Acesso da Equipe</h3>
