@@ -139,16 +139,17 @@ function aplicarPermissoes() {
 
     // Libera de acordo com o papel
     if (role === 'admin') {[...btnLoja, ...btnProducao, ...btnFinanceiro, ...btnConfig, ...btnDashboard].forEach(b => b.classList.remove('hidden'));[btnSubCli, btnSubProd, btnSubCat, btnSubAcab, btnSubUsuarios].forEach(b => { if(b) b.classList.remove('hidden'); });
-        mudarAba('dashboard', btnDashboard[0] || btnDashboard[1]);
+        mudarAba('dashboard');
     } 
-    else if (role === 'vendedor') {[...btnLoja, ...btnProducao, ...btnFinanceiro, ...btnConfig].forEach(b => b.classList.remove('hidden'));
+    else if (role === 'vendedor') {
+        [...btnLoja, ...btnProducao, ...btnFinanceiro, ...btnConfig].forEach(b => b.classList.remove('hidden'));
         if(btnSubCli) btnSubCli.classList.remove('hidden'); 
-        mudarAba('loja', btnLoja[0] || btnLoja[1]);
-        mudarSubAba('sub-cli', btnSubCli);
+        mudarAba('loja');
+        mudarSubAba('sub-cli');
     } 
     else if (role === 'producao') {
         [...btnProducao].forEach(b => b.classList.remove('hidden'));
-        mudarAba('producao', btnProducao[0] || btnProducao[1]);
+        mudarAba('producao');
     }
 }
 
@@ -275,7 +276,6 @@ function imprimirDashboard() {
     const mes = document.getElementById('dashMesFiltro').value;
     if(!mes) return;
     
-    // Formata o mês para exibição (ex: 2023-10 -> Outubro/2023)
     const [ano, mesNum] = mes.split('-');
     const meses =["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
     const mesFormatado = `${meses[parseInt(mesNum)-1]} de ${ano}`;
@@ -356,7 +356,7 @@ function renderKanbanProducao() {
             // Coluna Minimizada
             html += `
                 <div class="bg-slate-100 rounded-xl p-2 w-12 flex-shrink-0 flex flex-col items-center border border-slate-200 opacity-50 hover:opacity-100 transition cursor-default h-full">
-                    <span class="bg-slate-200 text-slate-500 text-[10px] font-black px-2 py-1 rounded-full mb-4">${pedidosDoStatus.length}</span>
+                    <span class="bg-slate-200 text-slate-500 text-[10px] font-black px-2 py-1 rounded-full mb-4">0</span>
                     <h3 class="font-bold text-slate-400 uppercase text-[10px] tracking-widest vertical-text whitespace-nowrap">${status}</h3>
                 </div>
             `;
@@ -654,7 +654,6 @@ function imprimirOrcamento(idPedido, objPedido) {
     janela.document.write(html);
     janela.document.close();
 }
-
 // --- PRODUTOS E PREÇOS ---
 function addOpcaoAtrib(container, n = '', p = '') {
     const div = document.createElement('div');
@@ -755,7 +754,6 @@ async function salvarProduto() {
     
     if (!nome) return alert("Nome obrigatório!");
 
-    // Trava de Duplicidade
     const duplicado = bdProdutos.find(p => p.id !== id && p.nome.toLowerCase() === nome.toLowerCase());
     if (duplicado) return alert("Já existe um produto cadastrado com este exato nome!");
 
@@ -1109,7 +1107,7 @@ function calcularPrecoAoVivo() {
         qtd = parseInt(document.getElementById('w2pQtd')?.value) || 1;
         let precoUnit = base;
         if (p && p.progressivo) {
-            let faixas =[...p.progressivo].sort((a,b) => b.q - a.q);
+            let faixas = [...p.progressivo].sort((a,b) => b.q - a.q);
             let faixa = faixas.find(f => qtd >= f.q);
             if (faixa) precoUnit = faixa.p;
         }
@@ -1514,7 +1512,7 @@ async function excluirDespesa(id) {
 }
 
 // --- AUXILIARES E CRUD ---
-function mudarAba(aba, btn) { 
+function mudarAba(aba) { 
     document.querySelectorAll('.aba-content').forEach(el => { el.classList.add('hidden'); el.classList.remove('flex', 'block'); }); 
     const target = document.getElementById('aba-'+aba);
     if(target) {
@@ -1522,7 +1520,7 @@ function mudarAba(aba, btn) {
         if(aba === 'producao') target.classList.add('flex'); else target.classList.add('block');
     }
     document.querySelectorAll('.aba-btn').forEach(b => b.classList.remove('active-aba')); 
-    if(btn) btn.classList.add('active-aba'); 
+    document.querySelectorAll('.btn-menu-' + aba).forEach(b => b.classList.add('active-aba'));
 }
 function mudarSubAba(sub, btn) { 
     document.querySelectorAll('.sub-aba-content').forEach(el => el.classList.add('hidden')); 
