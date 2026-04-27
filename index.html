@@ -16,8 +16,7 @@
         .active-aba { background-color: #f1f5f9; color: #0f172a; border-left: 4px solid #1e293b; }
         .active-sub { color: #1e293b; border-bottom: 3px solid #1e293b; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
-        input::-webkit-outer-spin-button, 
-        input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
     </style>
 </head>
 <body class="bg-[#f4f4f2] text-slate-700 font-sans overflow-hidden">
@@ -31,10 +30,9 @@
             <div class="space-y-4">
                 <input type="email" id="email" placeholder="E-mail" class="w-full p-3 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-slate-500" />
                 <input type="password" id="senha" placeholder="Senha" class="w-full p-3 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-slate-500" />
-                <div class="flex gap-2">
-                    <button type="button" onclick="entrar()" class="w-2/3 bg-[#1e293b] text-white font-bold py-3 rounded hover:bg-slate-800 transition shadow-lg">Entrar</button>
-                    <button type="button" onclick="cadastrar()" class="w-1/3 bg-slate-200 text-slate-600 font-bold py-3 rounded hover:bg-slate-300 transition text-xs">Criar Conta</button>
-                </div>
+                
+                <button type="button" onclick="entrar()" class="w-full bg-[#1e293b] text-white font-bold py-3 rounded hover:bg-slate-800 transition shadow-lg">Entrar no Sistema</button>
+                
                 <p id="msgErro" class="text-red-500 text-xs hidden font-bold">Acesso negado. Verifique os dados.</p>
             </div>
         </div>
@@ -536,11 +534,11 @@
                         </div>
                     </div>
 
-                    <!-- USUÁRIOS E PERMISSÕES -->
+                    <!-- USUÁRIOS E PERMISSÕES (ATUALIZADO) -->
                     <div id="sub-usuarios" class="sub-aba-content hidden">
-                        <div class="bg-white p-6 rounded shadow-sm border border-slate-200 mb-8 max-w-3xl">
+                        <div class="bg-white p-6 rounded shadow-sm border border-slate-200 mb-8 max-w-4xl">
                             <h3 class="font-bold text-slate-800 mb-6 uppercase text-xs tracking-widest">Controle de Acesso da Equipe</h3>
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
                                 <div class="space-y-1">
                                     <label class="text-[10px] font-bold text-slate-400 uppercase">E-mail de Login</label>
                                     <input type="email" id="userEmail" placeholder="vendedor@suagrafica.com" class="w-full p-2 bg-slate-50 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-indigo-500" />
@@ -557,12 +555,19 @@
                                         <option value="admin">Administrador (Total Acesso)</option>
                                     </select>
                                 </div>
+                                <div class="space-y-1">
+                                    <label class="text-[10px] font-bold text-slate-400 uppercase">Nova Senha</label>
+                                    <input type="text" id="userSenha" placeholder="mín 6 digitos" class="w-full p-2 bg-slate-50 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-indigo-500" />
+                                </div>
                             </div>
-                            <button type="button" onclick="salvarUsuario()" class="bg-slate-800 text-white px-8 py-2 rounded font-bold text-xs hover:bg-slate-700 transition">Atribuir Permissão</button>
-                            <p class="text-[10px] text-slate-400 mt-3"><i class="fa fa-info-circle"></i> O funcionário precisa clicar em "Criar Conta" na tela de Login usando exatamente este e-mail inserido acima.</p>
+                            
+                            <p class="text-[9px] text-slate-400 mb-6 italic">* A senha só é obrigatória ao criar um usuário pela primeira vez. Deixe em branco se quiser apenas alterar o cargo de alguém.</p>
+
+                            <button type="button" onclick="salvarUsuario()" class="bg-slate-800 text-white px-8 py-2 rounded font-bold text-xs hover:bg-slate-700 transition">Salvar Conta / Permissão</button>
+                            <p class="text-[10px] text-slate-500 mt-3"><i class="fa fa-info-circle text-indigo-400"></i> Somente você, como administrador, consegue criar as senhas da sua equipe por aqui. O botão "Criar conta" na tela inicial foi desativado por segurança.</p>
                         </div>
                         
-                        <div class="bg-white rounded shadow-sm border border-slate-200 max-w-3xl overflow-hidden">
+                        <div class="bg-white rounded shadow-sm border border-slate-200 max-w-4xl overflow-hidden">
                             <table class="w-full text-left text-xs font-bold">
                                 <thead class="bg-slate-50 text-slate-400 uppercase tracking-wider">
                                     <tr><th class="p-4">Usuário</th><th class="p-4">Cargo/Acesso</th><th class="p-4 text-right">Ações</th></tr>
