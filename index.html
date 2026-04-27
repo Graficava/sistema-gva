@@ -137,12 +137,12 @@
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div class="bg-white rounded shadow-sm border border-slate-200 overflow-hidden">
-                            <div class="bg-slate-50 p-4 border-b border-slate-200">
+                            <div class="bg-slate-50 p-4 border-b border-slate-200 flex justify-between items-center">
                                 <h3 class="font-bold text-slate-800 uppercase text-xs tracking-widest"><i class="fa fa-star text-amber-400 mr-2"></i> Produtos Mais Vendidos</h3>
                             </div>
                             <table class="w-full text-left text-xs">
                                 <thead class="bg-slate-50 text-slate-400 uppercase tracking-wider text-[10px]">
-                                    <tr><th class="p-3">Produto</th><th class="p-3 text-center">Qtd Vendida</th><th class="p-3 text-right">Receita Gerada</th></tr>
+                                    <tr><th class="p-3">Produto</th><th class="p-3 text-center">Qtd Vendida</th><th class="p-3 text-right">Receita Bruta (S/ Desc)</th></tr>
                                 </thead>
                                 <tbody id="listaTopProdutosTab"></tbody>
                             </table>
@@ -161,8 +161,7 @@
                         </div>
                     </div>
                 </section>
-
-                <!-- ABA LOJA -->
+<!-- ABA LOJA -->
                 <section id="aba-loja" class="aba-content hidden h-full overflow-y-auto pr-2">
                     <div class="flex flex-col lg:flex-row gap-6">
                         <div class="flex-1">
@@ -213,6 +212,7 @@
                                             <option value="Credito_Vista">Crédito à Vista</option>
                                             <option value="Credito_Parcelado">Crédito Parcelado</option>
                                             <option value="Saldo_Cliente">Saldo de Crédito</option>
+                                            <option value="Faturado">Faturado</option>
                                         </select>
                                         <p class="text-[9px] text-slate-400 font-bold mt-1 leading-tight"><span class="text-emerald-500">Pix/Dinheiro: -5%</span> | <span class="text-red-400">Crédito à Vista: +5%</span></p>
                                     </div>
@@ -349,6 +349,7 @@
                 <section id="aba-cadastros" class="aba-content hidden h-full overflow-y-auto pr-2">
                     <div class="flex gap-8 border-b border-slate-200 mb-8 overflow-x-auto shrink-0">
                         <button type="button" id="btn-sub-cli" onclick="mudarSubAba('sub-cli')" class="sub-aba-btn pb-4 font-bold text-slate-400 active-sub hidden">Clientes</button>
+                        <button type="button" id="btn-sub-areceber" onclick="mudarSubAba('sub-areceber')" class="sub-aba-btn pb-4 font-bold text-slate-400 hidden">A Receber</button>
                         <button type="button" id="btn-sub-prod" onclick="mudarSubAba('sub-prod')" class="sub-aba-btn pb-4 font-bold text-slate-400 hidden">Produtos</button>
                         <button type="button" id="btn-sub-cat" onclick="mudarSubAba('sub-cat')" class="sub-aba-btn pb-4 font-bold text-slate-400 hidden">Categorias</button>
                         <button type="button" id="btn-sub-acab" onclick="mudarSubAba('sub-acab')" class="sub-aba-btn pb-4 font-bold text-slate-400 hidden">Acabamentos</button>
@@ -393,7 +394,30 @@
                             </table>
                         </div>
                     </div>
-<!-- PRODUTOS -->
+
+                    <!-- NOVO: A RECEBER (FATURADOS) -->
+                    <div id="sub-areceber" class="sub-aba-content hidden">
+                        <div class="bg-white p-6 rounded shadow-sm border border-slate-200 mb-6">
+                            <h3 class="font-bold text-slate-800 uppercase text-xs tracking-widest mb-2"><i class="fa fa-file-invoice-dollar text-red-500 mr-2"></i> Clientes com Saldo Devedor (Faturados)</h3>
+                            <p class="text-[10px] text-slate-500">Abaixo estão listados todos os clientes que possuem pedidos com saldo a pagar ou faturados no sistema.</p>
+                        </div>
+                        
+                        <div class="bg-white rounded shadow-sm border border-slate-200 overflow-hidden">
+                            <table class="w-full text-left text-xs font-bold">
+                                <thead class="bg-slate-50 text-slate-400 uppercase tracking-wider">
+                                    <tr>
+                                        <th class="p-4">Cliente</th>
+                                        <th class="p-4 text-center">Qtd. Pedidos Pendentes</th>
+                                        <th class="p-4 text-right">Total Devido</th>
+                                        <th class="p-4 text-center">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="listaAReceberTab"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- PRODUTOS -->
                     <div id="sub-prod" class="sub-aba-content hidden">
                         <div class="bg-white p-6 rounded shadow-sm border border-slate-200 mb-8">
                             <h3 class="font-bold text-slate-800 mb-6 uppercase text-xs tracking-widest">Informações do Produto</h3>
@@ -688,7 +712,7 @@
                         <i class="fa fa-exclamation-triangle text-lg mt-0.5"></i><span>Atenção: O menor lado excede a largura da bobina. O material terá emenda.</span>
                     </div>
                     <div id="erroMedidaMax" class="hidden w-full bg-red-50 text-red-700 p-4 rounded border border-red-200 text-xs font-bold flex items-start gap-3 shadow-sm mt-4">
-                        <i class="fa fa-ban text-lg mt-0.5"></i><span>Atenção: A medida informada excede a largura máxima. O pedido não pode ser feito.</span>
+                        <i class="fa fa-ban text-lg mt-0.5"></i><span id="textoErroMedidaMax">Atenção: A medida informada excede a largura máxima. O pedido não pode ser feito.</span>
                     </div>
                 </div>
                 <div class="w-full md:w-3/5 p-8">
@@ -763,6 +787,7 @@
                         <option value="Credito_Vista">Crédito à Vista</option>
                         <option value="Credito_Parcelado">Crédito Parcelado</option>
                         <option value="Saldo_Cliente">Saldo de Crédito</option>
+                        <option value="Faturado">Faturado</option>
                     </select>
                 </div>
                 <button type="button" onclick="confirmarRecebimentoSaldo()" class="w-full bg-emerald-600 text-white py-3 rounded font-bold text-xs hover:bg-emerald-700 transition uppercase tracking-widest shadow-md mt-2">Confirmar Pagamento</button>
@@ -802,6 +827,6 @@
         }
     </script>
 
-    <script src="script.js?v=4"></script>
+    <script src="script.js?v=5"></script>
 </body>
 </html>
