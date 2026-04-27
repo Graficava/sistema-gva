@@ -14,11 +14,11 @@ const db = firebase.firestore();
 
 // Banco de Dados Local (Memória)
 let bdCategorias =[];
-let bdProdutos = [];
+let bdProdutos =[];
 let bdClientes =[];
 let bdPedidos =[];
-let bdDespesas =[];
-let bdAcabamentos = [];
+let bdDespesas = [];
+let bdAcabamentos =[];
 let bdUsuarios =[];
 let carrinho =[];
 
@@ -107,7 +107,8 @@ function aplicarPermissoes() {
     } else if (role === 'vendedor') {[...btnLoja, ...btnProducao, ...btnFinanceiro, ...btnConfig].forEach(b => b.classList.remove('hidden'));
         if(btnSubCli) btnSubCli.classList.remove('hidden'); 
         mudarAba('loja'); mudarSubAba('sub-cli');
-    } else if (role === 'producao') {[...btnProducao].forEach(b => b.classList.remove('hidden')); mudarAba('producao');
+    } else if (role === 'producao') {
+        [...btnProducao].forEach(b => b.classList.remove('hidden')); mudarAba('producao');
     }
 }
 
@@ -209,14 +210,10 @@ function gerarCardPedido(p) {
     let btnArquivar = (p.status === 'Entregue' || p.status === 'Cancelado / Estorno') ? `<button type="button" onclick="arquivarPedido('${p.id}')" class="bg-slate-200 text-slate-600 px-3 rounded hover:bg-slate-300 transition" title="Arquivar Pedido"><i class="fa fa-archive"></i></button>` : '';
     
     let visualizaPrecos = (!usuarioAtual || usuarioAtual.role !== 'producao');
-    
-    // NOVO: Botão de Receber Pagamento direto no Kanban
     let btnReceber = (visualizaPrecos && p.saldoDevedor > 0) ? `<button type="button" onclick="receberSaldo('${p.id}')" class="bg-emerald-500 text-white px-3 rounded hover:bg-emerald-600 transition" title="Receber Saldo (Falta R$ ${p.saldoDevedor.toFixed(2)})"><i class="fa fa-hand-holding-usd"></i></button>` : '';
-
     let btnZAP = !visualizaPrecos ? '' : `<button type="button" onclick="enviarWhatsApp('${p.id}', '${p.status === 'Pronto para Retirada' ? 'retirada' : (p.status === 'Orçamento' ? 'orcamento' : 'recibo')}')" class="bg-green-500 text-white px-3 rounded hover:bg-green-600 transition" title="Enviar WhatsApp"><i class="fab fa-whatsapp"></i></button>`;
     let btnImprimir = !visualizaPrecos ? '' : `<button type="button" onclick="${p.status === 'Orçamento' ? `imprimirOrcamento('${p.id}')` : `imprimirRecibo('${p.id}')`}" class="bg-slate-800 text-white px-3 rounded hover:bg-slate-700 transition" title="${p.status === 'Orçamento' ? 'Gerar PDF' : 'Imprimir Recibo'}"><i class="${p.status === 'Orçamento' ? 'fa fa-file-pdf' : 'fa fa-print'}"></i></button>`;
 
-    // NOVO: Etiqueta vermelha de FALTA R$ no topo do card
     let etiquetaFalta = (p.saldoDevedor > 0 && visualizaPrecos) ? `<div class="absolute -top-2 -right-2 bg-red-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full shadow-md">FALTA R$ ${p.saldoDevedor.toFixed(2)}</div>` : '';
 
     return `<div class="bg-white p-4 rounded-lg shadow-sm border border-slate-200 border-l-4 ${corBorda} relative">
@@ -227,7 +224,7 @@ function gerarCardPedido(p) {
 async function mudarStatusPedido(id, novoStatus) { try { await db.collection("pedidos").doc(id).update({ status: novoStatus }); } catch(e) { alert("Erro ao atualizar status."); } }
 async function arquivarPedido(id) { if(confirm("Deseja remover este pedido do painel de produção? Ele continuará salvo no histórico e financeiro.")) { try { await db.collection("pedidos").doc(id).update({ arquivado: true }); } catch(e) { alert("Erro ao arquivar pedido."); } } }
 
-// --- HISTÓRICO GERAL DE PEDIDOS ---
+// --- HISTÓRICO GERAL DE PEDIDOS (COM EXCLUSÃO PARA ADMIN) ---
 function abrirHistoricoGeral() {
     document.getElementById('buscaHistoricoGeral').value = '';
     renderHistoricoGeral();
@@ -250,7 +247,9 @@ function renderHistoricoGeral() {
     tbody.innerHTML = filtrados.length === 0 ? `<tr><td colspan="5" class="p-6 text-center text-slate-400">Nenhum pedido encontrado.</td></tr>` : filtrados.map(p => {
         const dataFormatada = p.data.toDate ? p.data.toDate().toLocaleDateString('pt-BR') : new Date(p.data).toLocaleDateString('pt-BR');
         const isArquivado = p.arquivado ? `<span class="bg-slate-200 text-slate-500 px-2 py-0.5 rounded text-[9px] uppercase ml-2">Arquivado</span>` : '';
+        
         let btnDesarquivar = p.arquivado ? `<button type="button" onclick="desarquivarPedido('${p.id}')" class="text-amber-500 hover:text-amber-700 mx-1" title="Voltar para Produção"><i class="fa fa-box-open"></i></button>` : '';
+        let btnExcluir = (usuarioAtual && usuarioAtual.role === 'admin') ? `<button type="button" onclick="excluirPedido('${p.id}')" class="text-red-400 hover:text-red-600 mx-1" title="Excluir Pedido Permanentemente"><i class="fa fa-trash"></i></button>` : '';
 
         return `
         <tr class="border-b border-slate-50 hover:bg-slate-50">
@@ -262,6 +261,7 @@ function renderHistoricoGeral() {
                 ${btnDesarquivar}
                 <button type="button" onclick="abrirDetalhesPedido('${p.id}')" class="text-indigo-400 hover:text-indigo-600 mx-1" title="Ver Detalhes"><i class="fa fa-eye"></i></button>
                 <button type="button" onclick="${p.status === 'Orçamento' ? `imprimirOrcamento('${p.id}')` : `imprimirRecibo('${p.id}')`}" class="text-slate-400 hover:text-slate-600 mx-1" title="Imprimir"><i class="fa fa-print"></i></button>
+                ${btnExcluir}
             </td>
         </tr>
         `;
@@ -274,6 +274,36 @@ async function desarquivarPedido(id) {
         catch(e) { alert("Erro ao desarquivar pedido."); }
     }
 }
+
+async function excluirPedido(id) {
+    if(usuarioAtual.role !== 'admin') return alert("Sem permissão.");
+    if(confirm("ATENÇÃO: Tem certeza que deseja EXCLUIR PERMANENTEMENTE este pedido? Esta ação não pode ser desfeita.")) {
+        try { await db.collection("pedidos").doc(id).delete(); renderHistoricoGeral(); } 
+        catch(e) { alert("Erro ao excluir pedido."); }
+    }
+}
+// --- ATUALIZAÇÃO DE STATUS E ESTORNO AUTOMÁTICO ---
+async function mudarStatusPedido(id, novoStatus) {
+    try {
+        const pedidoRef = db.collection("pedidos").doc(id);
+        const doc = await pedidoRef.get();
+        if (!doc.exists) return;
+        const p = doc.data();
+
+        await pedidoRef.update({ status: novoStatus });
+
+        // Se mudou para Cancelado/Estorno e o cliente já tinha pago algo, gera a despesa
+        if (novoStatus === 'Cancelado / Estorno' && p.valorPago > 0) {
+            await db.collection("despesas").add({
+                descricao: `ESTORNO - Pedido: ${p.clienteNome}`,
+                valor: p.valorPago,
+                data: new Date()
+            });
+            alert(`Pedido cancelado! Um estorno de R$ ${p.valorPago.toFixed(2)} foi registrado nas Saídas do Financeiro.`);
+        }
+    } catch(e) { alert("Erro ao atualizar status."); }
+}
+
 // --- WHATSAPP ---
 function enviarWhatsApp(idPedido, tipo, objPedido = null) {
     const p = objPedido || bdPedidos.find(x => x.id === idPedido);
@@ -950,15 +980,34 @@ function calcularPrecoAoVivo() {
     const erroMax = document.getElementById('erroMedidaMax');
 
     if (regra === 'm2') {
-        const l = parseFloat(document.getElementById('w2pLargura')?.value) || 0;
-        const a = parseFloat(document.getElementById('w2pAltura')?.value) || 0;
+        let l = parseFloat(document.getElementById('w2pLargura')?.value) || 0;
+        let a = parseFloat(document.getElementById('w2pAltura')?.value) || 0;
         qtd = parseInt(document.getElementById('w2pQtd')?.value) || 1;
         
-        const menorLado = Math.min(l, a);
-        if (p && p.larguraMax > 0 && menorLado > p.larguraMax) { erroMax.classList.remove('hidden'); bloqueado = true; } 
-        else erroMax.classList.add('hidden');
+        let menorLado = Math.min(l, a);
+        
+        // NOVO: Trava e correção automática do m2
+        if (p && p.larguraMax > 0 && menorLado > p.larguraMax) {
+            erroMax.classList.remove('hidden');
+            
+            // Corrige o valor digitado de volta para o limite máximo
+            if (l === menorLado) {
+                document.getElementById('w2pLargura').value = p.larguraMax;
+                l = p.larguraMax;
+            } else {
+                document.getElementById('w2pAltura').value = p.larguraMax;
+                a = p.larguraMax;
+            }
+            
+            erroMax.innerHTML = `<i class="fa fa-ban text-lg mt-0.5"></i><span>Atenção: A medida excede a largura máxima permitida (${p.larguraMax}m). O valor foi ajustado automaticamente.</span>`;
+            
+            // Recalcula o menor lado após a correção
+            menorLado = Math.min(l, a);
+        } else {
+            erroMax.classList.add('hidden');
+        }
 
-        if (!bloqueado && p && p.larguraBobina > 0 && menorLado > p.larguraBobina) avisoBobina.classList.remove('hidden');
+        if (p && p.larguraBobina > 0 && menorLado > p.larguraBobina) avisoBobina.classList.remove('hidden');
         else avisoBobina.classList.add('hidden');
         
         m2 = l * a; 
@@ -980,7 +1029,7 @@ function calcularPrecoAoVivo() {
         qtd = parseInt(document.getElementById('w2pQtd')?.value) || 1;
         let precoUnit = base;
         if (p && p.progressivo) {
-            let faixas = [...p.progressivo].sort((a,b) => b.q - a.q);
+            let faixas =[...p.progressivo].sort((a,b) => b.q - a.q);
             let faixa = faixas.find(f => qtd >= f.q);
             if (faixa) precoUnit = faixa.p;
         }
@@ -1127,6 +1176,12 @@ async function enviarPedido(imprimir = false, isOrcamento = false) {
     
     const idCli = document.getElementById('cartClienteId').value;
     const nomeCliInput = document.getElementById('cartClienteInput').value;
+    
+    // NOVO: Trava de Cliente Obrigatório
+    if (!idCli) {
+        return alert("ATENÇÃO: É obrigatório pesquisar e selecionar um cliente cadastrado na lista para gerar o pedido ou orçamento.");
+    }
+
     const total = parseFloat(document.getElementById('totalCarrinho').innerText.replace("R$ ",""));
     
     let pago = parseFloat(document.getElementById('cartValorPago').value) || 0;
@@ -1144,8 +1199,8 @@ async function enviarPedido(imprimir = false, isOrcamento = false) {
     else if (saldo > 0) statusInicial = "Aguardando pagamento";
 
     const pedido = {
-        clienteId: idCli || "Consumidor Final",
-        clienteNome: idCli ? bdClientes.find(x => x.id === idCli).nome : (nomeCliInput || "Consumidor Final"),
+        clienteId: idCli,
+        clienteNome: bdClientes.find(x => x.id === idCli).nome,
         itens: carrinho,
         total: total,
         desconto: desconto,
@@ -1177,6 +1232,9 @@ async function enviarPedido(imprimir = false, isOrcamento = false) {
     document.getElementById('cartDesconto').value = 0; 
     document.getElementById('cartFreteValor').value = 0;
     document.getElementById('cartPagamento').value = 'Pix';
+    document.getElementById('cartClienteInput').value = '';
+    document.getElementById('cartClienteId').value = '';
+    document.getElementById('labelCreditoCli').innerText = 'Saldo: R$ 0.00';
     toggleOpcoesPagamento();
     renderCarrinho();
 }
