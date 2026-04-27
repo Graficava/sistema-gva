@@ -18,7 +18,7 @@ let bdProdutos = [];
 let bdClientes =[];
 let bdPedidos =[];
 let bdDespesas = [];
-let bdAcabamentos = [];
+let bdAcabamentos =[];
 let bdUsuarios =[];
 let carrinho =[];
 
@@ -49,13 +49,10 @@ auth.onAuthStateChanged(async user => {
     
     if (user) {
         try {
-            // Tenta buscar a permissão do usuário no banco
             const doc = await db.collection("usuarios").doc(user.email).get();
-            
             if (doc.exists) {
                 usuarioAtual = doc.data();
             } else {
-                // Se não existir (primeiro dono a entrar), define como admin
                 usuarioAtual = { nome: user.email.split('@')[0], email: user.email, role: "admin" };
                 await db.collection("usuarios").doc(user.email).set(usuarioAtual);
             }
@@ -74,14 +71,12 @@ auth.onAuthStateChanged(async user => {
             btnEntrar.disabled = false;
         }
         
-        // Define as datas padrão dos filtros
         const dataFiltro = document.getElementById('finDataFiltro');
         if(dataFiltro && !dataFiltro.value) dataFiltro.valueAsDate = new Date();
 
         const dashMes = document.getElementById('dashMesFiltro');
         if(dashMes && !dashMes.value) dashMes.value = new Date().toISOString().slice(0,7);
 
-        // Dispara a leitura dos bancos de dados
         iniciarLeitura();
         
     } else {
@@ -125,33 +120,29 @@ function sair() { auth.signOut(); }
 function aplicarPermissoes() {
     const role = usuarioAtual.role || 'vendedor';
     
-    // Atualiza cabeçalho com nome e cargo
     document.getElementById('nomeUsuarioLogado').innerText = usuarioAtual.nome || usuarioAtual.email.split('@')[0];
     document.getElementById('roleUsuarioLogado').innerText = role;
 
-    // Seleciona botões de menu lateral e topo
     const btnLoja = document.querySelectorAll('.btn-menu-loja');
     const btnProducao = document.querySelectorAll('.btn-menu-producao');
     const btnFinanceiro = document.querySelectorAll('.btn-menu-financeiro');
     const btnConfig = document.querySelectorAll('.btn-menu-config');
     const btnDashboard = document.querySelectorAll('.btn-menu-dashboard');
 
-    // Sub-abas de configuração
     const btnSubCli = document.getElementById('btn-sub-cli');
     const btnSubProd = document.getElementById('btn-sub-prod');
     const btnSubCat = document.getElementById('btn-sub-cat');
     const btnSubAcab = document.getElementById('btn-sub-acab');
     const btnSubUsuarios = document.getElementById('btn-sub-usuarios');
 
-    // Esconde tudo primeiro[...btnLoja, ...btnProducao, ...btnFinanceiro, ...btnConfig, ...btnDashboard].forEach(b => b.classList.add('hidden'));[btnSubCli, btnSubProd, btnSubCat, btnSubAcab, btnSubUsuarios].forEach(b => { if(b) b.classList.add('hidden'); });
+    // Esconde tudo primeiro[...btnLoja, ...btnProducao, ...btnFinanceiro, ...btnConfig, ...btnDashboard].forEach(b => b.classList.add('hidden'));
+    [btnSubCli, btnSubProd, btnSubCat, btnSubAcab, btnSubUsuarios].forEach(b => { if(b) b.classList.add('hidden'); });
 
     // Libera de acordo com o papel
-    if (role === 'admin') {[...btnLoja, ...btnProducao, ...btnFinanceiro, ...btnConfig, ...btnDashboard].forEach(b => b.classList.remove('hidden'));
-        [btnSubCli, btnSubProd, btnSubCat, btnSubAcab, btnSubUsuarios].forEach(b => { if(b) b.classList.remove('hidden'); });
+    if (role === 'admin') {[...btnLoja, ...btnProducao, ...btnFinanceiro, ...btnConfig, ...btnDashboard].forEach(b => b.classList.remove('hidden'));[btnSubCli, btnSubProd, btnSubCat, btnSubAcab, btnSubUsuarios].forEach(b => { if(b) b.classList.remove('hidden'); });
         mudarAba('dashboard', btnDashboard[0] || btnDashboard[1]);
     } 
-    else if (role === 'vendedor') {
-        // Vendedor agora vê: Loja, Produção, Financeiro e Configurações (apenas Clientes)[...btnLoja, ...btnProducao, ...btnFinanceiro, ...btnConfig].forEach(b => b.classList.remove('hidden'));
+    else if (role === 'vendedor') {[...btnLoja, ...btnProducao, ...btnFinanceiro, ...btnConfig].forEach(b => b.classList.remove('hidden'));
         if(btnSubCli) btnSubCli.classList.remove('hidden'); 
         mudarAba('loja', btnLoja[0] || btnLoja[1]);
         mudarSubAba('sub-cli', btnSubCli);
@@ -222,8 +213,16 @@ function renderDashboard() {
             p.itens.forEach(item => {
                 const nomeProd = item.nome.split(' (')[0]; 
                 if (!produtosVendidos[nomeProd]) produtosVendidos[nomeProd] = { qtd: 0, valor: 0 };
-                produtosVendidos[nomeProd].qtd += item.qtdCarrinho;
-                produtosVendidos[nomeProd].valor += item.valor;
+                
+                // Correção do erro NaN (Força a conversão para número)
+                let qtdNum = parseInt(item.qtdCarrinho);
+                if (isNaN(qtdNum)) qtdNum = 1;
+                
+                let valNum = parseFloat(item.valor);
+                if (isNaN(valNum)) valNum = 0;
+
+                produtosVendidos[nomeProd].qtd += qtdNum;
+                produtosVendidos[nomeProd].valor += valNum;
             });
         }
     });
@@ -242,7 +241,6 @@ function renderDashboard() {
     document.getElementById('dashDespesas').innerText = `R$ ${despesas.toFixed(2)}`;
     document.getElementById('dashLucro').innerText = `R$ ${(faturamento - despesas).toFixed(2)}`;
 
-    // Top 5 Produtos
     const arrayProdutos = Object.keys(produtosVendidos).map(nome => ({
         nome: nome,
         qtd: produtosVendidos[nome].qtd,
@@ -259,7 +257,6 @@ function renderDashboard() {
         </tr>
     `).join('');
 
-    // Top 5 Clientes
     const arrayClientes = Object.keys(clientesCompras).map(nome => ({
         nome: nome,
         valor: clientesCompras[nome]
@@ -318,7 +315,6 @@ function gerarCardPedido(p) {
         btnArquivar = `<button type="button" onclick="arquivarPedido('${p.id}')" class="bg-slate-200 text-slate-600 px-3 rounded hover:bg-slate-300 transition" title="Arquivar Pedido"><i class="fa fa-archive"></i></button>`;
     }
 
-    // Apenas vendedores ou admins vêem botões de faturamento e whats
     let visualizaPrecos = (!usuarioAtual || usuarioAtual.role !== 'producao');
     
     let btnZAP = !visualizaPrecos ? '' : `<button type="button" onclick="enviarWhatsApp('${p.id}', '${p.status === 'Pronto para Retirada' ? 'retirada' : (p.status === 'Orçamento' ? 'orcamento' : 'recibo')}')" class="bg-green-500 text-white px-3 rounded hover:bg-green-600 transition" title="Enviar WhatsApp"><i class="fab fa-whatsapp"></i></button>`;
@@ -672,6 +668,14 @@ function atualizarListaAcabamentosProduto(salvos =[]) {
 
 async function salvarProduto() {
     const id = document.getElementById('prodId').value;
+    const nome = document.getElementById('prodNome').value.trim();
+    
+    if (!nome) return alert("Nome obrigatório!");
+
+    // Trava de Duplicidade
+    const duplicado = bdProdutos.find(p => p.id !== id && p.nome.toLowerCase() === nome.toLowerCase());
+    if (duplicado) return alert("Já existe um produto cadastrado com este exato nome!");
+
     const regra = document.getElementById('prodRegraPreco').value;
     
     let atributos =[];
@@ -725,7 +729,7 @@ async function salvarProduto() {
     }
 
     const d = {
-        nome: document.getElementById('prodNome').value,
+        nome: nome,
         setor: document.getElementById('prodSetor').value,
         categoria: document.getElementById('prodCategoria').value,
         subcategoria: document.getElementById('prodSubcategoria').value || '',
@@ -740,14 +744,13 @@ async function salvarProduto() {
         larguraMax: parseFloat(document.getElementById('prodLargMax').value) || 0,
         compMax: parseFloat(document.getElementById('prodCompMax').value) || 0,
         obs: document.getElementById('prodObs').value || '',
+        acabObrigatorio: document.getElementById('prodAcabObrigatorio').checked,
         atributos: atributos,
         acabamentos: acabList,
         pacotes: pacotes,
         progressivo: progressivo,
         combinacoes: combinacoes
     };
-
-    if (!d.nome) return alert("Nome obrigatório!");
     
     try {
         if (id) await db.collection("produtos").doc(id).update(d); 
@@ -777,6 +780,7 @@ function editProd(id) {
     document.getElementById('prodLargMax').value = p.larguraMax || 0;
     document.getElementById('prodCompMax').value = p.compMax || 0;
     document.getElementById('prodObs').value = p.obs || '';
+    document.getElementById('prodAcabObrigatorio').checked = p.acabObrigatorio || false;
     
     document.getElementById('listaAtributos').innerHTML = '';
     if (p.atributos) p.atributos.forEach(a => addAtributo(a.nome, a.tipo || 'multiplica', a.opcoes));
@@ -882,6 +886,7 @@ function abrirConfigurador(id) {
     document.getElementById('modalProdId').value = p.id;
     document.getElementById('modalProdPrecoBase').value = p.preco || 0;
     document.getElementById('modalProdRegra').value = p.regraPreco;
+    document.getElementById('modalProdAcabObrigatorio').value = p.acabObrigatorio ? 'true' : 'false';
     document.getElementById('modalHeaderImg').style.backgroundImage = `url('${p.foto || 'https://via.placeholder.com/400'}')`;
     
     const inputNomeArq = document.getElementById('w2pNomeArquivo');
@@ -938,11 +943,18 @@ function abrirConfigurador(id) {
     
     if (acabPermitidos.length > 0) {
         tituloAcabamentos.classList.remove('hidden');
-        let optionsAcab = `<option value="" data-preco="0" data-regra="unidade">Nenhum</option>`;
+        let optionsAcab = '';
+        
+        if (p.acabObrigatorio) {
+            optionsAcab += `<option value="" data-preco="0" data-regra="unidade">-- Selecione um Acabamento --</option>`;
+        } else {
+            optionsAcab += `<option value="" data-preco="0" data-regra="unidade">Nenhum</option>`;
+        }
+
         acabPermitidos.forEach(obj => {
             const a = bdAcabamentos.find(x => x.id === (obj.id || obj));
             if (!a) return;
-            const selected = obj.padrao ? 'selected' : '';
+            const selected = (obj.padrao && !p.acabObrigatorio) ? 'selected' : '';
             optionsAcab += `<option value="${a.id}" data-preco="${a.venda}" data-regra="${a.regra}" ${selected}>${a.nome} (+ R$ ${a.venda.toFixed(2)})</option>`;
         });
         divAcabamentos.innerHTML = `<select id="selAcabamentoUnico" class="w-full p-3 border border-slate-200 rounded bg-slate-50 font-bold text-xs outline-none" onchange="calcularPrecoAoVivo()">${optionsAcab}</select>`;
@@ -1041,6 +1053,17 @@ function calcularPrecoAoVivo() {
 }
 
 function confirmarAdicaoCarrinho() {
+    const nomeArquivo = document.getElementById('w2pNomeArquivo')?.value.trim();
+    if (!nomeArquivo) {
+        return alert("Por favor, preencha a Identificação / Nome do Arquivo. É obrigatório para a produção.");
+    }
+
+    const isAcabObrigatorio = document.getElementById('modalProdAcabObrigatorio').value === 'true';
+    const selAcab = document.getElementById('selAcabamentoUnico');
+    if (isAcabObrigatorio && selAcab && selAcab.value === "") {
+        return alert("Este produto exige a escolha de um Acabamento Extra. Por favor, selecione uma opção.");
+    }
+
     const p = bdProdutos.find(x => x.id === document.getElementById('modalProdId').value);
     const totalItem = parseFloat(document.getElementById('modalSubtotal').innerText.replace("R$ ",""));
     
@@ -1055,10 +1078,8 @@ function confirmarAdicaoCarrinho() {
     let varsEscolhidas =[];
     document.querySelectorAll('.sel-var').forEach(s => varsEscolhidas.push(s.options[s.selectedIndex].text.split(" (+")[0].split(" (Grátis)")[0]));
     
-    const selAcab = document.getElementById('selAcabamentoUnico');
     if (selAcab && selAcab.value !== "") varsEscolhidas.push(`Acab: ${selAcab.options[selAcab.selectedIndex].text.split(" (+")[0]}`);
 
-    const nomeArquivo = document.getElementById('w2pNomeArquivo')?.value.trim();
     let nomeFinal = p.nome;
     if (nomeArquivo) nomeFinal += ` (${nomeArquivo})`;
     
@@ -1415,6 +1436,27 @@ function mudarSubAba(sub, btn) {
 function fecharModal() { document.getElementById('modalW2P').classList.add('hidden'); }
 function fecharModalFora(event) { if (event.target.id === 'modalW2P') fecharModal(); }
 
+async function salvarCategoria() { 
+    const id = document.getElementById('catId').value; 
+    const nome = document.getElementById('catNome').value.trim(); 
+    if(!nome) return; 
+
+    const duplicado = bdCategorias.find(c => c.id !== id && c.nome.toLowerCase() === nome.toLowerCase());
+    if (duplicado) return alert("Já existe uma categoria cadastrada com este nome!");
+
+    if(id) await db.collection("categorias").doc(id).update({nome: nome}); 
+    else await db.collection("categorias").add({nome: nome}); 
+    
+    document.getElementById('catId').value = ''; 
+    document.getElementById('catNome').value = ''; 
+}
+
+function editCat(id) { 
+    const c = bdCategorias.find(x => x.id === id); 
+    document.getElementById('catId').value = c.id; 
+    document.getElementById('catNome').value = c.nome; 
+}
+
 function renderCat() { 
     const tab = document.getElementById('listaCategoriasTab'); 
     if(tab) tab.innerHTML = bdCategorias.map(c => `<tr class="border-b border-slate-50"><td class="p-4 font-bold text-slate-600">${c.nome}</td><td class="p-4 text-right"><button type="button" onclick="editCat('${c.id}')" class="text-indigo-500 mr-3">Editar</button><button type="button" onclick="db.collection('categorias').doc('${c.id}').delete()" class="text-red-300">✕</button></td></tr>`).join(''); 
@@ -1440,18 +1482,101 @@ function atualizarInfoCreditoCarrinho() {
 function toggleOpcoesPagamento() { document.getElementById('divParcelas').style.display = (document.getElementById('cartPagamento').value === 'Credito_Parcelado') ? 'block' : 'none'; atualizarTotalFinal(); }
 function toggleOpcoesEntrega() { document.getElementById('divFrete').style.display = (document.getElementById('cartEntrega').value === 'Retirada') ? 'none' : 'block'; atualizarTotalFinal(); }
 
+async function salvarAcabamento() { 
+    const id = document.getElementById('acabId').value; 
+    const nome = document.getElementById('acabNome').value.trim();
+    
+    if(!nome) return alert("Nome obrigatório"); 
+
+    const duplicado = bdAcabamentos.find(a => a.id !== id && a.nome.toLowerCase() === nome.toLowerCase());
+    if (duplicado) return alert("Já existe um acabamento com este nome!");
+
+    const d = { 
+        nome: nome, 
+        grupo: document.getElementById('acabGrupo').value, 
+        categoria: document.getElementById('acabCategoria').value, 
+        regra: document.getElementById('acabRegra').value, 
+        venda: parseFloat(document.getElementById('acabPrecoVenda').value) || 0, 
+        custo: parseFloat(document.getElementById('acabCusto').value) || 0 
+    }; 
+    
+    if(id) await db.collection("acabamentos").doc(id).update(d); 
+    else await db.collection("acabamentos").add(d); 
+    limparFormAcab(); 
+}
+
+function editAcab(id) { const a = bdAcabamentos.find(x => x.id === id); if(!a) return; document.getElementById('acabId').value = a.id; document.getElementById('acabNome').value = a.nome; document.getElementById('acabGrupo').value = a.grupo || ''; document.getElementById('acabCategoria').value = a.categoria || ''; document.getElementById('acabRegra').value = a.regra || 'unidade'; document.getElementById('acabPrecoVenda').value = a.venda || 0; document.getElementById('acabCusto').value = a.custo || 0; document.getElementById('tituloAcabForm').innerText = "Editar Acabamento"; }
+function limparFormAcab() { document.getElementById('acabId').value = ''; document.getElementById('acabNome').value = ''; document.getElementById('acabGrupo').value = ''; document.getElementById('acabPrecoVenda').value = ''; document.getElementById('acabCusto').value = ''; document.getElementById('tituloAcabForm').innerText = "Novo Acabamento"; }
+
 function renderAcabTable() { const tab = document.getElementById('listaAcabamentosTab'); if(tab) tab.innerHTML = bdAcabamentos.map(a => `<tr class="border-b border-slate-50"><td class="p-4 font-bold text-slate-600">${a.nome} (${a.grupo})</td><td class="p-4 text-center"><button type="button" onclick="editAcab('${a.id}')" class="text-indigo-500 mr-3 font-bold text-[10px] uppercase">Editar</button><button type="button" onclick="db.collection('acabamentos').doc('${a.id}').delete()" class="text-red-300 font-bold text-[10px]">X</button></td></tr>`).join(''); }
 function renderProdTable() { const tab = document.getElementById('listaProdutosTab'); if(tab) tab.innerHTML = bdProdutos.map(p => `<tr class="border-b border-slate-50 hover:bg-slate-50 transition"><td class="p-4 font-bold text-slate-700">${p.nome}</td><td class="p-4 text-slate-400 text-[10px] uppercase">${p.setor || 'Gráfico'}</td><td class="p-4 text-center"><button type="button" onclick="editProd('${p.id}')" class="text-indigo-500 mr-3 font-bold text-[10px] uppercase">Editar</button><button type="button" onclick="db.collection('produtos').doc('${p.id}').delete()" class="text-red-300 font-bold text-[10px]">X</button></td></tr>`).join(''); }
+
+async function salvarCliente() { 
+    const id = document.getElementById('cliId').value; 
+    const nome = document.getElementById('cliNome').value.trim();
+    const doc = document.getElementById('cliDoc').value.trim();
+
+    if(!nome) return alert("Nome / Razão Social é obrigatório"); 
+
+    const duplicado = bdClientes.find(c => 
+        c.id !== id && 
+        (c.nome.toLowerCase() === nome.toLowerCase() || (doc !== '' && c.documento === doc))
+    );
+    if (duplicado) return alert("Já existe um cliente cadastrado com este Nome ou CPF/CNPJ!");
+
+    const d = { 
+        nome: nome, 
+        responsavel: document.getElementById('cliResponsavel').value.trim(),
+        documento: doc, 
+        telefone: document.getElementById('cliTel').value.trim(), 
+        email: document.getElementById('cliEmail').value.trim(),
+        endereco: document.getElementById('cliEnd').value.trim(), 
+        credito: parseFloat(document.getElementById('cliCredito').value) || 0 
+    }; 
+    
+    if(id) await db.collection("clientes").doc(id).update(d); 
+    else await db.collection("clientes").add(d); 
+    limparFormCli(); 
+}
+
+function editCli(id) { 
+    const c = bdClientes.find(x => x.id === id); 
+    document.getElementById('cliId').value = c.id; 
+    document.getElementById('cliNome').value = c.nome; 
+    document.getElementById('cliResponsavel').value = c.responsavel || '';
+    document.getElementById('cliDoc').value = c.documento || ''; 
+    document.getElementById('cliTel').value = c.telefone || ''; 
+    document.getElementById('cliEmail').value = c.email || '';
+    document.getElementById('cliEnd').value = c.endereco || ''; 
+    document.getElementById('cliCredito').value = c.credito || 0; 
+    document.getElementById('tituloCliForm').innerText = "Editar Cadastro"; 
+}
+
+function limparFormCli() { 
+    document.querySelectorAll('#sub-cli input').forEach(i => i.value = ''); 
+    document.getElementById('cliId').value = ''; 
+    document.getElementById('tituloCliForm').innerText = "Novo Cliente"; 
+}
+
 function renderCliTable() { 
     const tab = document.getElementById('listaClientesTab'); if(!tab) return; 
     const termo = document.getElementById('buscaClienteTab')?.value.toLowerCase() || '';
     let filtrados = bdClientes;
     if (termo) filtrados = bdClientes.filter(c => c.nome.toLowerCase().includes(termo) || (c.documento && c.documento.includes(termo)));
-    tab.innerHTML = filtrados.map(c => `<tr class="border-b border-slate-50 hover:bg-slate-50"><td class="p-4 font-bold text-slate-700">${c.nome}</td><td class="p-4 font-bold ${c.credito >= 0 ? 'text-emerald-500' : 'text-red-500'}">R$ ${(c.credito || 0).toFixed(2)}</td><td class="p-4 text-center space-x-3"><button type="button" onclick="verHistoricoCliente('${c.id}')" class="text-indigo-400 text-[10px] font-black uppercase hover:text-indigo-500">Histórico</button><button type="button" onclick="editCli('${c.id}')" class="text-slate-400 text-[10px] font-black uppercase hover:text-indigo-500">Editar</button><button type="button" onclick="db.collection('clientes').doc('${c.id}').delete()" class="text-red-300 hover:text-red-500">✕</button></td></tr>`).join(''); 
+    
+    tab.innerHTML = filtrados.map(c => `
+        <tr class="border-b border-slate-50 hover:bg-slate-50">
+            <td class="p-4 font-bold text-slate-700">${c.nome}</td>
+            <td class="p-4 text-slate-500">${c.responsavel || '-'}</td>
+            <td class="p-4 font-bold ${c.credito >= 0 ? 'text-emerald-500' : 'text-red-500'}">R$ ${(c.credito || 0).toFixed(2)}</td>
+            <td class="p-4 text-center space-x-3">
+                <button type="button" onclick="verHistoricoCliente('${c.id}')" class="text-indigo-400 text-[10px] font-black uppercase hover:text-indigo-500">Histórico</button>
+                <button type="button" onclick="editCli('${c.id}')" class="text-slate-400 text-[10px] font-black uppercase hover:text-indigo-500">Editar</button>
+                <button type="button" onclick="db.collection('clientes').doc('${c.id}').delete()" class="text-red-300 hover:text-red-500">✕</button>
+            </td>
+        </tr>
+    `).join(''); 
 }
-
-async function salvarCategoria() { const id = document.getElementById('catId').value; const nome = document.getElementById('catNome').value; if(!nome) return; if(id) await db.collection("categorias").doc(id).update({nome: nome}); else await db.collection("categorias").add({nome: nome}); document.getElementById('catId').value = ''; document.getElementById('catNome').value = ''; }
-function editCat(id) { const c = bdCategorias.find(x => x.id === id); document.getElementById('catId').value = c.id; document.getElementById('catNome').value = c.nome; }
 
 function verHistoricoCliente(idCli) { 
     const cliente = bdClientes.find(x => x.id === idCli); 
@@ -1470,14 +1595,6 @@ function verHistoricoCliente(idCli) {
     `).join(''); 
     document.getElementById('modalHistoricoCli').classList.remove('hidden'); 
 }
-
-async function salvarCliente() { const id = document.getElementById('cliId').value; const d = { nome: document.getElementById('cliNome').value, documento: document.getElementById('cliDoc').value, telefone: document.getElementById('cliTel').value, endereco: document.getElementById('cliEnd').value, credito: parseFloat(document.getElementById('cliCredito').value) || 0 }; if(!d.nome) return alert("Nome obrigatório"); if(id) await db.collection("clientes").doc(id).update(d); else await db.collection("clientes").add(d); limparFormCli(); }
-function editCli(id) { const c = bdClientes.find(x => x.id === id); document.getElementById('cliId').value = c.id; document.getElementById('cliNome').value = c.nome; document.getElementById('cliDoc').value = c.documento || ''; document.getElementById('cliTel').value = c.telefone || ''; document.getElementById('cliEnd').value = c.endereco || ''; document.getElementById('cliCredito').value = c.credito || 0; document.getElementById('tituloCliForm').innerText = "Editar Cadastro"; }
-function limparFormCli() { document.querySelectorAll('#sub-cli input').forEach(i => i.value = ''); document.getElementById('cliId').value = ''; document.getElementById('tituloCliForm').innerText = "Novo Cliente"; }
-
-async function salvarAcabamento() { const id = document.getElementById('acabId').value; const d = { nome: document.getElementById('acabNome').value, grupo: document.getElementById('acabGrupo').value, categoria: document.getElementById('acabCategoria').value, regra: document.getElementById('acabRegra').value, venda: parseFloat(document.getElementById('acabPrecoVenda').value) || 0, custo: parseFloat(document.getElementById('acabCusto').value) || 0 }; if(!d.nome) return alert("Nome obrigatório"); if(id) await db.collection("acabamentos").doc(id).update(d); else await db.collection("acabamentos").add(d); limparFormAcab(); }
-function editAcab(id) { const a = bdAcabamentos.find(x => x.id === id); if(!a) return; document.getElementById('acabId').value = a.id; document.getElementById('acabNome').value = a.nome; document.getElementById('acabGrupo').value = a.grupo || ''; document.getElementById('acabCategoria').value = a.categoria || ''; document.getElementById('acabRegra').value = a.regra || 'unidade'; document.getElementById('acabPrecoVenda').value = a.venda || 0; document.getElementById('acabCusto').value = a.custo || 0; document.getElementById('tituloAcabForm').innerText = "Editar Acabamento"; }
-function limparFormAcab() { document.getElementById('acabId').value = ''; document.getElementById('acabNome').value = ''; document.getElementById('acabGrupo').value = ''; document.getElementById('acabPrecoVenda').value = ''; document.getElementById('acabCusto').value = ''; document.getElementById('tituloAcabForm').innerText = "Novo Acabamento"; }
 
 // --- CONTROLE DE USUÁRIOS E PERMISSÕES ---
 async function salvarUsuario() {
