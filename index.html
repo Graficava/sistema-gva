@@ -59,11 +59,11 @@
             <div class="flex items-center gap-4">
                 <img src="https://i.postimg.cc/1RCc58qN/gva-br-1-ERP-26.png" alt="GVA Gráfica" class="h-8 object-contain" />
                 <nav class="hidden md:flex gap-6 ml-10 text-slate-400 text-[11px] font-bold uppercase">
+                    <button type="button" onclick="mudarAba('dashboard')" class="btn-menu-dashboard hover:text-white transition hidden">Dashboard</button>
                     <button type="button" onclick="mudarAba('loja')" class="btn-menu-loja hover:text-white transition hidden">Vendas</button>
                     <button type="button" onclick="mudarAba('producao')" class="btn-menu-producao hover:text-white transition hidden">Produção</button>
                     <button type="button" onclick="mudarAba('financeiro')" class="btn-menu-financeiro hover:text-white transition hidden">Financeiro</button>
                     <button type="button" onclick="mudarAba('cadastros')" class="btn-menu-config hover:text-white transition hidden">Configurações</button>
-                    <button type="button" onclick="mudarAba('dashboard')" class="btn-menu-dashboard hover:text-white transition hidden">Dashboard</button>
                 </nav>
             </div>
             <div class="flex items-center gap-4 text-white">
@@ -102,7 +102,7 @@
                 </nav>
             </aside>
 
-            <!-- CONTEUDO (Atenção ao pb-24 para não esconder conteúdo atrás do menu do celular) -->
+            <!-- CONTEUDO -->
             <main class="flex-1 p-6 pb-24 md:pb-6 overflow-hidden flex flex-col relative">
 
                 <!-- ABA DASHBOARD (RELATÓRIOS) -->
@@ -615,6 +615,159 @@
                         </div>
                     </div>
                 </section>
+
+                <!-- MENU MOBILE (BOTTOM NAV) -->
+                <nav class="bottom-nav md:hidden fixed bottom-0 left-0 w-full bg-white border-t border-slate-200 flex justify-around items-center text-[10px] font-bold text-slate-400 z-50 pb-2 pt-2 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+                    <button type="button" onclick="mudarAba('dashboard')" class="aba-btn btn-menu-dashboard flex-1 flex flex-col items-center gap-1 hidden">
+                        <i class="fa fa-chart-pie text-lg"></i> Dash
+                    </button>
+                    <button type="button" onclick="mudarAba('loja')" class="aba-btn btn-menu-loja flex-1 flex flex-col items-center gap-1 hidden">
+                        <i class="fa fa-shopping-cart text-lg"></i> PDV
+                    </button>
+                    <button type="button" onclick="mudarAba('producao')" class="aba-btn btn-menu-producao flex-1 flex flex-col items-center gap-1 hidden">
+                        <i class="fa fa-tasks text-lg"></i> Prod
+                    </button>
+                    <button type="button" onclick="mudarAba('financeiro')" class="aba-btn btn-menu-financeiro flex-1 flex flex-col items-center gap-1 hidden">
+                        <i class="fa fa-chart-line text-lg"></i> Caixa
+                    </button>
+                    <button type="button" onclick="mudarAba('cadastros')" class="aba-btn btn-menu-config flex-1 flex flex-col items-center gap-1 hidden">
+                        <i class="fa fa-cog text-lg"></i> Config
+                    </button>
+                </nav>
+
             </main>
         </div>
     </div>
+
+    <!-- MODAL W2P PDV -->
+    <div id="modalW2P" onclick="fecharModalFora(event)" class="fixed inset-0 bg-slate-900/80 hidden z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-5xl max-h-[90vh] rounded-xl overflow-hidden flex flex-col shadow-2xl relative">
+            <div class="flex justify-between items-center p-6 border-b border-slate-100 bg-white">
+                <h2 id="modalNomeProd" class="text-2xl font-black text-slate-800 uppercase tracking-tight"></h2>
+                <button type="button" onclick="fecharModal()" class="text-slate-400 hover:text-red-500 transition text-2xl leading-none">&times;</button>
+            </div>
+            <div class="flex flex-col md:flex-row flex-1 overflow-y-auto bg-slate-50/50">
+                <div class="w-full md:w-2/5 p-8 border-r border-slate-100 flex flex-col items-center justify-start bg-white shrink-0">
+                    <div id="modalHeaderImg" class="w-full h-40 md:h-64 bg-contain bg-no-repeat bg-center rounded-lg mb-6"></div>
+                    <div id="modalObs" class="hidden w-full bg-blue-50 text-blue-700 p-4 rounded border border-blue-100 text-xs mb-4"></div>
+                    <div id="avisoBobina" class="hidden w-full bg-amber-50 text-amber-700 p-4 rounded border border-amber-200 text-xs font-bold flex items-start gap-3 shadow-sm mt-4">
+                        <i class="fa fa-exclamation-triangle text-lg mt-0.5"></i><span>Atenção: O menor lado excede a largura da bobina. O material terá emenda.</span>
+                    </div>
+                    <div id="erroMedidaMax" class="hidden w-full bg-red-50 text-red-700 p-4 rounded border border-red-200 text-xs font-bold flex items-start gap-3 shadow-sm mt-4">
+                        <i class="fa fa-ban text-lg mt-0.5"></i><span>Atenção: A medida informada excede a largura máxima. O pedido não pode ser feito.</span>
+                    </div>
+                </div>
+                <div class="w-full md:w-3/5 p-8">
+                    <input type="hidden" id="modalProdId" />
+                    <input type="hidden" id="modalProdPrecoBase" />
+                    <input type="hidden" id="modalProdRegra" />
+                    <input type="hidden" id="modalProdAcabObrigatorio" />
+                    
+                    <div class="space-y-1 mb-6">
+                        <label class="text-[10px] font-bold text-slate-400 uppercase">Identificação / Nome do Arquivo <span class="text-red-500 text-sm">*</span></label>
+                        <input type="text" id="w2pNomeArquivo" placeholder="Ex: Cartão Pizzaria, Panfleto Promoção..." class="w-full p-3 border border-slate-200 rounded bg-white font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
+                    </div>
+                    <h4 class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4 border-t border-slate-200 pt-6">Medidas e Quantidade</h4>
+                    <div id="modalCorpoMedidas" class="grid grid-cols-2 gap-4 mb-8"></div>
+                    <h4 id="tituloVariacoes" class="hidden text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4 border-t border-slate-200 pt-6">Variações do Produto</h4>
+                    <div id="modalCorpoVariacoes" class="grid grid-cols-2 gap-4 mb-8"></div>
+                    <h4 id="tituloAcabamentos" class="hidden text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4 border-t border-slate-200 pt-6">Acabamento Extra</h4>
+                    <div id="modalCorpoAcabamentos" class="mb-4"></div>
+                </div>
+            </div>
+            <div class="p-6 border-t border-slate-200 flex flex-col md:flex-row justify-between items-center bg-white gap-4 shrink-0">
+                <div>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase">Investimento Total</p>
+                    <p id="modalSubtotal" class="text-4xl font-black text-indigo-600">R$ 0.00</p>
+                </div>
+                <button type="button" id="btnAdicionarCarrinho" onclick="confirmarAdicaoCarrinho()" class="w-full md:w-auto bg-indigo-600 text-white px-12 py-4 rounded font-bold text-lg shadow-lg hover:bg-indigo-700 transition-all uppercase tracking-widest">Adicionar ao Pedido</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL HISTÓRICO CLIENTE -->
+    <div id="modalHistoricoCli" class="fixed inset-0 bg-slate-900/60 hidden z-50 flex items-center justify-center p-4 backdrop-blur-md">
+        <div class="bg-white w-full max-w-2xl max-h-[80vh] rounded-lg shadow-2xl flex flex-col p-10 overflow-hidden">
+            <div class="flex justify-between items-center mb-6">
+                <h3 id="histNomeCli" class="text-2xl font-black text-slate-900 uppercase tracking-tighter">Histórico</h3>
+                <button type="button" onclick="document.getElementById('modalHistoricoCli').classList.add('hidden')" class="text-slate-300 hover:text-red-500 font-bold">✕ FECHAR</button>
+            </div>
+            <div id="corpoHistoricoCli" class="overflow-y-auto space-y-4"></div>
+        </div>
+    </div>
+
+    <!-- MODAL DETALHES DO PEDIDO -->
+    <div id="modalDetalhesPedido" class="fixed inset-0 bg-slate-900/60 hidden z-50 flex items-center justify-center p-4 backdrop-blur-md">
+        <div class="bg-white w-full max-w-2xl max-h-[90vh] rounded-lg shadow-2xl flex flex-col overflow-hidden">
+            <div class="flex justify-between items-center p-6 border-b border-slate-100">
+                <h3 class="text-xl font-black text-slate-900 uppercase tracking-tighter">Resumo do Pedido</h3>
+                <button type="button" onclick="document.getElementById('modalDetalhesPedido').classList.add('hidden')" class="text-slate-400 hover:text-red-500 text-2xl leading-none">&times;</button>
+            </div>
+            <div id="corpoDetalhesPedido" class="p-6 overflow-y-auto space-y-4"></div>
+        </div>
+    </div>
+
+    <!-- MODAL RECEBER SALDO -->
+    <div id="modalReceberSaldo" class="fixed inset-0 bg-slate-900/60 hidden z-50 flex items-center justify-center p-4 backdrop-blur-md">
+        <div class="bg-white w-full max-w-sm rounded-lg shadow-2xl flex flex-col p-6 overflow-hidden">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-lg font-black text-slate-900 uppercase tracking-tighter">Receber Pagamento</h3>
+                <button type="button" onclick="document.getElementById('modalReceberSaldo').classList.add('hidden')" class="text-slate-400 hover:text-red-500 text-xl leading-none">&times;</button>
+            </div>
+            <div class="space-y-4">
+                <input type="hidden" id="recSaldoIdPedido" />
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold text-slate-400 uppercase">Valor a Receber R$</label>
+                    <input type="number" id="recSaldoValor" class="w-full p-3 bg-slate-50 border border-slate-200 rounded text-sm font-bold outline-none focus:ring-2 focus:ring-emerald-500" />
+                </div>
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold text-slate-400 uppercase">Forma de Pagamento</label>
+                    <select id="recSaldoForma" class="w-full p-3 bg-slate-50 border border-slate-200 rounded text-sm font-bold outline-none focus:ring-2 focus:ring-emerald-500">
+                        <option value="Pix">Pix</option>
+                        <option value="Dinheiro">Dinheiro</option>
+                        <option value="Debito">Débito</option>
+                        <option value="Credito_Vista">Crédito à Vista</option>
+                        <option value="Credito_Parcelado">Crédito Parcelado</option>
+                        <option value="Saldo_Cliente">Saldo de Crédito</option>
+                    </select>
+                </div>
+                <button type="button" onclick="confirmarRecebimentoSaldo()" class="w-full bg-emerald-600 text-white py-3 rounded font-bold text-xs hover:bg-emerald-700 transition uppercase tracking-widest shadow-md mt-2">Confirmar Pagamento</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL WHATSAPP -->
+    <div id="modalWhatsApp" class="fixed inset-0 bg-slate-900/60 hidden z-50 flex items-center justify-center p-4 backdrop-blur-md">
+        <div class="bg-white w-full max-w-md rounded-lg shadow-2xl flex flex-col p-6 overflow-hidden">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-lg font-black text-slate-900 uppercase tracking-tighter"><i class="fab fa-whatsapp text-green-500 mr-2"></i> Enviar WhatsApp</h3>
+                <button type="button" onclick="document.getElementById('modalWhatsApp').classList.add('hidden')" class="text-slate-400 hover:text-red-500 text-xl leading-none">&times;</button>
+            </div>
+            <div class="space-y-4">
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold text-slate-400 uppercase">Número do Cliente (com DDD)</label>
+                    <input type="text" id="zapTelefone" placeholder="Ex: 11999999999" class="w-full p-3 bg-slate-50 border border-slate-200 rounded text-sm font-bold outline-none focus:ring-2 focus:ring-green-500" />
+                </div>
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold text-slate-400 uppercase">Mensagem</label>
+                    <textarea id="zapMensagem" rows="10" class="w-full p-3 bg-slate-50 border border-slate-200 rounded text-sm outline-none focus:ring-2 focus:ring-green-500"></textarea>
+                </div>
+                <button type="button" onclick="confirmarEnvioWhatsApp()" class="w-full bg-green-500 text-white py-3 rounded font-bold text-xs hover:bg-green-600 transition uppercase tracking-widest shadow-md mt-2">Abrir WhatsApp Web</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- REGISTRO DO SERVICE WORKER (PWA) -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('Service Worker registrado com sucesso!'))
+                    .catch(err => console.log('Erro ao registrar Service Worker:', err));
+            });
+        }
+    </script>
+
+    <script src="script.js?v=2"></script>
+</body>
+</html>
