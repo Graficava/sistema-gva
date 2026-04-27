@@ -16,7 +16,8 @@
         .active-aba { background-color: #f1f5f9; color: #0f172a; border-left: 4px solid #1e293b; }
         .active-sub { color: #1e293b; border-bottom: 3px solid #1e293b; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
-        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        input::-webkit-outer-spin-button, 
+        input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
     </style>
 </head>
 <body class="bg-[#f4f4f2] text-slate-700 font-sans overflow-hidden">
@@ -34,7 +35,7 @@
                     <button type="button" onclick="entrar()" class="w-2/3 bg-[#1e293b] text-white font-bold py-3 rounded hover:bg-slate-800 transition shadow-lg">Entrar</button>
                     <button type="button" onclick="cadastrar()" class="w-1/3 bg-slate-200 text-slate-600 font-bold py-3 rounded hover:bg-slate-300 transition text-xs">Criar Conta</button>
                 </div>
-                <p id="msgErro" class="text-red-500 text-xs hidden font-bold">Erro</p>
+                <p id="msgErro" class="text-red-500 text-xs hidden font-bold">Acesso negado. Verifique os dados.</p>
             </div>
         </div>
     </div>
@@ -47,17 +48,17 @@
             <div class="flex items-center gap-4">
                 <img src="https://i.postimg.cc/1RCc58qN/gva-br-1-ERP-26.png" alt="GVA Gráfica" class="h-8 object-contain" />
                 <nav class="hidden md:flex gap-6 ml-10 text-slate-400 text-[11px] font-bold uppercase">
-                    <button type="button" onclick="mudarAba('dashboard', this)" class="btn-menu-dashboard hover:text-white transition">Dashboard</button>
-                    <button type="button" onclick="mudarAba('loja', this)" class="btn-menu-loja hover:text-white transition">Vendas</button>
-                    <button type="button" onclick="mudarAba('producao', this)" class="btn-menu-producao hover:text-white transition">Produção</button>
-                    <button type="button" onclick="mudarAba('financeiro', this)" class="btn-menu-financeiro hover:text-white transition">Financeiro</button>
-                    <button type="button" onclick="mudarAba('cadastros', this)" class="btn-menu-config hover:text-white transition">Configurações</button>
+                    <button type="button" onclick="mudarAba('dashboard', this)" class="btn-menu-dashboard hover:text-white transition hidden">Dashboard</button>
+                    <button type="button" onclick="mudarAba('loja', this)" class="btn-menu-loja hover:text-white transition hidden">Vendas</button>
+                    <button type="button" onclick="mudarAba('producao', this)" class="btn-menu-producao hover:text-white transition hidden">Produção</button>
+                    <button type="button" onclick="mudarAba('financeiro', this)" class="btn-menu-financeiro hover:text-white transition hidden">Financeiro</button>
+                    <button type="button" onclick="mudarAba('cadastros', this)" class="btn-menu-config hover:text-white transition hidden">Configurações</button>
                 </nav>
             </div>
             <div class="flex items-center gap-4 text-white">
                 <div class="text-right hidden md:block">
-                    <p id="nomeUsuarioLogado" class="text-xs font-bold leading-none">Usuário</p>
-                    <p id="roleUsuarioLogado" class="text-[9px] text-emerald-400 font-bold uppercase tracking-widest">Role</p>
+                    <p id="nomeUsuarioLogado" class="text-xs font-bold leading-none">Carregando...</p>
+                    <p id="roleUsuarioLogado" class="text-[9px] text-emerald-400 font-bold uppercase tracking-widest">Verificando</p>
                 </div>
                 <button type="button" onclick="sair()" class="bg-red-600 px-3 py-1 rounded text-[10px] font-bold uppercase hover:bg-red-700 transition ml-2">Sair</button>
             </div>
@@ -68,29 +69,29 @@
             <aside class="w-64 bg-white border-r border-slate-200 hidden md:flex flex-col shrink-0">
                 <div class="p-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Menu Principal</div>
                 <nav class="flex-1 space-y-1">
-                    <button type="button" onclick="mudarAba('dashboard', this)" class="aba-btn btn-menu-dashboard w-full flex items-center gap-3 p-4 font-bold text-slate-500 hover:bg-slate-50 active-aba">
+                    <button type="button" onclick="mudarAba('dashboard', this)" class="aba-btn btn-menu-dashboard w-full flex items-center gap-3 p-4 font-bold text-slate-500 hover:bg-slate-50 hidden">
                         <i class="fa fa-chart-pie w-5"></i> Dashboard
                     </button>
-                    <button type="button" onclick="mudarAba('loja', this)" class="aba-btn btn-menu-loja w-full flex items-center gap-3 p-4 font-bold text-slate-500 hover:bg-slate-50">
+                    <button type="button" onclick="mudarAba('loja', this)" class="aba-btn btn-menu-loja w-full flex items-center gap-3 p-4 font-bold text-slate-500 hover:bg-slate-50 hidden">
                         <i class="fa fa-shopping-cart w-5"></i> Loja PDV
                     </button>
-                    <button type="button" onclick="mudarAba('producao', this)" class="aba-btn btn-menu-producao w-full flex items-center gap-3 p-4 font-bold text-slate-500 hover:bg-slate-50">
+                    <button type="button" onclick="mudarAba('producao', this)" class="aba-btn btn-menu-producao w-full flex items-center gap-3 p-4 font-bold text-slate-500 hover:bg-slate-50 hidden">
                         <i class="fa fa-tasks w-5"></i> Produção
                     </button>
-                    <button type="button" onclick="mudarAba('financeiro', this)" class="aba-btn btn-menu-financeiro w-full flex items-center gap-3 p-4 font-bold text-slate-500 hover:bg-slate-50">
+                    <button type="button" onclick="mudarAba('financeiro', this)" class="aba-btn btn-menu-financeiro w-full flex items-center gap-3 p-4 font-bold text-slate-500 hover:bg-slate-50 hidden">
                         <i class="fa fa-chart-line w-5"></i> Financeiro
                     </button>
-                    <button type="button" onclick="mudarAba('cadastros', this)" class="aba-btn btn-menu-config w-full flex items-center gap-3 p-4 font-bold text-slate-500 hover:bg-slate-50">
+                    <button type="button" onclick="mudarAba('cadastros', this)" class="aba-btn btn-menu-config w-full flex items-center gap-3 p-4 font-bold text-slate-500 hover:bg-slate-50 hidden">
                         <i class="fa fa-cog w-5"></i> Configurações
                     </button>
                 </nav>
             </aside>
 
-            <!-- CONTEÚDO PRINCIPAL -->
+            <!-- CONTEUDO -->
             <main class="flex-1 p-6 overflow-hidden flex flex-col relative">
 
-                <!-- NOVO: ABA DASHBOARD -->
-                <section id="aba-dashboard" class="aba-content block h-full overflow-y-auto pr-2">
+                <!-- ABA DASHBOARD (RELATÓRIOS) -->
+                <section id="aba-dashboard" class="aba-content hidden h-full overflow-y-auto pr-2">
                     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                         <h2 class="text-2xl font-bold text-slate-900 uppercase italic tracking-tighter">Relatório Mensal</h2>
                         <div class="flex items-center gap-2 bg-white p-2 rounded border border-slate-200 shadow-sm">
@@ -115,7 +116,6 @@
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <!-- Top Produtos -->
                         <div class="bg-white rounded shadow-sm border border-slate-200 overflow-hidden">
                             <div class="bg-slate-50 p-4 border-b border-slate-200">
                                 <h3 class="font-bold text-slate-800 uppercase text-xs tracking-widest"><i class="fa fa-star text-amber-400 mr-2"></i> Produtos Mais Vendidos</h3>
@@ -128,7 +128,6 @@
                             </table>
                         </div>
 
-                        <!-- Top Clientes -->
                         <div class="bg-white rounded shadow-sm border border-slate-200 overflow-hidden">
                             <div class="bg-slate-50 p-4 border-b border-slate-200">
                                 <h3 class="font-bold text-slate-800 uppercase text-xs tracking-widest"><i class="fa fa-crown text-amber-400 mr-2"></i> Melhores Clientes</h3>
@@ -143,21 +142,401 @@
                     </div>
                 </section>
 
-                <!-- ... Restante das abas (Loja, Produção, Financeiro) MANTENHA IGUAL ... -->
-                
-                <!-- ABA CONFIGURAÇÕES (ATUALIZADA) -->
-                <section id="aba-cadastros" class="aba-content hidden h-full overflow-y-auto pr-2">
-                    <div class="flex gap-8 border-b border-slate-200 mb-8 overflow-x-auto shrink-0">
-                        <button type="button" id="btn-sub-cli" onclick="mudarSubAba('sub-cli', this)" class="sub-aba-btn pb-4 font-bold text-slate-400 active-sub">Clientes</button>
-                        <button type="button" id="btn-sub-prod" onclick="mudarSubAba('sub-prod', this)" class="sub-aba-btn pb-4 font-bold text-slate-400">Produtos</button>
-                        <button type="button" id="btn-sub-cat" onclick="mudarSubAba('sub-cat', this)" class="sub-aba-btn pb-4 font-bold text-slate-400">Categorias</button>
-                        <button type="button" id="btn-sub-acab" onclick="mudarSubAba('sub-acab', this)" class="sub-aba-btn pb-4 font-bold text-slate-400">Acabamentos</button>
-                        <button type="button" id="btn-sub-usuarios" onclick="mudarSubAba('sub-usuarios', this)" class="sub-aba-btn pb-4 font-bold text-slate-400">Usuários/Permissões</button>
+                <!-- ABA LOJA -->
+                <section id="aba-loja" class="aba-content hidden h-full overflow-y-auto pr-2">
+                    <div class="flex flex-col lg:flex-row gap-6">
+                        <div class="flex-1">
+                            <div class="flex flex-col gap-3 mb-6">
+                                <div class="flex flex-col md:flex-row gap-4">
+                                    <div class="w-full md:w-1/3 relative">
+                                        <i class="fa fa-search absolute left-3 top-3 text-slate-400"></i>
+                                        <input type="text" id="buscaProduto" onkeyup="renderVitrine()" placeholder="Buscar produto..." class="w-full pl-9 p-2 border border-slate-200 rounded text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500" />
+                                    </div>
+                                    <div class="flex gap-2 overflow-x-auto pb-1 flex-1">
+                                        <button type="button" onclick="setFiltroSetor('Todos')" class="btn-setor data-setor-Todos px-5 py-2 bg-white border border-slate-200 rounded font-bold text-xs transition shadow-sm">Todos</button>
+                                        <button type="button" onclick="setFiltroSetor('Gráfico')" class="btn-setor data-setor-Gráfico px-5 py-2 bg-yellow-100 text-yellow-800 border border-yellow-200 rounded font-bold text-xs transition shadow-sm">Gráfico</button>
+                                        <button type="button" onclick="setFiltroSetor('Com. Visual')" class="btn-setor data-setor-ComVisual px-5 py-2 bg-blue-100 text-blue-800 border border-blue-200 rounded font-bold text-xs transition shadow-sm">Com. Visual</button>
+                                        <button type="button" onclick="setFiltroSetor('Outros')" class="btn-setor data-setor-Outros px-5 py-2 bg-emerald-100 text-emerald-800 border border-emerald-200 rounded font-bold text-xs transition shadow-sm">Outros</button>
+                                    </div>
+                                </div>
+                                <div id="menuFiltroCat" class="flex gap-2 overflow-x-auto pb-1 hidden"></div>
+                                <div id="menuFiltroSubCat" class="flex gap-2 overflow-x-auto pb-1 hidden"></div>
+                            </div>
+
+                            <div id="gradeProdutos" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6"></div>
+                        </div>
+
+                        <!-- CARRINHO -->
+                        <div class="w-full lg:w-[350px] bg-white p-6 rounded shadow-sm border border-slate-200 h-fit sticky top-0">
+                            <h3 class="text-lg font-bold mb-6 border-b pb-2 text-slate-800">Carrinho de Venda</h3>
+                            
+                            <div class="mb-6 space-y-1">
+                                <label class="text-[10px] font-bold text-slate-400 uppercase flex justify-between">
+                                    Cliente <span id="labelCreditoCli" class="text-emerald-600 font-bold">Saldo: R$ 0.00</span>
+                                </label>
+                                <input type="text" id="cartClienteInput" list="listaClientesDatalist" onchange="atualizarInfoCreditoCarrinho()" placeholder="Digite para buscar cliente..." class="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500" />
+                                <datalist id="listaClientesDatalist"></datalist>
+                                <input type="hidden" id="cartClienteId" />
+                            </div>
+
+                            <div id="listaCarrinho" class="space-y-3 mb-6 max-h-60 overflow-y-auto pr-1"></div>
+                            
+                            <div class="border-t border-slate-100 pt-4 space-y-3">
+                                
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div class="space-y-1">
+                                        <label class="text-[10px] font-bold text-slate-400 uppercase">Pagamento</label>
+                                        <select id="cartPagamento" onchange="toggleOpcoesPagamento()" class="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs font-bold outline-none">
+                                            <option value="Pix">Pix</option>
+                                            <option value="Dinheiro">Dinheiro</option>
+                                            <option value="Debito">Débito</option>
+                                            <option value="Credito_Vista">Crédito à Vista</option>
+                                            <option value="Credito_Parcelado">Crédito Parcelado</option>
+                                            <option value="Saldo_Cliente">Saldo de Crédito</option>
+                                        </select>
+                                    </div>
+                                    <div class="space-y-1" id="divParcelas" style="display:none;">
+                                        <label class="text-[10px] font-bold text-slate-400 uppercase">Parcelas</label>
+                                        <select id="cartParcelas" class="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs font-bold outline-none">
+                                            <option value="2">2x</option><option value="3">3x</option><option value="4">4x</option><option value="5">5x</option><option value="6">6x</option><option value="7">7x</option><option value="8">8x</option><option value="9">9x</option><option value="10">10x</option><option value="11">11x</option><option value="12">12x</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div class="space-y-1">
+                                        <label class="text-[10px] font-bold text-slate-400 uppercase">Entrega</label>
+                                        <select id="cartEntrega" onchange="toggleOpcoesEntrega()" class="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs font-bold outline-none">
+                                            <option value="Retirada">Retirada</option>
+                                            <option value="Motoboy">Motoboy</option>
+                                        </select>
+                                    </div>
+                                    <div class="space-y-1" id="divFrete" style="display:none;">
+                                        <label class="text-[10px] font-bold text-slate-400 uppercase">Frete R$</label>
+                                        <input type="number" id="cartFreteValor" value="0" oninput="atualizarTotalFinal()" class="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs font-bold outline-none" />
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div class="space-y-1">
+                                        <label class="text-[10px] font-bold text-red-400 uppercase">Desconto R$</label>
+                                        <input type="number" id="cartDesconto" value="0" oninput="atualizarTotalFinal()" class="w-full p-2 bg-red-50 border border-red-200 rounded text-xs font-bold text-red-600 outline-none focus:ring-2 focus:ring-red-500" />
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-2 gap-2 bg-slate-50 p-2 rounded border border-slate-100 mt-2">
+                                    <div class="space-y-1">
+                                        <label class="text-[10px] font-bold text-slate-500 uppercase">Valor Pago</label>
+                                        <input type="number" id="cartValorPago" value="0" oninput="atualizarTotalFinal()" class="w-full p-1 bg-white border border-slate-200 rounded text-sm font-bold outline-none" />
+                                    </div>
+                                    <div class="space-y-1 text-right">
+                                        <label class="text-[10px] font-bold text-red-400 uppercase">Restante</label>
+                                        <div id="cartSaldoDevedor" class="text-sm font-black text-red-500">R$ 0.00</div>
+                                    </div>
+                                </div>
+
+                                <div class="pt-4 border-t border-dashed border-slate-200 space-y-1">
+                                    <div class="flex justify-between text-slate-400 font-bold text-xs">
+                                        <span>Subtotal:</span>
+                                        <span id="subtotalCart">R$ 0.00</span>
+                                    </div>
+                                    <div class="flex justify-between text-slate-400 font-bold text-xs">
+                                        <span>Taxa/Desc. Pgto:</span>
+                                        <span id="cartTaxaPagto">R$ 0.00</span>
+                                    </div>
+                                    <div class="flex justify-between text-xl font-black text-slate-900 mt-2 pt-2 border-t border-slate-100">
+                                        <span>A Pagar:</span>
+                                        <span id="totalCarrinho">R$ 0.00</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2 mt-6">
+                                <button type="button" onclick="enviarPedido(false, true)" class="col-span-2 bg-blue-50 text-blue-600 border border-blue-200 py-3 rounded font-bold text-xs hover:bg-blue-100 transition uppercase tracking-widest"><i class="fa fa-file-pdf mr-1"></i> Gerar Orçamento PDF</button>
+                                <button type="button" onclick="enviarPedido(false, false)" class="bg-slate-200 text-slate-600 py-3 rounded font-bold text-xs hover:bg-slate-300 transition uppercase">Salvar Pedido</button>
+                                <button type="button" onclick="enviarPedido(true, false)" class="bg-emerald-600 text-white py-3 rounded font-bold text-xs hover:bg-emerald-700 transition shadow-md uppercase tracking-widest"><i class="fa fa-print"></i> Imprimir</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ABA PRODUÇÃO -->
+                <section id="aba-producao" class="aba-content hidden h-full overflow-hidden">
+                    <h2 class="text-2xl font-bold text-slate-900 mb-6 uppercase italic tracking-tighter shrink-0">Painel de Produção</h2>
+                    <div id="kanbanContainer" class="flex-1 overflow-x-auto overflow-y-hidden flex gap-4 pb-2 h-[calc(100%-4rem)]"></div>
+                </section>
+
+                <!-- ABA FINANCEIRO -->
+                <section id="aba-financeiro" class="aba-content hidden h-full overflow-y-auto pr-2">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                        <h2 class="text-2xl font-bold text-slate-900 uppercase italic tracking-tighter">Fluxo de Caixa (Diário)</h2>
+                        <div class="flex items-center gap-2 bg-white p-2 rounded border border-slate-200 shadow-sm">
+                            <label class="text-[10px] font-bold text-slate-400 uppercase">Movimento do Dia:</label>
+                            <input type="date" id="finDataFiltro" onchange="renderFinanceiro()" class="p-1 border-none bg-transparent font-bold text-sm outline-none text-indigo-600" />
+                        </div>
                     </div>
 
-                    <!-- SUB ABAS CLIENTES, PRODUTOS, CATEGORIAS, ACABAMENTOS FICAM AQUI (Mantenha o seu código atual) -->
-                    
-                    <!-- NOVO: SUB ABA USUÁRIOS -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                        <div class="bg-emerald-50 p-6 rounded border border-emerald-100 shadow-sm">
+                            <p class="text-[10px] font-bold text-emerald-600 uppercase tracking-widest mb-1">Entradas Hoje</p>
+                            <p id="finEntradas" class="text-3xl font-black text-emerald-700">R$ 0.00</p>
+                        </div>
+                        <div class="bg-red-50 p-6 rounded border border-red-100 shadow-sm">
+                            <p class="text-[10px] font-bold text-red-600 uppercase tracking-widest mb-1">Saídas Hoje</p>
+                            <p id="finSaidas" class="text-3xl font-black text-red-700">R$ 0.00</p>
+                        </div>
+                        <div class="bg-indigo-50 p-6 rounded border border-indigo-100 shadow-sm">
+                            <p class="text-[10px] font-bold text-indigo-600 uppercase tracking-widest mb-1">Saldo de Hoje</p>
+                            <p id="finSaldo" class="text-3xl font-black text-indigo-700">R$ 0.00</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-6 rounded shadow-sm border border-slate-200 mb-6">
+                        <h3 class="font-bold text-slate-800 mb-4 uppercase text-xs tracking-widest">Registrar Nova Saída/Despesa</h3>
+                        <div class="flex flex-col md:flex-row gap-4 items-end">
+                            <div class="flex-1 space-y-1">
+                                <label class="text-[10px] font-bold text-slate-400 uppercase">Descrição da Despesa</label>
+                                <input type="text" id="finDesc" placeholder="Ex: Conta de Luz, Compra de Material, Pagamento..." class="w-full p-3 bg-slate-50 border border-slate-200 rounded text-sm outline-none focus:ring-2 focus:ring-red-500" />
+                            </div>
+                            <div class="w-full md:w-48 space-y-1">
+                                <label class="text-[10px] font-bold text-slate-400 uppercase">Valor R$</label>
+                                <input type="number" id="finValor" placeholder="0.00" class="w-full p-3 bg-slate-50 border border-slate-200 rounded text-sm font-bold outline-none focus:ring-2 focus:ring-red-500" />
+                            </div>
+                            <button type="button" onclick="salvarDespesa()" class="w-full md:w-auto bg-red-600 text-white px-8 py-3 rounded font-bold text-xs hover:bg-red-700 transition uppercase tracking-widest shadow-md">Registrar Saída</button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded shadow-sm border border-slate-200 overflow-hidden">
+                        <table class="w-full text-left text-xs font-bold">
+                            <thead class="bg-slate-50 text-slate-400 uppercase tracking-wider">
+                                <tr>
+                                    <th class="p-4">Hora</th>
+                                    <th class="p-4">Descrição</th>
+                                    <th class="p-4 text-right">Valor</th>
+                                </tr>
+                            </thead>
+                            <tbody id="listaFinanceiroTab"></tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- ABA CONFIGURAÇÕES -->
+                <section id="aba-cadastros" class="aba-content hidden h-full overflow-y-auto pr-2">
+                    <div class="flex gap-8 border-b border-slate-200 mb-8 overflow-x-auto shrink-0">
+                        <button type="button" id="btn-sub-cli" onclick="mudarSubAba('sub-cli', this)" class="sub-aba-btn pb-4 font-bold text-slate-400 active-sub hidden">Clientes</button>
+                        <button type="button" id="btn-sub-prod" onclick="mudarSubAba('sub-prod', this)" class="sub-aba-btn pb-4 font-bold text-slate-400 hidden">Produtos</button>
+                        <button type="button" id="btn-sub-cat" onclick="mudarSubAba('sub-cat', this)" class="sub-aba-btn pb-4 font-bold text-slate-400 hidden">Categorias</button>
+                        <button type="button" id="btn-sub-acab" onclick="mudarSubAba('sub-acab', this)" class="sub-aba-btn pb-4 font-bold text-slate-400 hidden">Acabamentos</button>
+                        <button type="button" id="btn-sub-usuarios" onclick="mudarSubAba('sub-usuarios', this)" class="sub-aba-btn pb-4 font-bold text-slate-400 hidden">Usuários/Permissões</button>
+                    </div>
+
+                    <!-- CLIENTES -->
+                    <div id="sub-cli" class="sub-aba-content hidden">
+                        <div class="bg-white p-6 rounded shadow-sm border border-slate-200 mb-8">
+                            <h3 id="tituloCliForm" class="font-bold text-slate-800 mb-6 uppercase text-xs tracking-widest">Informações do Cliente</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+                                <input type="hidden" id="cliId" />
+                                <div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">Nome</label><input type="text" id="cliNome" class="w-full p-2 bg-slate-50 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-indigo-500" /></div>
+                                <div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">CPF/CNPJ</label><input type="text" id="cliDoc" class="w-full p-2 bg-slate-50 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-indigo-500" /></div>
+                                <div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">WhatsApp</label><input type="text" id="cliTel" placeholder="Ex: 11999999999" class="w-full p-2 bg-slate-50 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-indigo-500" /></div>
+                                <div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">Endereço</label><input type="text" id="cliEnd" class="w-full p-2 bg-slate-50 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-indigo-500" /></div>
+                                <div class="space-y-1"><label class="text-[10px] font-bold text-emerald-600 uppercase">Crédito R$</label><input type="number" id="cliCredito" value="0" step="0.01" class="w-full p-2 bg-emerald-50 border border-emerald-100 rounded font-bold text-emerald-700 outline-none focus:ring-2 focus:ring-emerald-500" /></div>
+                            </div>
+                            <div class="flex gap-2">
+                                <button type="button" id="btnSalvarCli" onclick="salvarCliente()" class="bg-slate-800 text-white px-8 py-2 rounded font-bold text-xs hover:bg-slate-700 transition">Salvar Cliente</button>
+                                <button type="button" onclick="limparFormCli()" class="bg-slate-100 text-slate-400 px-6 py-2 rounded font-bold text-xs hover:bg-slate-200 transition">Limpar</button>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4 relative max-w-md">
+                            <i class="fa fa-search absolute left-3 top-3 text-slate-400"></i>
+                            <input type="text" id="buscaClienteTab" onkeyup="renderCliTable()" placeholder="Buscar cliente por nome ou documento..." class="w-full pl-9 p-2 border border-slate-200 rounded text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500" />
+                        </div>
+
+                        <div class="bg-white rounded shadow-sm border border-slate-200 overflow-hidden">
+                            <table class="w-full text-left text-xs font-bold">
+                                <thead class="bg-slate-50 text-slate-400 uppercase">
+                                    <tr><th class="p-4">Nome</th><th class="p-4">Crédito</th><th class="p-4 text-center">Ações</th></tr>
+                                </thead>
+                                <tbody id="listaClientesTab"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- PRODUTOS -->
+                    <div id="sub-prod" class="sub-aba-content hidden">
+                        <div class="bg-white p-6 rounded shadow-sm border border-slate-200 mb-8">
+                            <h3 class="font-bold text-slate-800 mb-6 uppercase text-xs tracking-widest">Informações do Produto</h3>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+                                <input type="hidden" id="prodId" />
+                                <div class="space-y-1 lg:col-span-2"><label class="text-[10px] font-bold text-slate-400 uppercase">Nome do Produto</label><input type="text" id="prodNome" class="w-full p-2 bg-slate-50 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-indigo-500" /></div>
+                                
+                                <div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">Setor</label>
+                                    <select id="prodSetor" class="w-full p-2 bg-slate-50 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-indigo-500">
+                                        <option value="Gráfico">Gráfico</option>
+                                        <option value="Com. Visual">Com. Visual</option>
+                                        <option value="Outros">Outros</option>
+                                    </select>
+                                </div>
+
+                                <div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">Categoria</label><select id="prodCategoria" onchange="atualizarListaAcabamentosProduto()" class="w-full p-2 bg-slate-50 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-indigo-500"></select></div>
+                                
+                                <div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">Subcategoria</label><input type="text" id="prodSubcategoria" placeholder="Ex: 90g, 150g, UV..." class="w-full p-2 bg-slate-50 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-indigo-500" /></div>
+
+                                <div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">Regra de Preço</label>
+                                    <select id="prodRegraPreco" onchange="ajustarCamposProduto()" class="w-full p-2 bg-slate-50 border border-slate-200 rounded outline-none font-bold focus:ring-2 focus:ring-indigo-500">
+                                        <option value="unidade">Unitário</option>
+                                        <option value="m2">Por M²</option>
+                                        <option value="pacote">Pacotes Fechados</option>
+                                        <option value="progressivo">Desconto Progressivo</option>
+                                        <option value="combinacao">Matriz de Combinações</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+                                <div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">Referência</label><input type="text" id="prodRef" class="w-full p-2 bg-slate-50 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-indigo-500" /></div>
+                                <div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">Material</label><input type="text" id="prodMaterial" class="w-full p-2 bg-slate-50 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-indigo-500" /></div>
+                                <div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">Gramatura</label><input type="text" id="prodGramatura" class="w-full p-2 bg-slate-50 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-indigo-500" /></div>
+                                <div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">Prazo (Dias)</label><input type="number" id="prodPrazo" class="w-full p-2 bg-slate-50 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-indigo-500" /></div>
+                                <div class="space-y-1" id="boxPrecoBase"><label class="text-[10px] font-bold text-indigo-600 uppercase">Preço Base R$</label><input type="number" id="prodPreco" class="w-full p-2 bg-indigo-50 border border-indigo-200 rounded outline-none font-bold text-indigo-700 focus:ring-2 focus:ring-indigo-500" /></div>
+                            </div>
+
+                            <div id="boxMedidas" style="display:none;" class="bg-blue-50 p-4 rounded border border-blue-100 mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div class="space-y-1"><label class="text-[10px] font-bold text-blue-800 uppercase">Largura Bobina (m)</label><input type="number" id="prodLargBobina" step="0.01" class="w-full p-2 bg-white border border-blue-200 rounded outline-none font-bold focus:ring-2 focus:ring-blue-500" /></div>
+                                <div class="space-y-1"><label class="text-[10px] font-bold text-blue-800 uppercase">Largura Máx Permitida (m)</label><input type="number" id="prodLargMax" step="0.01" class="w-full p-2 bg-white border border-blue-200 rounded outline-none focus:ring-2 focus:ring-blue-500" /></div>
+                                <div class="space-y-1"><label class="text-[10px] font-bold text-blue-800 uppercase">Comprimento Máx (m)</label><input type="number" id="prodCompMax" step="0.01" class="w-full p-2 bg-white border border-blue-200 rounded outline-none focus:ring-2 focus:ring-blue-500" /></div>
+                            </div>
+
+                            <div id="boxPacotes" style="display:none;" class="bg-amber-50 p-4 rounded border border-amber-100 mb-6">
+                                <h4 class="font-bold text-amber-800 mb-4 text-[10px] uppercase tracking-widest">Grade de Pacotes</h4>
+                                <div id="listaGradePacotes" class="space-y-2"></div>
+                                <button type="button" onclick="addLinhaPacote()" class="mt-4 bg-white text-amber-600 border border-amber-200 px-4 py-1 rounded text-[10px] font-bold uppercase tracking-widest">+ Add Quantidade</button>
+                            </div>
+
+                            <div id="boxProgressivo" style="display:none;" class="bg-emerald-50 p-4 rounded border border-emerald-100 mb-6">
+                                <h4 class="font-bold text-emerald-800 mb-4 text-[10px] uppercase tracking-widest">Tabela Progressiva</h4>
+                                <div id="listaGradeProgressivo" class="space-y-2"></div>
+                                <button type="button" onclick="addLinhaProgressivo()" class="mt-4 bg-white text-emerald-600 border border-emerald-200 px-4 py-1 rounded text-[10px] font-bold uppercase tracking-widest">+ Add Faixa</button>
+                            </div>
+
+                            <div id="boxCombinacoes" style="display:none;" class="bg-purple-50 p-4 rounded border border-purple-100 mb-6">
+                                <h4 class="font-bold text-purple-800 mb-4 text-[10px] uppercase tracking-widest">Matriz de Combinações</h4>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                    <div>
+                                        <label class="text-[10px] font-bold text-purple-600 uppercase">Atributo 1 (Ex: Cores)</label>
+                                        <input type="text" id="combNome1" placeholder="Nome do Atributo" class="w-full p-2 mb-2 text-xs rounded border border-purple-200 outline-none" />
+                                        <input type="text" id="combValores1" placeholder="Valores separados por vírgula (Ex: 4x0, 4x4)" class="w-full p-2 text-xs rounded border border-purple-200 outline-none" />
+                                    </div>
+                                    <div>
+                                        <label class="text-[10px] font-bold text-purple-600 uppercase">Atributo 2 (Ex: Quantidade)</label>
+                                        <input type="text" id="combNome2" placeholder="Nome do Atributo" class="w-full p-2 mb-2 text-xs rounded border border-purple-200 outline-none" />
+                                        <input type="text" id="combValores2" placeholder="Valores separados por vírgula (Ex: 1000, 2500, 5000)" class="w-full p-2 text-xs rounded border border-purple-200 outline-none" />
+                                    </div>
+                                </div>
+                                <button type="button" onclick="gerarGradeCombinacoes()" class="bg-purple-600 text-white px-4 py-2 rounded text-xs font-bold uppercase tracking-widest hover:bg-purple-700 transition mb-4">Gerar Tabela de Preços</button>
+                                <div id="listaGradeCombinacoes" class="space-y-2"></div>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                                <div class="bg-slate-50 p-4 rounded border border-slate-100">
+                                    <h4 class="font-bold text-slate-400 mb-4 text-[10px] uppercase tracking-widest">Variações Independentes</h4>
+                                    <div id="listaAtributos" class="space-y-3"></div>
+                                    <button type="button" onclick="addAtributoManual()" class="mt-4 bg-white text-slate-600 border border-slate-200 px-4 py-1 rounded text-[10px] font-bold uppercase tracking-widest">+ Novo Grupo</button>
+                                </div>
+                                <div class="bg-slate-50 p-4 rounded border border-slate-100">
+                                    <h4 class="font-bold text-slate-400 mb-4 text-[10px] uppercase tracking-widest">Acabamentos Disponíveis</h4>
+                                    <div id="listaCheckAcabamentos" class="grid grid-cols-1 gap-2 max-h-40 overflow-y-auto pr-1"></div>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                                <div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">URL da Foto</label><input type="text" id="prodFoto" class="w-full p-2 bg-slate-50 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-indigo-500" /></div>
+                                <div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">Observações (Avisos, Prazos extras...)</label><textarea id="prodObs" rows="1" class="w-full p-2 bg-slate-50 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-indigo-500"></textarea></div>
+                            </div>
+                            
+                            <button type="button" onclick="salvarProduto()" class="bg-slate-800 text-white px-12 py-3 rounded font-bold text-xs hover:bg-slate-700 transition shadow-md uppercase tracking-widest">Salvar Produto</button>
+                        </div>
+
+                        <div class="bg-white rounded shadow-sm border border-slate-200 overflow-hidden">
+                            <table class="w-full text-left text-xs font-bold">
+                                <thead class="bg-slate-50 text-slate-400 uppercase tracking-wider">
+                                    <tr>
+                                        <th class="p-4">Produto</th>
+                                        <th class="p-4">Setor</th>
+                                        <th class="p-4 text-center">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="listaProdutosTab"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- CATEGORIAS -->
+                    <div id="sub-cat" class="sub-aba-content hidden">
+                        <div class="bg-white p-6 rounded shadow-sm border border-slate-200 max-w-md mb-6">
+                            <h3 class="font-bold text-slate-800 mb-4 uppercase text-xs tracking-widest">Categorias</h3>
+                            <div class="flex items-end gap-2">
+                                <input type="hidden" id="catId" />
+                                <div class="space-y-1 flex-1">
+                                    <label class="text-[10px] font-bold text-slate-400 uppercase">Nome da Categoria</label>
+                                    <input type="text" id="catNome" class="w-full p-2 bg-slate-50 border border-slate-200 rounded outline-none font-bold focus:ring-2 focus:ring-indigo-500" />
+                                </div>
+                                <button type="button" onclick="salvarCategoria()" class="bg-slate-800 text-white px-6 py-2 h-[38px] rounded font-bold text-xs hover:bg-slate-700 transition">Salvar</button>
+                            </div>
+                        </div>
+                        <div class="bg-white rounded shadow-sm border border-slate-200 max-w-md overflow-hidden">
+                            <table class="w-full text-left text-xs font-bold">
+                                <thead class="bg-slate-50 text-slate-400 uppercase tracking-wider">
+                                    <tr>
+                                        <th class="p-4">Categoria</th>
+                                        <th class="p-4 text-right">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="listaCategoriasTab"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- ACABAMENTOS -->
+                    <div id="sub-acab" class="sub-aba-content hidden">
+                        <div class="bg-white p-6 rounded shadow-sm border border-slate-200 mb-8">
+                            <h3 id="tituloAcabForm" class="font-bold text-slate-800 mb-6 uppercase text-xs tracking-widest">Novo Acabamento</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                                <input type="hidden" id="acabId" />
+                                <div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">Nome</label><input type="text" id="acabNome" class="w-full p-2 bg-slate-50 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-indigo-500" /></div>
+                                <div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">Grupo</label><input type="text" id="acabGrupo" class="w-full p-2 bg-slate-50 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-indigo-500" /></div>
+                                <div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">Categoria</label><select id="acabCategoria" class="w-full p-2 bg-slate-50 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-indigo-500"></select></div>
+                                <div class="space-y-1">
+                                    <label class="text-[10px] font-bold text-slate-400 uppercase">Regra</label>
+                                    <select id="acabRegra" class="w-full p-2 bg-slate-50 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-indigo-500">
+                                        <option value="unidade">Por Unidade</option><option value="lote">Fixo por Lote</option><option value="m2">Por M²</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4 max-w-md mb-6">
+                                <div class="space-y-1"><label class="text-[10px] font-bold text-emerald-600 uppercase">Preço Venda R$</label><input type="number" id="acabPrecoVenda" class="w-full p-2 bg-emerald-50 border border-emerald-100 rounded font-bold text-emerald-700 outline-none focus:ring-2 focus:ring-emerald-500" /></div>
+                                <div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">Custo R$</label><input type="number" id="acabCusto" class="w-full p-2 bg-slate-50 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-indigo-500" /></div>
+                            </div>
+                            <div class="flex gap-2">
+                                <button type="button" id="btnSalvarAcab" onclick="salvarAcabamento()" class="bg-slate-800 text-white px-10 py-2 rounded font-bold text-xs hover:bg-slate-700 transition">Salvar Acabamento</button>
+                                <button type="button" onclick="limparFormAcab()" class="bg-slate-100 text-slate-400 px-6 py-2 rounded font-bold text-xs hover:bg-slate-200 transition">Limpar</button>
+                            </div>
+                        </div>
+                        <div class="bg-white rounded shadow-sm border border-slate-200 overflow-hidden">
+                            <table class="w-full text-left text-xs font-bold">
+                                <thead class="bg-slate-50 text-slate-400 uppercase tracking-wider">
+                                    <tr>
+                                        <th class="p-4">Acabamento</th>
+                                        <th class="p-4 text-center">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="listaAcabamentosTab"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- USUÁRIOS E PERMISSÕES -->
                     <div id="sub-usuarios" class="sub-aba-content hidden">
                         <div class="bg-white p-6 rounded shadow-sm border border-slate-200 mb-8 max-w-3xl">
                             <h3 class="font-bold text-slate-800 mb-6 uppercase text-xs tracking-widest">Controle de Acesso da Equipe</h3>
@@ -192,10 +571,127 @@
                             </table>
                         </div>
                     </div>
-
                 </section>
             </main>
         </div>
     </div>
 
-    <!-- ... (Mantenha todos os seus modais no final do arquivo: ModalCarrinho, Historico, Detalhes, WhatsApp, etc) ... -->
+    <!-- MODAL W2P PDV -->
+    <div id="modalW2P" onclick="fecharModalFora(event)" class="fixed inset-0 bg-slate-900/80 hidden z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-5xl max-h-[90vh] rounded-xl overflow-hidden flex flex-col shadow-2xl">
+            <div class="flex justify-between items-center p-6 border-b border-slate-100 bg-white">
+                <h2 id="modalNomeProd" class="text-2xl font-black text-slate-800 uppercase tracking-tight"></h2>
+                <button type="button" onclick="fecharModal()" class="text-slate-400 hover:text-red-500 transition text-2xl leading-none">&times;</button>
+            </div>
+            <div class="flex flex-col md:flex-row flex-1 overflow-hidden bg-slate-50/50">
+                <div class="w-full md:w-2/5 p-8 border-r border-slate-100 flex flex-col items-center justify-start bg-white">
+                    <div id="modalHeaderImg" class="w-full h-64 bg-contain bg-no-repeat bg-center rounded-lg mb-6"></div>
+                    <div id="modalObs" class="hidden w-full bg-blue-50 text-blue-700 p-4 rounded border border-blue-100 text-xs mb-4"></div>
+                    <div id="avisoBobina" class="hidden w-full bg-amber-50 text-amber-700 p-4 rounded border border-amber-200 text-xs font-bold flex items-start gap-3 shadow-sm mt-4">
+                        <i class="fa fa-exclamation-triangle text-lg mt-0.5"></i><span>Atenção: O menor lado excede a largura da bobina. O material terá emenda.</span>
+                    </div>
+                    <div id="erroMedidaMax" class="hidden w-full bg-red-50 text-red-700 p-4 rounded border border-red-200 text-xs font-bold flex items-start gap-3 shadow-sm mt-4">
+                        <i class="fa fa-ban text-lg mt-0.5"></i><span>Atenção: A medida informada excede a largura máxima. O pedido não pode ser feito.</span>
+                    </div>
+                </div>
+                <div class="w-full md:w-3/5 p-8 overflow-y-auto">
+                    <input type="hidden" id="modalProdId" />
+                    <input type="hidden" id="modalProdPrecoBase" />
+                    <input type="hidden" id="modalProdRegra" />
+                    <div class="space-y-1 mb-6">
+                        <label class="text-[10px] font-bold text-slate-400 uppercase">Identificação / Nome do Arquivo</label>
+                        <input type="text" id="w2pNomeArquivo" placeholder="Ex: Cartão Pizzaria, Panfleto Promoção..." class="w-full p-3 border border-slate-200 rounded bg-white font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
+                    </div>
+                    <h4 class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4 border-t border-slate-200 pt-6">Medidas e Quantidade</h4>
+                    <div id="modalCorpoMedidas" class="grid grid-cols-2 gap-4 mb-8"></div>
+                    <h4 id="tituloVariacoes" class="hidden text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4 border-t border-slate-200 pt-6">Variações do Produto</h4>
+                    <div id="modalCorpoVariacoes" class="grid grid-cols-2 gap-4 mb-8"></div>
+                    <h4 id="tituloAcabamentos" class="hidden text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4 border-t border-slate-200 pt-6">Acabamento Extra</h4>
+                    <div id="modalCorpoAcabamentos" class="mb-4"></div>
+                </div>
+            </div>
+            <div class="p-6 border-t border-slate-200 flex flex-col md:flex-row justify-between items-center bg-white gap-4">
+                <div>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase">Investimento Total</p>
+                    <p id="modalSubtotal" class="text-4xl font-black text-indigo-600">R$ 0.00</p>
+                </div>
+                <button type="button" id="btnAdicionarCarrinho" onclick="confirmarAdicaoCarrinho()" class="w-full md:w-auto bg-indigo-600 text-white px-12 py-4 rounded font-bold text-lg shadow-lg hover:bg-indigo-700 transition-all uppercase tracking-widest">Adicionar ao Pedido</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL HISTÓRICO CLIENTE -->
+    <div id="modalHistoricoCli" class="fixed inset-0 bg-slate-900/60 hidden z-50 flex items-center justify-center p-4 backdrop-blur-md">
+        <div class="bg-white w-full max-w-2xl max-h-[80vh] rounded-lg shadow-2xl flex flex-col p-10 overflow-hidden">
+            <div class="flex justify-between items-center mb-6">
+                <h3 id="histNomeCli" class="text-2xl font-black text-slate-900 uppercase tracking-tighter">Histórico</h3>
+                <button type="button" onclick="document.getElementById('modalHistoricoCli').classList.add('hidden')" class="text-slate-300 hover:text-red-500 font-bold">✕ FECHAR</button>
+            </div>
+            <div id="corpoHistoricoCli" class="overflow-y-auto space-y-4"></div>
+        </div>
+    </div>
+
+    <!-- MODAL DETALHES DO PEDIDO -->
+    <div id="modalDetalhesPedido" class="fixed inset-0 bg-slate-900/60 hidden z-50 flex items-center justify-center p-4 backdrop-blur-md">
+        <div class="bg-white w-full max-w-2xl max-h-[90vh] rounded-lg shadow-2xl flex flex-col overflow-hidden">
+            <div class="flex justify-between items-center p-6 border-b border-slate-100">
+                <h3 class="text-xl font-black text-slate-900 uppercase tracking-tighter">Resumo do Pedido</h3>
+                <button type="button" onclick="document.getElementById('modalDetalhesPedido').classList.add('hidden')" class="text-slate-400 hover:text-red-500 text-2xl leading-none">&times;</button>
+            </div>
+            <div id="corpoDetalhesPedido" class="p-6 overflow-y-auto space-y-4"></div>
+        </div>
+    </div>
+
+    <!-- MODAL RECEBER SALDO -->
+    <div id="modalReceberSaldo" class="fixed inset-0 bg-slate-900/60 hidden z-50 flex items-center justify-center p-4 backdrop-blur-md">
+        <div class="bg-white w-full max-w-sm rounded-lg shadow-2xl flex flex-col p-6 overflow-hidden">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-lg font-black text-slate-900 uppercase tracking-tighter">Receber Pagamento</h3>
+                <button type="button" onclick="document.getElementById('modalReceberSaldo').classList.add('hidden')" class="text-slate-400 hover:text-red-500 text-xl leading-none">&times;</button>
+            </div>
+            <div class="space-y-4">
+                <input type="hidden" id="recSaldoIdPedido" />
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold text-slate-400 uppercase">Valor a Receber R$</label>
+                    <input type="number" id="recSaldoValor" class="w-full p-3 bg-slate-50 border border-slate-200 rounded text-sm font-bold outline-none focus:ring-2 focus:ring-emerald-500" />
+                </div>
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold text-slate-400 uppercase">Forma de Pagamento</label>
+                    <select id="recSaldoForma" class="w-full p-3 bg-slate-50 border border-slate-200 rounded text-sm font-bold outline-none focus:ring-2 focus:ring-emerald-500">
+                        <option value="Pix">Pix</option>
+                        <option value="Dinheiro">Dinheiro</option>
+                        <option value="Debito">Débito</option>
+                        <option value="Credito_Vista">Crédito à Vista</option>
+                        <option value="Credito_Parcelado">Crédito Parcelado</option>
+                        <option value="Saldo_Cliente">Saldo de Crédito</option>
+                    </select>
+                </div>
+                <button type="button" onclick="confirmarRecebimentoSaldo()" class="w-full bg-emerald-600 text-white py-3 rounded font-bold text-xs hover:bg-emerald-700 transition uppercase tracking-widest shadow-md mt-2">Confirmar Pagamento</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL WHATSAPP -->
+    <div id="modalWhatsApp" class="fixed inset-0 bg-slate-900/60 hidden z-50 flex items-center justify-center p-4 backdrop-blur-md">
+        <div class="bg-white w-full max-w-md rounded-lg shadow-2xl flex flex-col p-6 overflow-hidden">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-lg font-black text-slate-900 uppercase tracking-tighter"><i class="fab fa-whatsapp text-green-500 mr-2"></i> Enviar WhatsApp</h3>
+                <button type="button" onclick="document.getElementById('modalWhatsApp').classList.add('hidden')" class="text-slate-400 hover:text-red-500 text-xl leading-none">&times;</button>
+            </div>
+            <div class="space-y-4">
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold text-slate-400 uppercase">Número do Cliente (com DDD)</label>
+                    <input type="text" id="zapTelefone" placeholder="Ex: 11999999999" class="w-full p-3 bg-slate-50 border border-slate-200 rounded text-sm font-bold outline-none focus:ring-2 focus:ring-green-500" />
+                </div>
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold text-slate-400 uppercase">Mensagem</label>
+                    <textarea id="zapMensagem" rows="10" class="w-full p-3 bg-slate-50 border border-slate-200 rounded text-sm outline-none focus:ring-2 focus:ring-green-500"></textarea>
+                </div>
+                <button type="button" onclick="confirmarEnvioWhatsApp()" class="w-full bg-green-500 text-white py-3 rounded font-bold text-xs hover:bg-green-600 transition uppercase tracking-widest shadow-md mt-2">Abrir WhatsApp Web</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
