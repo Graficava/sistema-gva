@@ -12,10 +12,10 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 
 let bdCategorias = [];
-let bdProdutos = [];
-let bdClientes =[];
-let bdPedidos =[];
-let bdDespesas = [];
+let bdProdutos =[];
+let bdClientes = [];
+let bdPedidos = [];
+let bdDespesas =[];
 let bdAcabamentos = [];
 let carrinho =[];
 
@@ -208,8 +208,10 @@ function imprimirReciboDireto(idPedido, objPedido) {
             ${p.itens.map(i => `<tr><td>${i.qtdCarrinho}x ${i.nome}<br/><small>${i.desc}</small></td><td class="right">R$ ${i.valor.toFixed(2)}</td></tr>`).join('')}
         </table>
         <div class="linha"></div>
-        <div class="right bold">Subtotal: R$ ${(p.total + (p.desconto || 0)).toFixed(2)}</div>
-        ${p.desconto > 0 ? `<div class="right text-red-500">Desconto: - R$ ${p.desconto.toFixed(2)}</div>` : ''}
+        <div class="right bold">Subtotal: R$ ${(p.total - (p.taxaPagto || 0) - (p.frete || 0) + (p.desconto || 0)).toFixed(2)}</div>
+        ${p.taxaPagto ? `<div class="right ${p.taxaPagto > 0 ? 'text-red-500' : 'text-emerald-500'}">Taxa/Desc. Pgto: ${p.taxaPagto > 0 ? '+' : ''} R$ ${p.taxaPagto.toFixed(2)}</div>` : ''}
+        ${p.frete > 0 ? `<div class="right">Frete: + R$ ${p.frete.toFixed(2)}</div>` : ''}
+        ${p.desconto > 0 ? `<div class="right text-red-500">Desconto Manual: - R$ ${p.desconto.toFixed(2)}</div>` : ''}
         <div class="right bold">Total: R$ ${p.total.toFixed(2)}</div>
         <div class="right">Valor Pago: R$ ${(p.valorPago || 0).toFixed(2)}</div>
         <div class="right bold">Saldo: R$ ${(p.saldoDevedor || 0).toFixed(2)}</div>
@@ -842,8 +844,24 @@ function atualizarTotalFinal() {
     const frete = parseFloat(document.getElementById('cartFreteValor').value) || 0;
     const desconto = parseFloat(document.getElementById('cartDesconto').value) || 0;
     const pago = parseFloat(document.getElementById('cartValorPago').value) || 0;
-    
-    const totalPedido = (sub + frete) - desconto;
+    const formaPagto = document.getElementById('cartPagamento').value;
+
+    let taxaDescPagto = 0;
+    if (formaPagto === 'Pix' || formaPagto === 'Dinheiro') {
+        taxaDescPagto = sub * -0.05; // -5% de desconto
+    } else if (formaPagto === 'Credito_Vista') {
+        taxaDescPagto = sub * 0.05; // +5% de acréscimo
+    }
+
+    const elTaxa = document.getElementById('cartTaxaPagto');
+    if(elTaxa) {
+        elTaxa.innerText = "R$ " + taxaDescPagto.toFixed(2);
+        if(taxaDescPagto < 0) elTaxa.className = "text-emerald-500 font-bold";
+        else if(taxaDescPagto > 0) elTaxa.className = "text-red-500 font-bold";
+        else elTaxa.className = "text-slate-400 font-bold";
+    }
+
+    const totalPedido = (sub + taxaDescPagto + frete) - desconto;
     const saldo = totalPedido - pago;
     
     document.getElementById('totalCarrinho').innerText = "R$ " + totalPedido.toFixed(2);
@@ -858,6 +876,10 @@ async function enviarPedido(imprimir = false) {
     const total = parseFloat(document.getElementById('totalCarrinho').innerText.replace("R$ ",""));
     const pago = parseFloat(document.getElementById('cartValorPago').value) || 0;
     const desconto = parseFloat(document.getElementById('cartDesconto').value) || 0;
+    const formaPagto = document.getElementById('cartPagamento').value;
+    const taxaPagto = parseFloat(document.getElementById('cartTaxaPagto').innerText.replace("R$ ","")) || 0;
+    const frete = parseFloat(document.getElementById('cartFreteValor').value) || 0;
+
     const saldo = total - pago;
     const statusInicial = saldo > 0 ? "Aguardando pagamento" : "Em produção";
 
@@ -867,17 +889,20 @@ async function enviarPedido(imprimir = false) {
         itens: carrinho,
         total: total,
         desconto: desconto,
+        taxaPagto: taxaPagto,
+        frete: frete,
+        formaPagamento: formaPagto,
         valorPago: pago,
         saldoDevedor: saldo,
         data: new Date(),
         status: statusInicial,
         arquivado: false,
-        pagamentos: pago > 0 ?[{ data: new Date(), valor: pago }] :[]
+        pagamentos: pago > 0 ?[{ data: new Date(), valor: pago, forma: formaPagto }] :[]
     };
     
     const docRef = await db.collection("pedidos").add(pedido);
     
-    if (idCli && document.getElementById('cartPagamento').value === "Saldo_Cliente") {
+    if (idCli && formaPagto === "Saldo_Cliente") {
         const c = bdClientes.find(x => x.id === idCli);
         await db.collection("clientes").doc(idCli).update({ credito: (c.credito || 0) - pago });
     }
@@ -886,6 +911,9 @@ async function enviarPedido(imprimir = false) {
     carrinho =[]; 
     document.getElementById('cartValorPago').value = 0; 
     document.getElementById('cartDesconto').value = 0; 
+    document.getElementById('cartFreteValor').value = 0;
+    document.getElementById('cartPagamento').value = 'Pix';
+    toggleOpcoesPagamento();
     renderCarrinho();
     
     if(imprimir) imprimirReciboDireto(docRef.id, pedido);
@@ -906,7 +934,6 @@ function renderFinanceiro() {
     bdPedidos.forEach(p => {
         if (!p.data) return;
         
-        // Se o pedido tem o array de pagamentos (novo formato)
         if (p.pagamentos && p.pagamentos.length > 0) {
             p.pagamentos.forEach((pag, index) => {
                 const pagDataObj = pag.data.toDate ? pag.data.toDate() : new Date(pag.data);
@@ -916,7 +943,7 @@ function renderFinanceiro() {
                     entradasTotal += pag.valor;
                     transacoes.push({
                         dataObj: pagDataObj,
-                        desc: `Pedido: ${p.clienteNome} ${index > 0 ? '(Pagamento de Saldo)' : ''}`,
+                        desc: `Pedido: ${p.clienteNome} ${index > 0 ? '(Pgto Saldo)' : ''} - ${pag.forma ? pag.forma.replace('_', ' ') : ''}`,
                         tipo: 'entrada',
                         valor: pag.valor,
                         id: p.id,
@@ -926,7 +953,6 @@ function renderFinanceiro() {
                 }
             });
         } else {
-            // Fallback para pedidos antigos que não tem o array de pagamentos
             const dataObj = p.data.toDate ? p.data.toDate() : new Date(p.data);
             const dataStr = dataObj.toISOString().split('T')[0];
             
@@ -988,33 +1014,43 @@ function renderFinanceiro() {
     `).join('');
 }
 
-async function receberSaldo(idPedido) {
+function receberSaldo(idPedido) {
     const p = bdPedidos.find(x => x.id === idPedido);
     if (!p || p.saldoDevedor <= 0) return;
 
-    const valorRecebidoStr = prompt(`O saldo devedor deste pedido é de R$ ${p.saldoDevedor.toFixed(2)}.\nDigite o valor que o cliente está pagando agora:`, p.saldoDevedor.toFixed(2));
-    
-    if (!valorRecebidoStr) return;
-    
+    document.getElementById('recSaldoIdPedido').value = idPedido;
+    document.getElementById('recSaldoValor').value = p.saldoDevedor.toFixed(2);
+    document.getElementById('recSaldoForma').value = 'Pix';
+    document.getElementById('modalReceberSaldo').classList.remove('hidden');
+}
+
+async function confirmarRecebimentoSaldo() {
+    const idPedido = document.getElementById('recSaldoIdPedido').value;
+    const valorRecebidoStr = document.getElementById('recSaldoValor').value;
+    const formaPagto = document.getElementById('recSaldoForma').value;
+
+    const p = bdPedidos.find(x => x.id === idPedido);
+    if (!p) return;
+
     const valorRecebido = parseFloat(valorRecebidoStr.replace(',', '.'));
     if (isNaN(valorRecebido) || valorRecebido <= 0) return alert("Valor inválido.");
-    if (valorRecebido > p.saldoDevedor) return alert("O valor recebido não pode ser maior que o saldo devedor.");
+    if (valorRecebido > (p.saldoDevedor + 0.01)) return alert("O valor recebido não pode ser maior que o saldo devedor.");
 
     const novoPago = p.valorPago + valorRecebido;
-    const novoSaldo = p.saldoDevedor - valorRecebido;
+    let novoSaldo = p.saldoDevedor - valorRecebido;
+    if (novoSaldo < 0) novoSaldo = 0;
     
-    // Se quitou tudo e estava aguardando pagamento, joga pra produção
     const novoStatus = (novoSaldo === 0 && p.status === 'Aguardando pagamento') ? 'Em produção' : p.status;
 
     const novoPagamento = {
         data: new Date(),
-        valor: valorRecebido
+        valor: valorRecebido,
+        forma: formaPagto
     };
 
     let pagamentosAtualizados = p.pagamentos ||[];
-    // Se for um pedido antigo que não tinha o array de pagamentos, cria com o valor inicial
     if (!p.pagamentos && p.valorPago > 0) {
-        pagamentosAtualizados.push({ data: p.data, valor: p.valorPago });
+        pagamentosAtualizados.push({ data: p.data, valor: p.valorPago, forma: p.formaPagamento || 'Não informada' });
     }
     pagamentosAtualizados.push(novoPagamento);
 
@@ -1025,7 +1061,16 @@ async function receberSaldo(idPedido) {
             status: novoStatus,
             pagamentos: pagamentosAtualizados
         });
+        
+        if (formaPagto === "Saldo_Cliente" && p.clienteId && p.clienteId !== "Consumidor Final") {
+            const c = bdClientes.find(x => x.id === p.clienteId);
+            if(c) {
+                await db.collection("clientes").doc(p.clienteId).update({ credito: (c.credito || 0) - valorRecebido });
+            }
+        }
+
         alert("Pagamento registrado com sucesso! O caixa de hoje foi atualizado.");
+        document.getElementById('modalReceberSaldo').classList.add('hidden');
     } catch (e) {
         console.error(e);
         alert("Erro ao registrar pagamento.");
@@ -1038,6 +1083,24 @@ function abrirDetalhesPedido(id) {
     
     const dataFormatada = p.data.toDate ? p.data.toDate().toLocaleString('pt-BR') : new Date(p.data).toLocaleString('pt-BR');
     
+    let pagamentosHtml = '';
+    if (p.pagamentos && p.pagamentos.length > 0) {
+        pagamentosHtml = `
+            <div class="mb-4 border-t border-slate-100 pt-4">
+                <p class="text-[10px] font-bold text-slate-400 uppercase mb-2">Histórico de Pagamentos</p>
+                <div class="space-y-2">
+                    ${p.pagamentos.map(pag => {
+                        const d = pag.data.toDate ? pag.data.toDate().toLocaleString('pt-BR') : new Date(pag.data).toLocaleString('pt-BR');
+                        return `<div class="flex justify-between items-center text-xs bg-slate-50 p-2 rounded border border-slate-100">
+                            <span><span class="font-bold text-slate-700">${pag.forma ? pag.forma.replace('_', ' ') : 'Não informada'}</span> <br/><span class="text-[9px] text-slate-400">${d}</span></span>
+                            <span class="font-black text-emerald-600">R$ ${pag.valor.toFixed(2)}</span>
+                        </div>`;
+                    }).join('')}
+                </div>
+            </div>
+        `;
+    }
+
     let html = `
         <div class="flex justify-between items-start mb-4 border-b border-slate-100 pb-4">
             <div>
@@ -1067,10 +1130,14 @@ function abrirDetalhesPedido(id) {
             </div>
         </div>
         
+        ${pagamentosHtml}
+
         <div class="space-y-1 border-t border-slate-100 pt-4">
-            <div class="flex justify-between text-xs font-bold text-slate-500"><span>Subtotal:</span> <span>R$ ${(p.total + (p.desconto || 0)).toFixed(2)}</span></div>
-            ${p.desconto > 0 ? `<div class="flex justify-between text-xs font-bold text-red-500"><span>Desconto:</span> <span>- R$ ${p.desconto.toFixed(2)}</span></div>` : ''}
-            <div class="flex justify-between text-sm font-black text-slate-800 mt-1"><span>Total:</span> <span>R$ ${p.total.toFixed(2)}</span></div>
+            <div class="flex justify-between text-xs font-bold text-slate-500"><span>Subtotal:</span> <span>R$ ${(p.total - (p.taxaPagto || 0) - (p.frete || 0) + (p.desconto || 0)).toFixed(2)}</span></div>
+            ${p.taxaPagto ? `<div class="flex justify-between text-xs font-bold ${p.taxaPagto > 0 ? 'text-red-500' : 'text-emerald-500'}"><span>Taxa/Desc. Pgto:</span> <span>${p.taxaPagto > 0 ? '+' : ''} R$ ${p.taxaPagto.toFixed(2)}</span></div>` : ''}
+            ${p.frete > 0 ? `<div class="flex justify-between text-xs font-bold text-slate-500"><span>Frete:</span> <span>+ R$ ${p.frete.toFixed(2)}</span></div>` : ''}
+            ${p.desconto > 0 ? `<div class="flex justify-between text-xs font-bold text-red-500"><span>Desconto Manual:</span> <span>- R$ ${p.desconto.toFixed(2)}</span></div>` : ''}
+            <div class="flex justify-between text-sm font-black text-slate-800 mt-1 pt-1 border-t border-slate-100"><span>Total:</span> <span>R$ ${p.total.toFixed(2)}</span></div>
             <div class="flex justify-between text-xs font-bold text-emerald-600 mt-1"><span>Valor Pago:</span> <span>R$ ${(p.valorPago || 0).toFixed(2)}</span></div>
             <div class="flex justify-between text-xs font-bold text-red-500 mt-1"><span>Saldo Devedor:</span> <span>R$ ${(p.saldoDevedor || 0).toFixed(2)}</span></div>
         </div>
@@ -1092,7 +1159,7 @@ async function salvarDespesa() {
     if (!desc || !valor) return alert("Preencha a descrição e o valor da saída.");
     
     const hoje = new Date();
-    const[ano, mes, dia] = dataFiltro.split('-');
+    const [ano, mes, dia] = dataFiltro.split('-');
     const dataRegistro = new Date(ano, mes - 1, dia, hoje.getHours(), hoje.getMinutes(), hoje.getSeconds());
 
     await db.collection("despesas").add({
@@ -1149,7 +1216,10 @@ function atualizarInfoCreditoCarrinho() {
     label.className = credito >= 0 ? "text-emerald-500 font-bold" : "text-red-500 font-bold"; 
 }
 
-function toggleOpcoesPagamento() { document.getElementById('divParcelas').style.display = (document.getElementById('cartPagamento').value === 'Credito_Parcelado') ? 'block' : 'none'; }
+function toggleOpcoesPagamento() { 
+    document.getElementById('divParcelas').style.display = (document.getElementById('cartPagamento').value === 'Credito_Parcelado') ? 'block' : 'none'; 
+    atualizarTotalFinal();
+}
 function toggleOpcoesEntrega() { const v = document.getElementById('cartEntrega').value; document.getElementById('divFrete').style.display = (v === 'Retirada') ? 'none' : 'block'; atualizarTotalFinal(); }
 function renderAcabTable() { const tab = document.getElementById('listaAcabamentosTab'); if(tab) tab.innerHTML = bdAcabamentos.map(a => `<tr class="border-b border-slate-50"><td class="p-4 font-bold text-slate-600">${a.nome} (${a.grupo})</td><td class="p-4 text-center"><button type="button" onclick="editAcab('${a.id}')" class="text-indigo-500 mr-3 font-bold text-[10px] uppercase">Editar</button><button type="button" onclick="db.collection('acabamentos').doc('${a.id}').delete()" class="text-red-300 font-bold text-[10px]">X</button></td></tr>`).join(''); }
 
