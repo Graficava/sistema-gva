@@ -589,6 +589,27 @@
         </div>
     </div>
 
+    <!-- NOVO MODAL: WHATSAPP -->
+    <div id="modalWhatsApp" class="fixed inset-0 bg-slate-900/60 hidden z-50 flex items-center justify-center p-4 backdrop-blur-md">
+        <div class="bg-white w-full max-w-md rounded-lg shadow-2xl flex flex-col p-6 overflow-hidden">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-lg font-black text-slate-900 uppercase tracking-tighter"><i class="fab fa-whatsapp text-green-500 mr-2"></i> Enviar WhatsApp</h3>
+                <button type="button" onclick="document.getElementById('modalWhatsApp').classList.add('hidden')" class="text-slate-400 hover:text-red-500 text-xl leading-none">&times;</button>
+            </div>
+            <div class="space-y-4">
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold text-slate-400 uppercase">Número do Cliente (com DDD)</label>
+                    <input type="text" id="zapTelefone" placeholder="Ex: 11999999999" class="w-full p-3 bg-slate-50 border border-slate-200 rounded text-sm font-bold outline-none focus:ring-2 focus:ring-green-500" />
+                </div>
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold text-slate-400 uppercase">Mensagem</label>
+                    <textarea id="zapMensagem" rows="10" class="w-full p-3 bg-slate-50 border border-slate-200 rounded text-sm outline-none focus:ring-2 focus:ring-green-500"></textarea>
+                </div>
+                <button type="button" onclick="confirmarEnvioWhatsApp()" class="w-full bg-green-500 text-white py-3 rounded font-bold text-xs hover:bg-green-600 transition uppercase tracking-widest shadow-md mt-2">Abrir WhatsApp Web</button>
+            </div>
+        </div>
+    </div>
+
     <script src="script.js"></script>
 </body>
 </html>
