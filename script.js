@@ -17,8 +17,8 @@ let bdCategorias = [];
 let bdProdutos =[];
 let bdClientes =[];
 let bdPedidos =[];
-let bdDespesas = [];
-let bdAcabamentos =[];
+let bdDespesas =[];
+let bdAcabamentos = [];
 let bdUsuarios =[];
 let carrinho =[];
 
@@ -48,11 +48,15 @@ auth.onAuthStateChanged(async user => {
     const btnEntrar = document.getElementById('btnEntrar');
     
     if (user) {
+        // DESTRAVA A TELA IMEDIATAMENTE PARA NÃO FICAR PRESO
+        telaLogin.classList.add('hidden');
+        appInterface.classList.remove('hidden');
+        if (btnEntrar) { btnEntrar.innerText = "Entrar no Sistema"; btnEntrar.disabled = false; }
+        
         try {
             const doc = await db.collection("usuarios").doc(user.email).get();
-            if (doc.exists) {
-                usuarioAtual = doc.data();
-            } else {
+            if (doc.exists) usuarioAtual = doc.data();
+            else {
                 usuarioAtual = { nome: user.email.split('@')[0], email: user.email, role: "admin" };
                 await db.collection("usuarios").doc(user.email).set(usuarioAtual);
             }
@@ -63,14 +67,6 @@ auth.onAuthStateChanged(async user => {
         
         aplicarPermissoes();
         
-        telaLogin.classList.add('hidden');
-        appInterface.classList.remove('hidden');
-        
-        if (btnEntrar) {
-            btnEntrar.innerText = "Entrar no Sistema";
-            btnEntrar.disabled = false;
-        }
-        
         const dataFiltro = document.getElementById('finDataFiltro');
         if(dataFiltro && !dataFiltro.value) dataFiltro.valueAsDate = new Date();
 
@@ -78,40 +74,22 @@ auth.onAuthStateChanged(async user => {
         if(dashMes && !dashMes.value) dashMes.value = new Date().toISOString().slice(0,7);
 
         iniciarLeitura();
-        
     } else {
         telaLogin.classList.remove('hidden');
         appInterface.classList.add('hidden');
         usuarioAtual = null;
-        
-        if (btnEntrar) {
-            btnEntrar.innerText = "Entrar no Sistema";
-            btnEntrar.disabled = false;
-        }
+        if (btnEntrar) { btnEntrar.innerText = "Entrar no Sistema"; btnEntrar.disabled = false; }
     }
 });
 
 function entrar() {
-    const e = document.getElementById('email').value;
-    const s = document.getElementById('senha').value;
-    const msgErro = document.getElementById('msgErro');
-    const btnEntrar = document.getElementById('btnEntrar');
-    
-    if (!e || !s) {
-        msgErro.innerText = "Preencha os dados.";
-        msgErro.classList.remove('hidden');
-        return;
-    }
-    
-    msgErro.classList.add('hidden');
-    btnEntrar.innerText = "Verificando...";
-    btnEntrar.disabled = true;
-    
+    const e = document.getElementById('email').value, s = document.getElementById('senha').value;
+    const msgErro = document.getElementById('msgErro'), btnEntrar = document.getElementById('btnEntrar');
+    if (!e || !s) { msgErro.innerText = "Preencha os dados."; msgErro.classList.remove('hidden'); return; }
+    msgErro.classList.add('hidden'); btnEntrar.innerText = "Verificando..."; btnEntrar.disabled = true;
     auth.signInWithEmailAndPassword(e, s).catch(() => {
-        msgErro.innerText = "Acesso negado. Verifique e-mail e senha.";
-        msgErro.classList.remove('hidden');
-        btnEntrar.innerText = "Entrar no Sistema";
-        btnEntrar.disabled = false;
+        msgErro.innerText = "Acesso negado. Verifique e-mail e senha."; msgErro.classList.remove('hidden');
+        btnEntrar.innerText = "Entrar no Sistema"; btnEntrar.disabled = false;
     });
 }
 
@@ -119,224 +97,86 @@ function sair() { auth.signOut(); }
 
 function aplicarPermissoes() {
     const role = usuarioAtual.role || 'vendedor';
-    
     document.getElementById('nomeUsuarioLogado').innerText = usuarioAtual.nome || usuarioAtual.email.split('@')[0];
     document.getElementById('roleUsuarioLogado').innerText = role;
 
-    const btnLoja = document.querySelectorAll('.btn-menu-loja');
-    const btnProducao = document.querySelectorAll('.btn-menu-producao');
-    const btnFinanceiro = document.querySelectorAll('.btn-menu-financeiro');
-    const btnConfig = document.querySelectorAll('.btn-menu-config');
-    const btnDashboard = document.querySelectorAll('.btn-menu-dashboard');
+    const btnLoja = document.querySelectorAll('.btn-menu-loja'), btnProducao = document.querySelectorAll('.btn-menu-producao'), btnFinanceiro = document.querySelectorAll('.btn-menu-financeiro'), btnConfig = document.querySelectorAll('.btn-menu-config'), btnDashboard = document.querySelectorAll('.btn-menu-dashboard');
+    const btnSubCli = document.getElementById('btn-sub-cli'), btnSubProd = document.getElementById('btn-sub-prod'), btnSubCat = document.getElementById('btn-sub-cat'), btnSubAcab = document.getElementById('btn-sub-acab'), btnSubUsuarios = document.getElementById('btn-sub-usuarios');[...btnLoja, ...btnProducao, ...btnFinanceiro, ...btnConfig, ...btnDashboard].forEach(b => b.classList.add('hidden'));[btnSubCli, btnSubProd, btnSubCat, btnSubAcab, btnSubUsuarios].forEach(b => { if(b) b.classList.add('hidden'); });
 
-    const btnSubCli = document.getElementById('btn-sub-cli');
-    const btnSubProd = document.getElementById('btn-sub-prod');
-    const btnSubCat = document.getElementById('btn-sub-cat');
-    const btnSubAcab = document.getElementById('btn-sub-acab');
-    const btnSubUsuarios = document.getElementById('btn-sub-usuarios');
-
-    // Esconde tudo primeiro[...btnLoja, ...btnProducao, ...btnFinanceiro, ...btnConfig, ...btnDashboard].forEach(b => b.classList.add('hidden'));[btnSubCli, btnSubProd, btnSubCat, btnSubAcab, btnSubUsuarios].forEach(b => { if(b) b.classList.add('hidden'); });
-
-    // Libera de acordo com o papel
     if (role === 'admin') {[...btnLoja, ...btnProducao, ...btnFinanceiro, ...btnConfig, ...btnDashboard].forEach(b => b.classList.remove('hidden'));[btnSubCli, btnSubProd, btnSubCat, btnSubAcab, btnSubUsuarios].forEach(b => { if(b) b.classList.remove('hidden'); });
         mudarAba('dashboard');
-    } 
-    else if (role === 'vendedor') {[...btnLoja, ...btnProducao, ...btnFinanceiro, ...btnConfig].forEach(b => b.classList.remove('hidden'));
+    } else if (role === 'vendedor') {
+        [...btnLoja, ...btnProducao, ...btnFinanceiro, ...btnConfig].forEach(b => b.classList.remove('hidden'));
         if(btnSubCli) btnSubCli.classList.remove('hidden'); 
-        mudarAba('loja');
-        mudarSubAba('sub-cli');
-    } 
-    else if (role === 'producao') {
-        [...btnProducao].forEach(b => b.classList.remove('hidden'));
-        mudarAba('producao');
+        mudarAba('loja'); mudarSubAba('sub-cli');
+    } else if (role === 'producao') {
+        [...btnProducao].forEach(b => b.classList.remove('hidden')); mudarAba('producao');
     }
 }
 
 // --- LEITURA DO BANCO DE DADOS ---
 function iniciarLeitura() {
-    db.collection("categorias").onSnapshot(s => { 
-        bdCategorias = s.docs.map(d => ({id: d.id, ...d.data()}));
-        renderCat(); 
-    });
-    db.collection("produtos").onSnapshot(s => { 
-        bdProdutos = s.docs.map(d => ({id: d.id, ...d.data()}));
-        renderVitrine(); renderProdTable();
-    });
-    db.collection("clientes").orderBy("nome").onSnapshot(s => { 
-        bdClientes = s.docs.map(d => ({id: d.id, ...d.data()}));
-        renderCliTable(); renderCliSelectCart(); renderDashboard();
-    });
-    db.collection("acabamentos").onSnapshot(s => {
-        bdAcabamentos = s.docs.map(d => ({id: d.id, ...d.data()}));
-        renderAcabTable(); atualizarListaAcabamentosProduto();
-    });
-    db.collection("pedidos").orderBy("data", "desc").limit(500).onSnapshot(s => {
-        bdPedidos = s.docs.map(d => ({id: d.id, ...d.data()}));
-        renderFinanceiro(); renderKanbanProducao(); renderDashboard();
-    });
-    db.collection("despesas").orderBy("data", "desc").limit(500).onSnapshot(s => {
-        bdDespesas = s.docs.map(d => ({id: d.id, ...d.data()}));
-        renderFinanceiro(); renderDashboard();
-    });
-    db.collection("usuarios").onSnapshot(s => {
-        bdUsuarios = s.docs.map(d => ({id: d.id, ...d.data()}));
-        renderUsuariosTab();
-    });
+    db.collection("categorias").onSnapshot(s => { bdCategorias = s.docs.map(d => ({id: d.id, ...d.data()})); renderCat(); });
+    db.collection("produtos").onSnapshot(s => { bdProdutos = s.docs.map(d => ({id: d.id, ...d.data()})); renderVitrine(); renderProdTable(); });
+    db.collection("clientes").orderBy("nome").onSnapshot(s => { bdClientes = s.docs.map(d => ({id: d.id, ...d.data()})); renderCliTable(); renderCliSelectCart(); renderDashboard(); });
+    db.collection("acabamentos").onSnapshot(s => { bdAcabamentos = s.docs.map(d => ({id: d.id, ...d.data()})); renderAcabTable(); atualizarListaAcabamentosProduto(); });
+    db.collection("pedidos").orderBy("data", "desc").limit(500).onSnapshot(s => { bdPedidos = s.docs.map(d => ({id: d.id, ...d.data()})); renderFinanceiro(); renderKanbanProducao(); renderDashboard(); });
+    db.collection("despesas").orderBy("data", "desc").limit(500).onSnapshot(s => { bdDespesas = s.docs.map(d => ({id: d.id, ...d.data()})); renderFinanceiro(); renderDashboard(); });
+    db.collection("usuarios").onSnapshot(s => { bdUsuarios = s.docs.map(d => ({id: d.id, ...d.data()})); renderUsuariosTab(); });
 }
 
-// --- DASHBOARD (RELATÓRIOS MENSAIS E IMPRESSÃO) ---
+// --- DASHBOARD E IMPRESSÃO ---
 function renderDashboard() {
     const dashMesInput = document.getElementById('dashMesFiltro');
-    if (!dashMesInput) return;
-    
+    if (!dashMesInput || !dashMesInput.value) return;
     const mesSelecionado = dashMesInput.value; 
-    if (!mesSelecionado) return;
-
-    let faturamento = 0;
-    let despesas = 0;
-    let produtosVendidos = {};
-    let clientesCompras = {};
+    let faturamento = 0, despesas = 0, produtosVendidos = {}, clientesCompras = {};
 
     bdPedidos.forEach(p => {
         if (!p.data) return;
-        const dataObj = p.data.toDate ? p.data.toDate() : new Date(p.data);
-        const dataStr = dataObj.toISOString().slice(0, 7);
-        
+        const dataStr = (p.data.toDate ? p.data.toDate() : new Date(p.data)).toISOString().slice(0, 7);
         if (dataStr === mesSelecionado && p.status !== 'Cancelado / Estorno' && p.status !== 'Orçamento') {
             faturamento += p.total;
-
             const cliNome = p.clienteNome || "Consumidor Final";
             if (!clientesCompras[cliNome]) clientesCompras[cliNome] = 0;
             clientesCompras[cliNome] += p.total;
-
             p.itens.forEach(item => {
                 const nomeProd = item.nome.split(' (')[0]; 
                 if (!produtosVendidos[nomeProd]) produtosVendidos[nomeProd] = { qtd: 0, valor: 0 };
-                
-                // Trava contra NaN
-                let qtdNum = parseInt(item.qtdCarrinho);
-                if (isNaN(qtdNum)) qtdNum = 1;
-                
-                let valNum = parseFloat(item.valor);
-                if (isNaN(valNum)) valNum = 0;
-
-                produtosVendidos[nomeProd].qtd += qtdNum;
-                produtosVendidos[nomeProd].valor += valNum;
+                let qtdNum = parseInt(item.qtdCarrinho); if (isNaN(qtdNum)) qtdNum = 1;
+                let valNum = parseFloat(item.valor); if (isNaN(valNum)) valNum = 0;
+                produtosVendidos[nomeProd].qtd += qtdNum; produtosVendidos[nomeProd].valor += valNum;
             });
         }
     });
 
     bdDespesas.forEach(d => {
         if (!d.data) return;
-        const dataObj = d.data.toDate ? d.data.toDate() : new Date(d.data);
-        const dataStr = dataObj.toISOString().slice(0, 7);
-        
-        if (dataStr === mesSelecionado) {
-            despesas += d.valor;
-        }
+        const dataStr = (d.data.toDate ? d.data.toDate() : new Date(d.data)).toISOString().slice(0, 7);
+        if (dataStr === mesSelecionado) despesas += d.valor;
     });
 
     document.getElementById('dashFaturamento').innerText = `R$ ${faturamento.toFixed(2)}`;
     document.getElementById('dashDespesas').innerText = `R$ ${despesas.toFixed(2)}`;
     document.getElementById('dashLucro').innerText = `R$ ${(faturamento - despesas).toFixed(2)}`;
 
-    const arrayProdutos = Object.keys(produtosVendidos).map(nome => ({
-        nome: nome,
-        qtd: produtosVendidos[nome].qtd,
-        valor: produtosVendidos[nome].valor
-    })).sort((a, b) => b.valor - a.valor).slice(0, 5);
+    const arrayProdutos = Object.keys(produtosVendidos).map(nome => ({ nome: nome, qtd: produtosVendidos[nome].qtd, valor: produtosVendidos[nome].valor })).sort((a, b) => b.valor - a.valor).slice(0, 5);
+    document.getElementById('listaTopProdutosTab').innerHTML = arrayProdutos.length === 0 ? `<tr><td colspan="3" class="p-4 text-center text-slate-400 text-xs">Nenhuma venda no período.</td></tr>` : arrayProdutos.map(p => `<tr class="border-b border-slate-50"><td class="p-3 text-slate-700 font-bold">${p.nome}</td><td class="p-3 text-center text-slate-500">${p.qtd}</td><td class="p-3 text-right text-emerald-600 font-black">R$ ${p.valor.toFixed(2)}</td></tr>`).join('');
 
-    const tabProd = document.getElementById('listaTopProdutosTab');
-    tabProd.innerHTML = arrayProdutos.length === 0 ? `<tr><td colspan="3" class="p-4 text-center text-slate-400 text-xs">Nenhuma venda no período.</td></tr>` : 
-        arrayProdutos.map(p => `
-        <tr class="border-b border-slate-50">
-            <td class="p-3 text-slate-700 font-bold">${p.nome}</td>
-            <td class="p-3 text-center text-slate-500">${p.qtd}</td>
-            <td class="p-3 text-right text-emerald-600 font-black">R$ ${p.valor.toFixed(2)}</td>
-        </tr>
-    `).join('');
-
-    const arrayClientes = Object.keys(clientesCompras).map(nome => ({
-        nome: nome,
-        valor: clientesCompras[nome]
-    })).sort((a, b) => b.valor - a.valor).slice(0, 5);
-
-    const tabCli = document.getElementById('listaTopClientesTab');
-    tabCli.innerHTML = arrayClientes.length === 0 ? `<tr><td colspan="2" class="p-4 text-center text-slate-400 text-xs">Nenhuma venda no período.</td></tr>` : 
-        arrayClientes.map(c => `
-        <tr class="border-b border-slate-50">
-            <td class="p-3 text-slate-700 font-bold">${c.nome}</td>
-            <td class="p-3 text-right text-indigo-600 font-black">R$ ${c.valor.toFixed(2)}</td>
-        </tr>
-    `).join('');
+    const arrayClientes = Object.keys(clientesCompras).map(nome => ({ nome: nome, valor: clientesCompras[nome] })).sort((a, b) => b.valor - a.valor).slice(0, 5);
+    document.getElementById('listaTopClientesTab').innerHTML = arrayClientes.length === 0 ? `<tr><td colspan="2" class="p-4 text-center text-slate-400 text-xs">Nenhuma venda no período.</td></tr>` : arrayClientes.map(c => `<tr class="border-b border-slate-50"><td class="p-3 text-slate-700 font-bold">${c.nome}</td><td class="p-3 text-right text-indigo-600 font-black">R$ ${c.valor.toFixed(2)}</td></tr>`).join('');
 }
 
 function imprimirDashboard() {
-    const mes = document.getElementById('dashMesFiltro').value;
-    if(!mes) return;
-    
-    const [ano, mesNum] = mes.split('-');
+    const mes = document.getElementById('dashMesFiltro').value; if(!mes) return;
+    const[ano, mesNum] = mes.split('-');
     const meses =["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
     const mesFormatado = `${meses[parseInt(mesNum)-1]} de ${ano}`;
-
-    const fat = document.getElementById('dashFaturamento').innerText;
-    const desp = document.getElementById('dashDespesas').innerText;
-    const lucro = document.getElementById('dashLucro').innerText;
-    const tabProd = document.getElementById('listaTopProdutosTab').innerHTML;
-    const tabCli = document.getElementById('listaTopClientesTab').innerHTML;
+    const fat = document.getElementById('dashFaturamento').innerText, desp = document.getElementById('dashDespesas').innerText, lucro = document.getElementById('dashLucro').innerText;
+    const tabProd = document.getElementById('listaTopProdutosTab').innerHTML, tabCli = document.getElementById('listaTopClientesTab').innerHTML;
 
     const janela = window.open('', '', 'width=800,height=900');
-    janela.document.write(`
-        <html><head><title>Relatório Mensal - ${mesFormatado}</title>
-        <style>
-            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 40px; color: #334155; }
-            .header { text-align: center; margin-bottom: 40px; border-bottom: 2px solid #e2e8f0; padding-bottom: 20px; }
-            h1 { color: #3E4095; margin: 0 0 10px 0; font-size: 28px; text-transform: uppercase; }
-            .cards { display: flex; gap: 20px; margin-bottom: 40px; }
-            .card { border: 1px solid #e2e8f0; padding: 20px; border-radius: 8px; flex: 1; background: #f8fafc; text-align: center; }
-            .card h3 { margin: 0 0 10px 0; font-size: 12px; text-transform: uppercase; color: #64748b; }
-            .card p { margin: 0; font-size: 24px; font-weight: bold; color: #0f172a; }
-            .card.lucro p { color: #10b981; }
-            .card.desp p { color: #ef4444; }
-            h2 { color: #3E4095; font-size: 16px; text-transform: uppercase; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px; margin-top: 40px; }
-            table { width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 14px; }
-            th, td { border-bottom: 1px solid #e2e8f0; padding: 12px 8px; text-align: left; }
-            th { background: #f1f5f9; color: #475569; font-size: 12px; text-transform: uppercase; }
-            .text-right { text-align: right; }
-            .text-center { text-align: center; }
-            @media print { body { padding: 0; } }
-        </style>
-        </head><body>
-            <div class="header">
-                <h1>Relatório de Desempenho</h1>
-                <p style="margin:0; color:#64748b; font-weight:bold;">Período: ${mesFormatado}</p>
-            </div>
-            
-            <div class="cards">
-                <div class="card"><h3>Faturamento Bruto</h3><p>${fat}</p></div>
-                <div class="card desp"><h3>Total de Despesas</h3><p>${desp}</p></div>
-                <div class="card lucro"><h3>Saldo / Lucro</h3><p>${lucro}</p></div>
-            </div>
-            
-            <h2>Produtos Mais Vendidos</h2>
-            <table>
-                <thead><tr><th>Produto</th><th class="text-center">Qtd Vendida</th><th class="text-right">Receita Gerada</th></tr></thead>
-                <tbody>${tabProd}</tbody>
-            </table>
-            
-            <h2>Melhores Clientes</h2>
-            <table>
-                <thead><tr><th>Cliente</th><th class="text-right">Volume Comprado</th></tr></thead>
-                <tbody>${tabCli}</tbody>
-            </table>
-            
-            <div style="text-align:center; margin-top:50px; font-size:12px; color:#94a3b8;">
-                Gerado pelo sistema GVAsist em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}
-            </div>
-            
-            <script>setTimeout(() => { window.print(); window.close(); }, 800);</script>
-        </body></html>
-    `);
+    janela.document.write(`<html><head><title>Relatório Mensal - ${mesFormatado}</title><style>body { font-family: sans-serif; padding: 40px; color: #334155; } .header { text-align: center; margin-bottom: 40px; border-bottom: 2px solid #e2e8f0; padding-bottom: 20px; } h1 { color: #3E4095; margin: 0 0 10px 0; font-size: 28px; text-transform: uppercase; } .cards { display: flex; gap: 20px; margin-bottom: 40px; } .card { border: 1px solid #e2e8f0; padding: 20px; border-radius: 8px; flex: 1; background: #f8fafc; text-align: center; } .card h3 { margin: 0 0 10px 0; font-size: 12px; text-transform: uppercase; color: #64748b; } .card p { margin: 0; font-size: 24px; font-weight: bold; color: #0f172a; } .card.lucro p { color: #10b981; } .card.desp p { color: #ef4444; } h2 { color: #3E4095; font-size: 16px; text-transform: uppercase; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px; margin-top: 40px; } table { width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 14px; } th, td { border-bottom: 1px solid #e2e8f0; padding: 12px 8px; text-align: left; } th { background: #f1f5f9; color: #475569; font-size: 12px; text-transform: uppercase; } .text-right { text-align: right; } .text-center { text-align: center; } @media print { body { padding: 0; } }</style></head><body><div class="header"><h1>Relatório de Desempenho</h1><p style="margin:0; color:#64748b; font-weight:bold;">Período: ${mesFormatado}</p></div><div class="cards"><div class="card"><h3>Faturamento Bruto</h3><p>${fat}</p></div><div class="card desp"><h3>Total de Despesas</h3><p>${desp}</p></div><div class="card lucro"><h3>Saldo / Lucro</h3><p>${lucro}</p></div></div><h2>Produtos Mais Vendidos</h2><table><thead><tr><th>Produto</th><th class="text-center">Qtd Vendida</th><th class="text-right">Receita Gerada</th></tr></thead><tbody>${tabProd}</tbody></table><h2>Melhores Clientes</h2><table><thead><tr><th>Cliente</th><th class="text-right">Volume Comprado</th></tr></thead><tbody>${tabCli}</tbody></table><div style="text-align:center; margin-top:50px; font-size:12px; color:#94a3b8;">Gerado pelo sistema GVAsist em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}</div><script>setTimeout(() => { window.print(); window.close(); }, 800);</script></body></html>`);
     janela.document.close();
 }
 
@@ -344,34 +184,14 @@ function imprimirDashboard() {
 function renderKanbanProducao() {
     const container = document.getElementById('kanbanContainer');
     if(!container) return;
-
     const pedidosAtivos = bdPedidos.filter(p => !p.arquivado);
-
     let html = '';
     STATUSES.forEach(status => {
         const pedidosDoStatus = pedidosAtivos.filter(p => p.status === status);
-        
         if (pedidosDoStatus.length === 0) {
-            // Coluna Minimizada
-            html += `
-                <div class="bg-slate-100 rounded-xl p-2 w-12 flex-shrink-0 flex flex-col items-center border border-slate-200 opacity-50 hover:opacity-100 transition cursor-default h-full">
-                    <span class="bg-slate-200 text-slate-500 text-[10px] font-black px-2 py-1 rounded-full mb-4">0</span>
-                    <h3 class="font-bold text-slate-400 uppercase text-[10px] tracking-widest vertical-text whitespace-nowrap">${status}</h3>
-                </div>
-            `;
+            html += `<div class="bg-slate-100 rounded-xl p-2 w-12 flex-shrink-0 flex flex-col items-center border border-slate-200 opacity-50 hover:opacity-100 transition cursor-default h-full"><span class="bg-slate-200 text-slate-500 text-[10px] font-black px-2 py-1 rounded-full mb-4">0</span><h3 class="font-bold text-slate-400 uppercase text-[10px] tracking-widest vertical-text whitespace-nowrap">${status}</h3></div>`;
         } else {
-            // Coluna Normal
-            html += `
-                <div class="bg-slate-100 rounded-xl p-4 w-80 flex-shrink-0 flex flex-col h-full border border-slate-200">
-                    <div class="flex justify-between items-center mb-4 shrink-0">
-                        <h3 class="font-bold text-slate-700 uppercase text-[10px] tracking-widest">${status}</h3>
-                        <span class="bg-slate-200 text-slate-600 text-[10px] font-black px-2 py-1 rounded-full">${pedidosDoStatus.length}</span>
-                    </div>
-                    <div class="flex-1 overflow-y-auto space-y-3 pr-1 no-scrollbar">
-                        ${pedidosDoStatus.map(p => gerarCardPedido(p)).join('')}
-                    </div>
-                </div>
-            `;
+            html += `<div class="bg-slate-100 rounded-xl p-4 w-80 flex-shrink-0 flex flex-col h-full border border-slate-200"><div class="flex justify-between items-center mb-4 shrink-0"><h3 class="font-bold text-slate-700 uppercase text-[10px] tracking-widest">${status}</h3><span class="bg-slate-200 text-slate-600 text-[10px] font-black px-2 py-1 rounded-full">${pedidosDoStatus.length}</span></div><div class="flex-1 overflow-y-auto space-y-3 pr-1 no-scrollbar">${pedidosDoStatus.map(p => gerarCardPedido(p)).join('')}</div></div>`;
         }
     });
     container.innerHTML = html;
@@ -380,7 +200,6 @@ function renderKanbanProducao() {
 function gerarCardPedido(p) {
     const dataFormatada = p.data.toDate().toLocaleDateString('pt-BR') + ' ' + p.data.toDate().toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
     let options = STATUSES.map(s => `<option value="${s}" ${p.status === s ? 'selected' : ''}>${s}</option>`).join('');
-
     let corBorda = 'border-l-slate-400';
     if(p.status === 'Orçamento') corBorda = 'border-l-blue-400';
     if(p.status === 'Aguardando pagamento') corBorda = 'border-l-amber-400';
@@ -390,47 +209,62 @@ function gerarCardPedido(p) {
     if(p.status === 'Entregue') corBorda = 'border-l-emerald-600';
     if(p.status === 'Cancelado / Estorno') corBorda = 'border-l-red-500';
 
-    let btnArquivar = '';
-    if (p.status === 'Entregue' || p.status === 'Cancelado / Estorno') {
-        btnArquivar = `<button type="button" onclick="arquivarPedido('${p.id}')" class="bg-slate-200 text-slate-600 px-3 rounded hover:bg-slate-300 transition" title="Arquivar Pedido"><i class="fa fa-archive"></i></button>`;
-    }
-
+    let btnArquivar = (p.status === 'Entregue' || p.status === 'Cancelado / Estorno') ? `<button type="button" onclick="arquivarPedido('${p.id}')" class="bg-slate-200 text-slate-600 px-3 rounded hover:bg-slate-300 transition" title="Arquivar Pedido"><i class="fa fa-archive"></i></button>` : '';
     let visualizaPrecos = (!usuarioAtual || usuarioAtual.role !== 'producao');
-    
     let btnZAP = !visualizaPrecos ? '' : `<button type="button" onclick="enviarWhatsApp('${p.id}', '${p.status === 'Pronto para Retirada' ? 'retirada' : (p.status === 'Orçamento' ? 'orcamento' : 'recibo')}')" class="bg-green-500 text-white px-3 rounded hover:bg-green-600 transition" title="Enviar WhatsApp"><i class="fab fa-whatsapp"></i></button>`;
     let btnImprimir = !visualizaPrecos ? '' : `<button type="button" onclick="${p.status === 'Orçamento' ? `imprimirOrcamento('${p.id}')` : `imprimirRecibo('${p.id}')`}" class="bg-slate-800 text-white px-3 rounded hover:bg-slate-700 transition" title="${p.status === 'Orçamento' ? 'Gerar PDF' : 'Imprimir Recibo'}"><i class="${p.status === 'Orçamento' ? 'fa fa-file-pdf' : 'fa fa-print'}"></i></button>`;
 
-    return `
-        <div class="bg-white p-4 rounded-lg shadow-sm border border-slate-200 border-l-4 ${corBorda}">
-            <div class="flex justify-between items-start mb-2">
-                <span class="text-[9px] font-bold text-slate-400">${dataFormatada}</span>
-                <span class="text-[10px] font-black text-indigo-600">${visualizaPrecos ? 'R$ ' + p.total.toFixed(2) : ''}</span>
-            </div>
-            <h4 class="font-bold text-slate-800 text-xs mb-2">${p.clienteNome}</h4>
-            <div class="text-[9px] text-slate-500 mb-3 space-y-1">
-                ${p.itens.map(i => `<p>• ${i.qtdCarrinho}x ${i.nome} <span class="opacity-70">(${i.desc})</span></p>`).join('')}
-            </div>
-            <div class="mt-3 pt-3 border-t border-slate-100 flex gap-2">
-                <select onchange="mudarStatusPedido('${p.id}', this.value)" class="flex-1 p-2 bg-slate-50 border border-slate-200 rounded text-[10px] font-bold outline-none focus:ring-2 focus:ring-indigo-500">
-                    ${options}
-                </select>
-                ${btnArquivar}
-                ${btnZAP}
-                ${btnImprimir}
-            </div>
-        </div>
-    `;
+    return `<div class="bg-white p-4 rounded-lg shadow-sm border border-slate-200 border-l-4 ${corBorda}"><div class="flex justify-between items-start mb-2"><span class="text-[9px] font-bold text-slate-400">${dataFormatada}</span><span class="text-[10px] font-black text-indigo-600">${visualizaPrecos ? 'R$ ' + p.total.toFixed(2) : ''}</span></div><h4 class="font-bold text-slate-800 text-xs mb-2">${p.clienteNome}</h4><div class="text-[9px] text-slate-500 mb-3 space-y-1">${p.itens.map(i => `<p>• ${i.qtdCarrinho}x ${i.nome} <span class="opacity-70">(${i.desc})</span></p>`).join('')}</div><div class="mt-3 pt-3 border-t border-slate-100 flex gap-2"><select onchange="mudarStatusPedido('${p.id}', this.value)" class="flex-1 p-2 bg-slate-50 border border-slate-200 rounded text-[10px] font-bold outline-none focus:ring-2 focus:ring-indigo-500">${options}</select>${btnArquivar}${btnZAP}${btnImprimir}</div></div>`;
 }
 
-async function mudarStatusPedido(id, novoStatus) {
-    try { await db.collection("pedidos").doc(id).update({ status: novoStatus }); } 
-    catch(e) { console.error(e); alert("Erro ao atualizar status."); }
+async function mudarStatusPedido(id, novoStatus) { try { await db.collection("pedidos").doc(id).update({ status: novoStatus }); } catch(e) { alert("Erro ao atualizar status."); } }
+async function arquivarPedido(id) { if(confirm("Deseja remover este pedido do painel de produção? Ele continuará salvo no histórico e financeiro.")) { try { await db.collection("pedidos").doc(id).update({ arquivado: true }); } catch(e) { alert("Erro ao arquivar pedido."); } } }
+
+// --- HISTÓRICO GERAL DE PEDIDOS ---
+function abrirHistoricoGeral() {
+    document.getElementById('buscaHistoricoGeral').value = '';
+    renderHistoricoGeral();
+    document.getElementById('modalHistoricoGeral').classList.remove('hidden');
 }
 
-async function arquivarPedido(id) {
-    if(confirm("Deseja remover este pedido do painel de produção? Ele continuará salvo no histórico e financeiro.")) {
-        try { await db.collection("pedidos").doc(id).update({ arquivado: true }); } 
-        catch(e) { console.error(e); alert("Erro ao arquivar pedido."); }
+function renderHistoricoGeral() {
+    const termo = document.getElementById('buscaHistoricoGeral').value.toLowerCase();
+    const tbody = document.getElementById('listaHistoricoGeral');
+    
+    let filtrados = bdPedidos;
+    if (termo) {
+        filtrados = bdPedidos.filter(p => 
+            p.clienteNome.toLowerCase().includes(termo) || 
+            p.status.toLowerCase().includes(termo) ||
+            p.id.toLowerCase().includes(termo)
+        );
+    }
+
+    tbody.innerHTML = filtrados.length === 0 ? `<tr><td colspan="5" class="p-6 text-center text-slate-400">Nenhum pedido encontrado.</td></tr>` : filtrados.map(p => {
+        const dataFormatada = p.data.toDate ? p.data.toDate().toLocaleDateString('pt-BR') : new Date(p.data).toLocaleDateString('pt-BR');
+        const isArquivado = p.arquivado ? `<span class="bg-slate-200 text-slate-500 px-2 py-0.5 rounded text-[9px] uppercase ml-2">Arquivado</span>` : '';
+        let btnDesarquivar = p.arquivado ? `<button type="button" onclick="desarquivarPedido('${p.id}')" class="text-amber-500 hover:text-amber-700 mx-1" title="Voltar para Produção"><i class="fa fa-box-open"></i></button>` : '';
+
+        return `
+        <tr class="border-b border-slate-50 hover:bg-slate-50">
+            <td class="p-3 text-slate-500 font-medium">${dataFormatada} <br/><span class="text-[9px] text-slate-400 uppercase">${p.id.substring(0,6)}</span></td>
+            <td class="p-3 font-bold text-slate-700">${p.clienteNome} ${isArquivado}</td>
+            <td class="p-3"><span class="bg-indigo-50 text-indigo-600 px-2 py-1 rounded text-[9px] font-black uppercase">${p.status}</span></td>
+            <td class="p-3 text-right font-black text-slate-800">R$ ${p.total.toFixed(2)}</td>
+            <td class="p-3 text-center">
+                ${btnDesarquivar}
+                <button type="button" onclick="abrirDetalhesPedido('${p.id}')" class="text-indigo-400 hover:text-indigo-600 mx-1" title="Ver Detalhes"><i class="fa fa-eye"></i></button>
+                <button type="button" onclick="${p.status === 'Orçamento' ? `imprimirOrcamento('${p.id}')` : `imprimirRecibo('${p.id}')`}" class="text-slate-400 hover:text-slate-600 mx-1" title="Imprimir"><i class="fa fa-print"></i></button>
+            </td>
+        </tr>
+        `;
+    }).join('');
+}
+
+async function desarquivarPedido(id) {
+    if(confirm("Deseja voltar este pedido para o painel de Produção?")) {
+        try { await db.collection("pedidos").doc(id).update({ arquivado: false }); renderHistoricoGeral(); } 
+        catch(e) { alert("Erro ao desarquivar pedido."); }
     }
 }
 // --- WHATSAPP ---
