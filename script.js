@@ -18,7 +18,7 @@ let bdProdutos = [];
 let bdClientes =[];
 let bdPedidos =[];
 let bdDespesas = [];
-let bdAcabamentos =[];
+let bdAcabamentos = [];
 let bdUsuarios =[];
 let carrinho =[];
 
@@ -57,7 +57,7 @@ auth.onAuthStateChanged(async user => {
                 await db.collection("usuarios").doc(user.email).set(usuarioAtual);
             }
         } catch (error) {
-            console.error("Erro ao verificar acesso. Liberando acesso por precaução:", error);
+            console.error("Erro ao verificar acesso:", error);
             usuarioAtual = { nome: user.email.split('@')[0], email: user.email, role: "admin" };
         }
         
@@ -135,8 +135,7 @@ function aplicarPermissoes() {
     const btnSubAcab = document.getElementById('btn-sub-acab');
     const btnSubUsuarios = document.getElementById('btn-sub-usuarios');
 
-    // Esconde tudo primeiro[...btnLoja, ...btnProducao, ...btnFinanceiro, ...btnConfig, ...btnDashboard].forEach(b => b.classList.add('hidden'));
-    [btnSubCli, btnSubProd, btnSubCat, btnSubAcab, btnSubUsuarios].forEach(b => { if(b) b.classList.add('hidden'); });
+    // Esconde tudo primeiro[...btnLoja, ...btnProducao, ...btnFinanceiro, ...btnConfig, ...btnDashboard].forEach(b => b.classList.add('hidden'));[btnSubCli, btnSubProd, btnSubCat, btnSubAcab, btnSubUsuarios].forEach(b => { if(b) b.classList.add('hidden'); });
 
     // Libera de acordo com o papel
     if (role === 'admin') {[...btnLoja, ...btnProducao, ...btnFinanceiro, ...btnConfig, ...btnDashboard].forEach(b => b.classList.remove('hidden'));[btnSubCli, btnSubProd, btnSubCat, btnSubAcab, btnSubUsuarios].forEach(b => { if(b) b.classList.remove('hidden'); });
@@ -185,7 +184,7 @@ function iniciarLeitura() {
     });
 }
 
-// --- DASHBOARD (RELATÓRIOS MENSAIS) ---
+// --- DASHBOARD (RELATÓRIOS MENSAIS E IMPRESSÃO) ---
 function renderDashboard() {
     const dashMesInput = document.getElementById('dashMesFiltro');
     if (!dashMesInput) return;
@@ -214,7 +213,7 @@ function renderDashboard() {
                 const nomeProd = item.nome.split(' (')[0]; 
                 if (!produtosVendidos[nomeProd]) produtosVendidos[nomeProd] = { qtd: 0, valor: 0 };
                 
-                // Correção do erro NaN (Força a conversão para número)
+                // Trava contra NaN
                 let qtdNum = parseInt(item.qtdCarrinho);
                 if (isNaN(qtdNum)) qtdNum = 1;
                 
@@ -272,7 +271,77 @@ function renderDashboard() {
     `).join('');
 }
 
-// --- KANBAN DE PRODUÇÃO ---
+function imprimirDashboard() {
+    const mes = document.getElementById('dashMesFiltro').value;
+    if(!mes) return;
+    
+    // Formata o mês para exibição (ex: 2023-10 -> Outubro/2023)
+    const [ano, mesNum] = mes.split('-');
+    const meses =["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+    const mesFormatado = `${meses[parseInt(mesNum)-1]} de ${ano}`;
+
+    const fat = document.getElementById('dashFaturamento').innerText;
+    const desp = document.getElementById('dashDespesas').innerText;
+    const lucro = document.getElementById('dashLucro').innerText;
+    const tabProd = document.getElementById('listaTopProdutosTab').innerHTML;
+    const tabCli = document.getElementById('listaTopClientesTab').innerHTML;
+
+    const janela = window.open('', '', 'width=800,height=900');
+    janela.document.write(`
+        <html><head><title>Relatório Mensal - ${mesFormatado}</title>
+        <style>
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 40px; color: #334155; }
+            .header { text-align: center; margin-bottom: 40px; border-bottom: 2px solid #e2e8f0; padding-bottom: 20px; }
+            h1 { color: #3E4095; margin: 0 0 10px 0; font-size: 28px; text-transform: uppercase; }
+            .cards { display: flex; gap: 20px; margin-bottom: 40px; }
+            .card { border: 1px solid #e2e8f0; padding: 20px; border-radius: 8px; flex: 1; background: #f8fafc; text-align: center; }
+            .card h3 { margin: 0 0 10px 0; font-size: 12px; text-transform: uppercase; color: #64748b; }
+            .card p { margin: 0; font-size: 24px; font-weight: bold; color: #0f172a; }
+            .card.lucro p { color: #10b981; }
+            .card.desp p { color: #ef4444; }
+            h2 { color: #3E4095; font-size: 16px; text-transform: uppercase; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px; margin-top: 40px; }
+            table { width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 14px; }
+            th, td { border-bottom: 1px solid #e2e8f0; padding: 12px 8px; text-align: left; }
+            th { background: #f1f5f9; color: #475569; font-size: 12px; text-transform: uppercase; }
+            .text-right { text-align: right; }
+            .text-center { text-align: center; }
+            @media print { body { padding: 0; } }
+        </style>
+        </head><body>
+            <div class="header">
+                <h1>Relatório de Desempenho</h1>
+                <p style="margin:0; color:#64748b; font-weight:bold;">Período: ${mesFormatado}</p>
+            </div>
+            
+            <div class="cards">
+                <div class="card"><h3>Faturamento Bruto</h3><p>${fat}</p></div>
+                <div class="card desp"><h3>Total de Despesas</h3><p>${desp}</p></div>
+                <div class="card lucro"><h3>Saldo / Lucro</h3><p>${lucro}</p></div>
+            </div>
+            
+            <h2>Produtos Mais Vendidos</h2>
+            <table>
+                <thead><tr><th>Produto</th><th class="text-center">Qtd Vendida</th><th class="text-right">Receita Gerada</th></tr></thead>
+                <tbody>${tabProd}</tbody>
+            </table>
+            
+            <h2>Melhores Clientes</h2>
+            <table>
+                <thead><tr><th>Cliente</th><th class="text-right">Volume Comprado</th></tr></thead>
+                <tbody>${tabCli}</tbody>
+            </table>
+            
+            <div style="text-align:center; margin-top:50px; font-size:12px; color:#94a3b8;">
+                Gerado pelo sistema GVAsist em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}
+            </div>
+            
+            <script>setTimeout(() => { window.print(); window.close(); }, 800);</script>
+        </body></html>
+    `);
+    janela.document.close();
+}
+
+// --- KANBAN DE PRODUÇÃO (MINIMIZADO) ---
 function renderKanbanProducao() {
     const container = document.getElementById('kanbanContainer');
     if(!container) return;
@@ -282,17 +351,29 @@ function renderKanbanProducao() {
     let html = '';
     STATUSES.forEach(status => {
         const pedidosDoStatus = pedidosAtivos.filter(p => p.status === status);
-        html += `
-            <div class="bg-slate-100 rounded-xl p-4 w-80 flex-shrink-0 flex flex-col h-full border border-slate-200">
-                <div class="flex justify-between items-center mb-4 shrink-0">
-                    <h3 class="font-bold text-slate-700 uppercase text-[10px] tracking-widest">${status}</h3>
-                    <span class="bg-slate-200 text-slate-600 text-[10px] font-black px-2 py-1 rounded-full">${pedidosDoStatus.length}</span>
+        
+        if (pedidosDoStatus.length === 0) {
+            // Coluna Minimizada
+            html += `
+                <div class="bg-slate-100 rounded-xl p-2 w-12 flex-shrink-0 flex flex-col items-center border border-slate-200 opacity-50 hover:opacity-100 transition cursor-default h-full">
+                    <span class="bg-slate-200 text-slate-500 text-[10px] font-black px-2 py-1 rounded-full mb-4">${pedidosDoStatus.length}</span>
+                    <h3 class="font-bold text-slate-400 uppercase text-[10px] tracking-widest vertical-text whitespace-nowrap">${status}</h3>
                 </div>
-                <div class="flex-1 overflow-y-auto space-y-3 pr-1 no-scrollbar">
-                    ${pedidosDoStatus.map(p => gerarCardPedido(p)).join('')}
+            `;
+        } else {
+            // Coluna Normal
+            html += `
+                <div class="bg-slate-100 rounded-xl p-4 w-80 flex-shrink-0 flex flex-col h-full border border-slate-200">
+                    <div class="flex justify-between items-center mb-4 shrink-0">
+                        <h3 class="font-bold text-slate-700 uppercase text-[10px] tracking-widest">${status}</h3>
+                        <span class="bg-slate-200 text-slate-600 text-[10px] font-black px-2 py-1 rounded-full">${pedidosDoStatus.length}</span>
+                    </div>
+                    <div class="flex-1 overflow-y-auto space-y-3 pr-1 no-scrollbar">
+                        ${pedidosDoStatus.map(p => gerarCardPedido(p)).join('')}
+                    </div>
                 </div>
-            </div>
-        `;
+            `;
+        }
     });
     container.innerHTML = html;
 }
@@ -448,7 +529,6 @@ function imprimirReciboDireto(idPedido, objPedido) {
 
 function imprimirRecibo(idPedido) { imprimirReciboDireto(idPedido, null); }
 
-// ORÇAMENTO 100% PROFISSIONAL EM AZUL DA LOJA (#3E4095)
 function imprimirOrcamento(idPedido, objPedido) {
     const p = objPedido || bdPedidos.find(x => x.id === idPedido);
     if(!p) return;
@@ -583,17 +663,20 @@ function addOpcaoAtrib(container, n = '', p = '') {
     container.appendChild(div);
 }
 
-function addAtributo(nome = '', tipo = 'multiplica', opcoes =[]) {
+function addAtributo(nome = '', tipo = 'multiplica', opcoes =[], obrigatorio = false) {
     const div = document.createElement('div');
     div.className = "bg-white p-4 rounded border border-slate-100 shadow-sm item-atrib";
     div.innerHTML = `
-        <div class="flex gap-2 mb-3">
+        <div class="flex gap-2 mb-3 items-center">
             <input type="text" placeholder="Grupo (ex: Papel)" value="${nome}" class="atrib-nome flex-1 font-bold text-sm p-2 border-b-2 border-indigo-50 outline-none focus:border-indigo-500" />
             <select class="atrib-tipo text-xs p-2 border-b-2 border-indigo-50 outline-none text-slate-500 font-bold">
                 <option value="multiplica" ${tipo === 'multiplica' ? 'selected' : ''}>Multiplica pela Qtd</option>
                 <option value="fixo" ${tipo === 'fixo' ? 'selected' : ''}>Fixo no Pedido</option>
             </select>
-            <button type="button" onclick="this.parentElement.parentElement.remove()" class="text-red-300">✕</button>
+            <label class="text-[10px] font-bold text-red-500 flex items-center gap-1 cursor-pointer ml-2">
+                <input type="checkbox" class="atrib-obrigatorio accent-red-500" ${obrigatorio ? 'checked' : ''} /> Obrigatório
+            </label>
+            <button type="button" onclick="this.parentElement.parentElement.remove()" class="text-red-300 ml-2">✕</button>
         </div>
         <div class="lista-opcoes space-y-2"></div>
         <button type="button" class="btn-add-op mt-3 text-[10px] font-bold uppercase text-indigo-400 hover:text-indigo-600">+ Add Opção</button>
@@ -605,7 +688,7 @@ function addAtributo(nome = '', tipo = 'multiplica', opcoes =[]) {
     else addOpcaoAtrib(containerOpcoes);
 }
 
-function addAtributoManual() { addAtributo('', 'multiplica',[]); }
+function addAtributoManual() { addAtributo('', 'multiplica',[], false); }
 
 function ajustarCamposProduto() {
     const r = document.getElementById('prodRegraPreco').value;
@@ -688,7 +771,8 @@ async function salvarProduto() {
         });
         const nomeAtrib = caixa.querySelector('.atrib-nome').value;
         const tipoAtrib = caixa.querySelector('.atrib-tipo').value;
-        if (nomeAtrib) atributos.push({ nome: nomeAtrib, tipo: tipoAtrib, opcoes: ops });
+        const obrigatorio = caixa.querySelector('.atrib-obrigatorio').checked;
+        if (nomeAtrib) atributos.push({ nome: nomeAtrib, tipo: tipoAtrib, opcoes: ops, obrigatorio: obrigatorio });
     });
 
     let acabList =[];
@@ -783,7 +867,7 @@ function editProd(id) {
     document.getElementById('prodAcabObrigatorio').checked = p.acabObrigatorio || false;
     
     document.getElementById('listaAtributos').innerHTML = '';
-    if (p.atributos) p.atributos.forEach(a => addAtributo(a.nome, a.tipo || 'multiplica', a.opcoes));
+    if (p.atributos) p.atributos.forEach(a => addAtributo(a.nome, a.tipo || 'multiplica', a.opcoes, a.obrigatorio));
     
     document.getElementById('listaGradePacotes').innerHTML = '';
     if (p.pacotes) p.pacotes.forEach(pct => addLinhaPacote(pct.qtd, pct.preco));
@@ -924,14 +1008,19 @@ function abrirConfigurador(id) {
     const tituloVariacoes = document.getElementById('tituloVariacoes');
     if (p.atributos && p.atributos.length > 0) {
         tituloVariacoes.classList.remove('hidden');
-        divVariacoes.innerHTML = p.atributos.map(a => `
+        divVariacoes.innerHTML = p.atributos.map(a => {
+            let optionsHtml = '';
+            if (a.obrigatorio) optionsHtml += `<option value="">-- Selecione --</option>`;
+            optionsHtml += a.opcoes.map(o => `<option value="${o.preco}">${o.nome} ${o.preco > 0 ? '(+ R$ ' + o.preco.toFixed(2) + ')' : '(Grátis)'}</option>`).join('');
+            
+            return `
             <div class="space-y-1">
-                <label class="text-[10px] font-bold text-slate-400 uppercase">${a.nome}</label>
-                <select class="sel-var w-full p-3 border border-slate-200 rounded bg-slate-50 font-bold text-xs outline-none" data-tipo="${a.tipo || 'multiplica'}" onchange="calcularPrecoAoVivo()">
-                    ${a.opcoes.map(o => `<option value="${o.preco}">${o.nome} ${o.preco > 0 ? '(+ R$ ' + o.preco.toFixed(2) + ')' : '(Grátis)'}</option>`).join('')}
+                <label class="text-[10px] font-bold text-slate-400 uppercase">${a.nome} ${a.obrigatorio ? '<span class="text-red-500">*</span>' : ''}</label>
+                <select class="sel-var w-full p-3 border border-slate-200 rounded bg-slate-50 font-bold text-xs outline-none" data-tipo="${a.tipo || 'multiplica'}" data-nome="${a.nome}" data-obrigatorio="${a.obrigatorio ? 'true' : 'false'}" onchange="calcularPrecoAoVivo()">
+                    ${optionsHtml}
                 </select>
             </div>
-        `).join('');
+        `}).join('');
     } else {
         tituloVariacoes.classList.add('hidden');
         divVariacoes.innerHTML = '';
@@ -946,7 +1035,7 @@ function abrirConfigurador(id) {
         let optionsAcab = '';
         
         if (p.acabObrigatorio) {
-            optionsAcab += `<option value="" data-preco="0" data-regra="unidade">-- Selecione um Acabamento --</option>`;
+            optionsAcab += `<option value="">-- Selecione um Acabamento --</option>`;
         } else {
             optionsAcab += `<option value="" data-preco="0" data-regra="unidade">Nenhum</option>`;
         }
@@ -1020,7 +1109,7 @@ function calcularPrecoAoVivo() {
         qtd = parseInt(document.getElementById('w2pQtd')?.value) || 1;
         let precoUnit = base;
         if (p && p.progressivo) {
-            let faixas = [...p.progressivo].sort((a,b) => b.q - a.q);
+            let faixas =[...p.progressivo].sort((a,b) => b.q - a.q);
             let faixa = faixas.find(f => qtd >= f.q);
             if (faixa) precoUnit = faixa.p;
         }
@@ -1058,6 +1147,18 @@ function confirmarAdicaoCarrinho() {
         return alert("Por favor, preencha a Identificação / Nome do Arquivo. É obrigatório para a produção.");
     }
 
+    let erroVar = false;
+    let varsEscolhidas =[];
+    document.querySelectorAll('.sel-var').forEach(s => {
+        if (s.dataset.obrigatorio === 'true' && s.value === "") {
+            alert(`A variação "${s.dataset.nome}" é obrigatória. Por favor, selecione uma opção.`);
+            erroVar = true;
+        } else if (s.value !== "") {
+            varsEscolhidas.push(s.options[s.selectedIndex].text.split(" (+")[0].split(" (Grátis)")[0]);
+        }
+    });
+    if (erroVar) return;
+
     const isAcabObrigatorio = document.getElementById('modalProdAcabObrigatorio').value === 'true';
     const selAcab = document.getElementById('selAcabamentoUnico');
     if (isAcabObrigatorio && selAcab && selAcab.value === "") {
@@ -1075,9 +1176,6 @@ function confirmarAdicaoCarrinho() {
         qtdTexto = `${qtdTexto}x (${v1} | ${v2})`;
     } else qtdTexto = qtdTexto + " un.";
 
-    let varsEscolhidas =[];
-    document.querySelectorAll('.sel-var').forEach(s => varsEscolhidas.push(s.options[s.selectedIndex].text.split(" (+")[0].split(" (Grátis)")[0]));
-    
     if (selAcab && selAcab.value !== "") varsEscolhidas.push(`Acab: ${selAcab.options[selAcab.selectedIndex].text.split(" (+")[0]}`);
 
     let nomeFinal = p.nome;
@@ -1530,7 +1628,9 @@ async function salvarCliente() {
         documento: doc, 
         telefone: document.getElementById('cliTel').value.trim(), 
         email: document.getElementById('cliEmail').value.trim(),
+        cep: document.getElementById('cliCep').value.trim(),
         endereco: document.getElementById('cliEnd').value.trim(), 
+        complemento: document.getElementById('cliComplemento').value.trim(),
         credito: parseFloat(document.getElementById('cliCredito').value) || 0 
     }; 
     
@@ -1547,7 +1647,9 @@ function editCli(id) {
     document.getElementById('cliDoc').value = c.documento || ''; 
     document.getElementById('cliTel').value = c.telefone || ''; 
     document.getElementById('cliEmail').value = c.email || '';
+    document.getElementById('cliCep').value = c.cep || '';
     document.getElementById('cliEnd').value = c.endereco || ''; 
+    document.getElementById('cliComplemento').value = c.complemento || '';
     document.getElementById('cliCredito').value = c.credito || 0; 
     document.getElementById('tituloCliForm').innerText = "Editar Cadastro"; 
 }
