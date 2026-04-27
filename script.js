@@ -135,14 +135,14 @@ function aplicarPermissoes() {
     const btnSubAcab = document.getElementById('btn-sub-acab');
     const btnSubUsuarios = document.getElementById('btn-sub-usuarios');
 
-    // Esconde tudo primeiro[...btnLoja, ...btnProducao, ...btnFinanceiro, ...btnConfig, ...btnDashboard].forEach(b => b.classList.add('hidden'));[btnSubCli, btnSubProd, btnSubCat, btnSubAcab, btnSubUsuarios].forEach(b => { if(b) b.classList.add('hidden'); });
+    // Esconde tudo primeiro[...btnLoja, ...btnProducao, ...btnFinanceiro, ...btnConfig, ...btnDashboard].forEach(b => b.classList.add('hidden'));
+    [btnSubCli, btnSubProd, btnSubCat, btnSubAcab, btnSubUsuarios].forEach(b => { if(b) b.classList.add('hidden'); });
 
     // Libera de acordo com o papel
     if (role === 'admin') {[...btnLoja, ...btnProducao, ...btnFinanceiro, ...btnConfig, ...btnDashboard].forEach(b => b.classList.remove('hidden'));[btnSubCli, btnSubProd, btnSubCat, btnSubAcab, btnSubUsuarios].forEach(b => { if(b) b.classList.remove('hidden'); });
         mudarAba('dashboard');
     } 
-    else if (role === 'vendedor') {
-        [...btnLoja, ...btnProducao, ...btnFinanceiro, ...btnConfig].forEach(b => b.classList.remove('hidden'));
+    else if (role === 'vendedor') {[...btnLoja, ...btnProducao, ...btnFinanceiro, ...btnConfig].forEach(b => b.classList.remove('hidden'));
         if(btnSubCli) btnSubCli.classList.remove('hidden'); 
         mudarAba('loja');
         mudarSubAba('sub-cli');
@@ -838,9 +838,39 @@ async function salvarProduto() {
         if (id) await db.collection("produtos").doc(id).update(d); 
         else await db.collection("produtos").add(d);
         alert("Produto salvo!");
-        document.getElementById('prodId').value = '';
+        limparFormProd();
         mudarSubAba('sub-prod', document.querySelectorAll('.sub-aba-btn')[1]);
     } catch (error) { alert("Erro ao salvar produto."); }
+}
+
+function limparFormProd() {
+    document.getElementById('prodId').value = '';
+    document.getElementById('prodNome').value = '';
+    document.getElementById('prodSetor').value = 'Gráfico';
+    document.getElementById('prodCategoria').value = '';
+    document.getElementById('prodSubcategoria').value = '';
+    document.getElementById('prodRegraPreco').value = 'unidade';
+    document.getElementById('prodPreco').value = '';
+    document.getElementById('prodFoto').value = '';
+    document.getElementById('prodRef').value = '';
+    document.getElementById('prodMaterial').value = '';
+    document.getElementById('prodGramatura').value = '';
+    document.getElementById('prodPrazo').value = '';
+    document.getElementById('prodLargBobina').value = '';
+    document.getElementById('prodLargMax').value = '';
+    document.getElementById('prodCompMax').value = '';
+    document.getElementById('prodObs').value = '';
+    document.getElementById('prodAcabObrigatorio').checked = false;
+    document.getElementById('listaAtributos').innerHTML = '';
+    document.getElementById('listaGradePacotes').innerHTML = '';
+    document.getElementById('listaGradeProgressivo').innerHTML = '';
+    document.getElementById('combNome1').value = ''; 
+    document.getElementById('combNome2').value = '';
+    document.getElementById('combValores1').value = ''; 
+    document.getElementById('combValores2').value = '';
+    document.getElementById('listaGradeCombinacoes').innerHTML = '';
+    ajustarCamposProduto();
+    atualizarListaAcabamentosProduto([]);
 }
 
 function editProd(id) {
@@ -986,6 +1016,9 @@ function abrirConfigurador(id) {
             <div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">Largura (m)</label><input type="number" id="w2pLargura" value="0.01" step="0.01" oninput="calcularPrecoAoVivo()" class="w-full p-3 border border-slate-200 rounded bg-slate-50 font-bold text-sm outline-none" /></div>
             <div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">Altura (m)</label><input type="number" id="w2pAltura" value="0.01" step="0.01" oninput="calcularPrecoAoVivo()" class="w-full p-3 border border-slate-200 rounded bg-slate-50 font-bold text-sm outline-none" /></div>
             <div class="space-y-1 col-span-2"><label class="text-[10px] font-bold text-slate-400 uppercase">Quantidade</label><input type="number" id="w2pQtd" value="1" oninput="calcularPrecoAoVivo()" class="w-full p-3 border border-slate-200 rounded bg-slate-50 font-bold text-sm outline-none" /></div>
+            <div class="col-span-2 text-[10px] text-blue-600 font-bold bg-blue-50 p-2 rounded border border-blue-100">
+                <i class="fa fa-info-circle"></i> Cobrança mínima de 0.5m² por item. ${p.larguraMax > 0 ? `Largura máxima permitida: ${p.larguraMax}m.` : ''}
+            </div>
         `;
     } else if (regra === 'pacote') {
         let opts = (p.pacotes ||[]).map(pct => `<option value="${pct.qtd}" data-preco="${pct.preco}">${pct.qtd} - R$ ${pct.preco.toFixed(2)}</option>`).join('');
