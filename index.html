@@ -28,8 +28,8 @@
                 <img src="https://i.postimg.cc/1RCc58qN/gva-br-1-ERP-26.png" alt="GVA Gráfica" class="mx-auto h-12 object-contain" />
             </div>
             <div class="space-y-4">
-                <input type="email" id="email" placeholder="E-mail" class="w-full p-3 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-slate-500" />
-                <input type="password" id="senha" placeholder="Senha" class="w-full p-3 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-slate-500" />
+                <input type="email" id="email" onkeypress="if(event.key === 'Enter') entrar()" placeholder="E-mail" class="w-full p-3 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-slate-500" />
+                <input type="password" id="senha" onkeypress="if(event.key === 'Enter') entrar()" placeholder="Senha" class="w-full p-3 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-slate-500" />
                 
                 <button type="button" id="btnEntrar" onclick="entrar()" class="w-full bg-[#1e293b] text-white font-bold py-3 rounded hover:bg-slate-800 transition shadow-lg">Entrar no Sistema</button>
                 
@@ -331,12 +331,14 @@
                     <div id="sub-cli" class="sub-aba-content hidden">
                         <div class="bg-white p-6 rounded shadow-sm border border-slate-200 mb-8">
                             <h3 id="tituloCliForm" class="font-bold text-slate-800 mb-6 uppercase text-xs tracking-widest">Informações do Cliente</h3>
-                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
                                 <input type="hidden" id="cliId" />
-                                <div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">Nome</label><input type="text" id="cliNome" class="w-full p-2 bg-slate-50 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-indigo-500" /></div>
-                                <div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">CPF/CNPJ</label><input type="text" id="cliDoc" class="w-full p-2 bg-slate-50 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-indigo-500" /></div>
+                                <div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">Nome / Razão Social</label><input type="text" id="cliNome" class="w-full p-2 bg-slate-50 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-indigo-500" /></div>
+                                <div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">Responsável (Contato)</label><input type="text" id="cliResponsavel" placeholder="Ex: João Silva" class="w-full p-2 bg-slate-50 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-indigo-500" /></div>
+                                <div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">CPF / CNPJ</label><input type="text" id="cliDoc" class="w-full p-2 bg-slate-50 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-indigo-500" /></div>
                                 <div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">WhatsApp</label><input type="text" id="cliTel" placeholder="Ex: 11999999999" class="w-full p-2 bg-slate-50 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-indigo-500" /></div>
-                                <div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">Endereço</label><input type="text" id="cliEnd" class="w-full p-2 bg-slate-50 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-indigo-500" /></div>
+                                <div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">E-mail</label><input type="email" id="cliEmail" class="w-full p-2 bg-slate-50 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-indigo-500" /></div>
+                                <div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">Endereço Completo</label><input type="text" id="cliEnd" class="w-full p-2 bg-slate-50 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-indigo-500" /></div>
                                 <div class="space-y-1"><label class="text-[10px] font-bold text-emerald-600 uppercase">Crédito R$</label><input type="number" id="cliCredito" value="0" step="0.01" class="w-full p-2 bg-emerald-50 border border-emerald-100 rounded font-bold text-emerald-700 outline-none focus:ring-2 focus:ring-emerald-500" /></div>
                             </div>
                             <div class="flex gap-2">
@@ -353,7 +355,7 @@
                         <div class="bg-white rounded shadow-sm border border-slate-200 overflow-hidden">
                             <table class="w-full text-left text-xs font-bold">
                                 <thead class="bg-slate-50 text-slate-400 uppercase">
-                                    <tr><th class="p-4">Nome</th><th class="p-4">Crédito</th><th class="p-4 text-center">Ações</th></tr>
+                                    <tr><th class="p-4">Nome / Empresa</th><th class="p-4">Contato</th><th class="p-4">Crédito</th><th class="p-4 text-center">Ações</th></tr>
                                 </thead>
                                 <tbody id="listaClientesTab"></tbody>
                             </table>
@@ -443,7 +445,13 @@
                                     <button type="button" onclick="addAtributoManual()" class="mt-4 bg-white text-slate-600 border border-slate-200 px-4 py-1 rounded text-[10px] font-bold uppercase tracking-widest">+ Novo Grupo</button>
                                 </div>
                                 <div class="bg-slate-50 p-4 rounded border border-slate-100">
-                                    <h4 class="font-bold text-slate-400 mb-4 text-[10px] uppercase tracking-widest">Acabamentos Disponíveis</h4>
+                                    <div class="flex justify-between items-center mb-4">
+                                        <h4 class="font-bold text-slate-400 text-[10px] uppercase tracking-widest">Acabamentos Disponíveis</h4>
+                                        <label class="flex items-center gap-2 text-[10px] font-bold text-red-500 cursor-pointer">
+                                            <input type="checkbox" id="prodAcabObrigatorio" class="accent-red-500" />
+                                            Tornar Obrigatório
+                                        </label>
+                                    </div>
                                     <div id="listaCheckAcabamentos" class="grid grid-cols-1 gap-2 max-h-40 overflow-y-auto pr-1"></div>
                                 </div>
                             </div>
@@ -603,8 +611,10 @@
                     <input type="hidden" id="modalProdId" />
                     <input type="hidden" id="modalProdPrecoBase" />
                     <input type="hidden" id="modalProdRegra" />
+                    <input type="hidden" id="modalProdAcabObrigatorio" />
+                    
                     <div class="space-y-1 mb-6">
-                        <label class="text-[10px] font-bold text-slate-400 uppercase">Identificação / Nome do Arquivo</label>
+                        <label class="text-[10px] font-bold text-slate-400 uppercase">Identificação / Nome do Arquivo <span class="text-red-500 text-sm">*</span></label>
                         <input type="text" id="w2pNomeArquivo" placeholder="Ex: Cartão Pizzaria, Panfleto Promoção..." class="w-full p-3 border border-slate-200 rounded bg-white font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
                     </div>
                     <h4 class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4 border-t border-slate-200 pt-6">Medidas e Quantidade</h4>
