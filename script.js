@@ -15,7 +15,7 @@ const db = firebase.firestore();
 // Banco de Dados Local (Memória)
 let bdCategorias = [];
 let bdProdutos = [];
-let bdClientes = [];
+let bdClientes =[];
 let bdPedidos =[];
 let bdDespesas = [];
 let bdAcabamentos = [];
@@ -143,15 +143,16 @@ function aplicarPermissoes() {
     const btnSubAcab = document.getElementById('btn-sub-acab');
     const btnSubUsuarios = document.getElementById('btn-sub-usuarios');
 
-    // Esconde tudo primeiro
-    [...btnLoja, ...btnProducao, ...btnFinanceiro, ...btnConfig, ...btnDashboard].forEach(b => b.classList.add('hidden'));[btnSubCli, btnSubProd, btnSubCat, btnSubAcab, btnSubUsuarios].forEach(b => { if(b) b.classList.add('hidden'); });
+    // Esconde tudo primeiro[...btnLoja, ...btnProducao, ...btnFinanceiro, ...btnConfig, ...btnDashboard].forEach(b => b.classList.add('hidden'));[btnSubCli, btnSubProd, btnSubCat, btnSubAcab, btnSubUsuarios].forEach(b => { if(b) b.classList.add('hidden'); });
 
     // Libera de acordo com o papel
-    if (role === 'admin') {[...btnLoja, ...btnProducao, ...btnFinanceiro, ...btnConfig, ...btnDashboard].forEach(b => b.classList.remove('hidden'));[btnSubCli, btnSubProd, btnSubCat, btnSubAcab, btnSubUsuarios].forEach(b => { if(b) b.classList.remove('hidden'); });
+    if (role === 'admin') {[...btnLoja, ...btnProducao, ...btnFinanceiro, ...btnConfig, ...btnDashboard].forEach(b => b.classList.remove('hidden'));
+        [btnSubCli, btnSubProd, btnSubCat, btnSubAcab, btnSubUsuarios].forEach(b => { if(b) b.classList.remove('hidden'); });
         mudarAba('dashboard', btnDashboard[0] || btnDashboard[1]);
     } 
-    else if (role === 'vendedor') {[...btnLoja, ...btnDashboard, ...btnConfig].forEach(b => b.classList.remove('hidden'));
-        if(btnSubCli) btnSubCli.classList.remove('hidden'); // Vendedor só gerencia clientes na config
+    else if (role === 'vendedor') {
+        // Vendedor agora vê: Loja, Produção, Financeiro e Configurações (apenas Clientes)[...btnLoja, ...btnProducao, ...btnFinanceiro, ...btnConfig].forEach(b => b.classList.remove('hidden'));
+        if(btnSubCli) btnSubCli.classList.remove('hidden'); 
         mudarAba('loja', btnLoja[0] || btnLoja[1]);
         mudarSubAba('sub-cli', btnSubCli);
     } 
