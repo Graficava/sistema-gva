@@ -14,7 +14,7 @@ const db = firebase.firestore();
 let bdCategorias = [];
 let bdProdutos = [];
 let bdClientes =[];
-let bdPedidos = [];
+let bdPedidos =[];
 let bdDespesas = [];
 let bdAcabamentos = [];
 let carrinho =[];
@@ -94,7 +94,6 @@ function renderKanbanProducao() {
     const container = document.getElementById('kanbanContainer');
     if(!container) return;
 
-    // Filtra os pedidos que NÃO estão arquivados
     const pedidosAtivos = bdPedidos.filter(p => !p.arquivado);
 
     let html = '';
@@ -583,7 +582,6 @@ function abrirConfigurador(id) {
     document.getElementById('modalProdRegra').value = p.regraPreco;
     document.getElementById('modalHeaderImg').style.backgroundImage = `url('${p.foto || 'https://via.placeholder.com/400'}')`;
     
-    // Limpa o campo de nome do arquivo
     const inputNomeArq = document.getElementById('w2pNomeArquivo');
     if(inputNomeArq) inputNomeArq.value = '';
 
@@ -789,7 +787,6 @@ function confirmarAdicaoCarrinho() {
         varsEscolhidas.push(`Acab: ${nomeAcab}`);
     }
 
-    // Pega o nome do arquivo se o usuário digitou
     const nomeArquivo = document.getElementById('w2pNomeArquivo')?.value.trim();
     let nomeFinal = p.nome;
     if (nomeArquivo) {
@@ -874,7 +871,8 @@ async function enviarPedido(imprimir = false) {
         saldoDevedor: saldo,
         data: new Date(),
         status: statusInicial,
-        arquivado: false
+        arquivado: false,
+        pagamentos: pago > 0 ?[{ data: new Date(), valor: pago }] :[]
     };
     
     const docRef = await db.collection("pedidos").add(pedido);
@@ -907,18 +905,43 @@ function renderFinanceiro() {
 
     bdPedidos.forEach(p => {
         if (!p.data) return;
-        const dataObj = p.data.toDate ? p.data.toDate() : new Date(p.data);
-        const dataStr = dataObj.toISOString().split('T')[0];
         
-        if (dataStr === dataSelecionada && p.valorPago > 0) {
-            entradasTotal += p.valorPago;
-            transacoes.push({
-                dataObj: dataObj,
-                desc: `Pedido: ${p.clienteNome}`,
-                tipo: 'entrada',
-                valor: p.valorPago,
-                id: p.id
+        // Se o pedido tem o array de pagamentos (novo formato)
+        if (p.pagamentos && p.pagamentos.length > 0) {
+            p.pagamentos.forEach((pag, index) => {
+                const pagDataObj = pag.data.toDate ? pag.data.toDate() : new Date(pag.data);
+                const pagDataStr = pagDataObj.toISOString().split('T')[0];
+                
+                if (pagDataStr === dataSelecionada) {
+                    entradasTotal += pag.valor;
+                    transacoes.push({
+                        dataObj: pagDataObj,
+                        desc: `Pedido: ${p.clienteNome} ${index > 0 ? '(Pagamento de Saldo)' : ''}`,
+                        tipo: 'entrada',
+                        valor: pag.valor,
+                        id: p.id,
+                        isPedido: true,
+                        saldoDevedor: p.saldoDevedor
+                    });
+                }
             });
+        } else {
+            // Fallback para pedidos antigos que não tem o array de pagamentos
+            const dataObj = p.data.toDate ? p.data.toDate() : new Date(p.data);
+            const dataStr = dataObj.toISOString().split('T')[0];
+            
+            if (dataStr === dataSelecionada && p.valorPago > 0) {
+                entradasTotal += p.valorPago;
+                transacoes.push({
+                    dataObj: dataObj,
+                    desc: `Pedido: ${p.clienteNome}`,
+                    tipo: 'entrada',
+                    valor: p.valorPago,
+                    id: p.id,
+                    isPedido: true,
+                    saldoDevedor: p.saldoDevedor
+                });
+            }
         }
     });
 
@@ -951,14 +974,62 @@ function renderFinanceiro() {
         : transacoes.map(t => `
         <tr class="border-b border-slate-50 hover:bg-slate-50 transition">
             <td class="p-4 text-slate-400 font-medium">${t.dataObj.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})}</td>
-            <td class="p-4 font-bold text-slate-700">${t.desc}</td>
+            <td class="p-4 font-bold text-slate-700">
+                ${t.desc}
+                ${t.isPedido && t.saldoDevedor > 0 ? `<span class="ml-2 text-[9px] bg-red-100 text-red-600 px-2 py-0.5 rounded uppercase tracking-widest">Falta R$ ${t.saldoDevedor.toFixed(2)}</span>` : ''}
+            </td>
             <td class="p-4 font-black text-right ${t.tipo === 'entrada' ? 'text-emerald-600' : 'text-red-600'}">
                 ${t.tipo === 'entrada' ? '+' : '-'} R$ ${t.valor.toFixed(2)}
-                ${t.tipo === 'entrada' ? `<button onclick="abrirDetalhesPedido('${t.id}')" class="ml-3 text-indigo-400 hover:text-indigo-600" title="Ver Detalhes do Pedido"><i class="fa fa-eye"></i></button>` : ''}
+                ${t.isPedido && t.saldoDevedor > 0 ? `<button onclick="receberSaldo('${t.id}')" class="ml-3 text-emerald-500 hover:text-emerald-700" title="Receber Saldo Devedor"><i class="fa fa-hand-holding-usd"></i></button>` : ''}
+                ${t.isPedido ? `<button onclick="abrirDetalhesPedido('${t.id}')" class="ml-3 text-indigo-400 hover:text-indigo-600" title="Ver Detalhes do Pedido"><i class="fa fa-eye"></i></button>` : ''}
                 ${t.tipo === 'saida' ? `<button onclick="excluirDespesa('${t.id}')" class="ml-3 text-red-300 hover:text-red-600" title="Excluir Saída"><i class="fa fa-trash"></i></button>` : ''}
             </td>
         </tr>
     `).join('');
+}
+
+async function receberSaldo(idPedido) {
+    const p = bdPedidos.find(x => x.id === idPedido);
+    if (!p || p.saldoDevedor <= 0) return;
+
+    const valorRecebidoStr = prompt(`O saldo devedor deste pedido é de R$ ${p.saldoDevedor.toFixed(2)}.\nDigite o valor que o cliente está pagando agora:`, p.saldoDevedor.toFixed(2));
+    
+    if (!valorRecebidoStr) return;
+    
+    const valorRecebido = parseFloat(valorRecebidoStr.replace(',', '.'));
+    if (isNaN(valorRecebido) || valorRecebido <= 0) return alert("Valor inválido.");
+    if (valorRecebido > p.saldoDevedor) return alert("O valor recebido não pode ser maior que o saldo devedor.");
+
+    const novoPago = p.valorPago + valorRecebido;
+    const novoSaldo = p.saldoDevedor - valorRecebido;
+    
+    // Se quitou tudo e estava aguardando pagamento, joga pra produção
+    const novoStatus = (novoSaldo === 0 && p.status === 'Aguardando pagamento') ? 'Em produção' : p.status;
+
+    const novoPagamento = {
+        data: new Date(),
+        valor: valorRecebido
+    };
+
+    let pagamentosAtualizados = p.pagamentos ||[];
+    // Se for um pedido antigo que não tinha o array de pagamentos, cria com o valor inicial
+    if (!p.pagamentos && p.valorPago > 0) {
+        pagamentosAtualizados.push({ data: p.data, valor: p.valorPago });
+    }
+    pagamentosAtualizados.push(novoPagamento);
+
+    try {
+        await db.collection("pedidos").doc(idPedido).update({
+            valorPago: novoPago,
+            saldoDevedor: novoSaldo,
+            status: novoStatus,
+            pagamentos: pagamentosAtualizados
+        });
+        alert("Pagamento registrado com sucesso! O caixa de hoje foi atualizado.");
+    } catch (e) {
+        console.error(e);
+        alert("Erro ao registrar pagamento.");
+    }
 }
 
 function abrirDetalhesPedido(id) {
@@ -1021,7 +1092,7 @@ async function salvarDespesa() {
     if (!desc || !valor) return alert("Preencha a descrição e o valor da saída.");
     
     const hoje = new Date();
-    const [ano, mes, dia] = dataFiltro.split('-');
+    const[ano, mes, dia] = dataFiltro.split('-');
     const dataRegistro = new Date(ano, mes - 1, dia, hoje.getHours(), hoje.getMinutes(), hoje.getSeconds());
 
     await db.collection("despesas").add({
