@@ -13,12 +13,12 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 
 // Banco de Dados Local (Memória)
-let bdCategorias =[];
+let bdCategorias = [];
 let bdProdutos =[];
 let bdClientes =[];
 let bdPedidos =[];
-let bdDespesas = [];
-let bdAcabamentos =[];
+let bdDespesas =[];
+let bdAcabamentos = [];
 let bdUsuarios =[];
 let carrinho =[];
 
@@ -100,12 +100,14 @@ function aplicarPermissoes() {
     document.getElementById('roleUsuarioLogado').innerText = role;
 
     const btnLoja = document.querySelectorAll('.btn-menu-loja'), btnProducao = document.querySelectorAll('.btn-menu-producao'), btnFinanceiro = document.querySelectorAll('.btn-menu-financeiro'), btnConfig = document.querySelectorAll('.btn-menu-config'), btnDashboard = document.querySelectorAll('.btn-menu-dashboard');
-    const btnSubCli = document.getElementById('btn-sub-cli'), btnSubProd = document.getElementById('btn-sub-prod'), btnSubCat = document.getElementById('btn-sub-cat'), btnSubAcab = document.getElementById('btn-sub-acab'), btnSubUsuarios = document.getElementById('btn-sub-usuarios');[...btnLoja, ...btnProducao, ...btnFinanceiro, ...btnConfig, ...btnDashboard].forEach(b => b.classList.add('hidden'));[btnSubCli, btnSubProd, btnSubCat, btnSubAcab, btnSubUsuarios].forEach(b => { if(b) b.classList.add('hidden'); });
+    const btnSubCli = document.getElementById('btn-sub-cli'), btnSubAReceber = document.getElementById('btn-sub-areceber'), btnSubProd = document.getElementById('btn-sub-prod'), btnSubCat = document.getElementById('btn-sub-cat'), btnSubAcab = document.getElementById('btn-sub-acab'), btnSubUsuarios = document.getElementById('btn-sub-usuarios');[...btnLoja, ...btnProducao, ...btnFinanceiro, ...btnConfig, ...btnDashboard].forEach(b => b.classList.add('hidden'));[btnSubCli, btnSubAReceber, btnSubProd, btnSubCat, btnSubAcab, btnSubUsuarios].forEach(b => { if(b) b.classList.add('hidden'); });
 
-    if (role === 'admin') {[...btnLoja, ...btnProducao, ...btnFinanceiro, ...btnConfig, ...btnDashboard].forEach(b => b.classList.remove('hidden'));[btnSubCli, btnSubProd, btnSubCat, btnSubAcab, btnSubUsuarios].forEach(b => { if(b) b.classList.remove('hidden'); });
+    if (role === 'admin') {[...btnLoja, ...btnProducao, ...btnFinanceiro, ...btnConfig, ...btnDashboard].forEach(b => b.classList.remove('hidden'));[btnSubCli, btnSubAReceber, btnSubProd, btnSubCat, btnSubAcab, btnSubUsuarios].forEach(b => { if(b) b.classList.remove('hidden'); });
         mudarAba('dashboard');
-    } else if (role === 'vendedor') {[...btnLoja, ...btnProducao, ...btnFinanceiro, ...btnConfig].forEach(b => b.classList.remove('hidden'));
+    } else if (role === 'vendedor') {
+        [...btnLoja, ...btnProducao, ...btnFinanceiro, ...btnConfig].forEach(b => b.classList.remove('hidden'));
         if(btnSubCli) btnSubCli.classList.remove('hidden'); 
+        if(btnSubAReceber) btnSubAReceber.classList.remove('hidden'); 
         mudarAba('loja'); mudarSubAba('sub-cli');
     } else if (role === 'producao') {
         [...btnProducao].forEach(b => b.classList.remove('hidden')); mudarAba('producao');
@@ -118,7 +120,7 @@ function iniciarLeitura() {
     db.collection("produtos").onSnapshot(s => { bdProdutos = s.docs.map(d => ({id: d.id, ...d.data()})); renderVitrine(); renderProdTable(); });
     db.collection("clientes").orderBy("nome").onSnapshot(s => { bdClientes = s.docs.map(d => ({id: d.id, ...d.data()})); renderCliTable(); renderCliSelectCart(); renderDashboard(); });
     db.collection("acabamentos").onSnapshot(s => { bdAcabamentos = s.docs.map(d => ({id: d.id, ...d.data()})); renderAcabTable(); atualizarListaAcabamentosProduto(); });
-    db.collection("pedidos").orderBy("data", "desc").limit(500).onSnapshot(s => { bdPedidos = s.docs.map(d => ({id: d.id, ...d.data()})); renderFinanceiro(); renderKanbanProducao(); renderDashboard(); });
+    db.collection("pedidos").orderBy("data", "desc").limit(500).onSnapshot(s => { bdPedidos = s.docs.map(d => ({id: d.id, ...d.data()})); renderFinanceiro(); renderKanbanProducao(); renderDashboard(); renderAReceber(); });
     db.collection("despesas").orderBy("data", "desc").limit(500).onSnapshot(s => { bdDespesas = s.docs.map(d => ({id: d.id, ...d.data()})); renderFinanceiro(); renderDashboard(); });
     db.collection("usuarios").onSnapshot(s => { bdUsuarios = s.docs.map(d => ({id: d.id, ...d.data()})); renderUsuariosTab(); });
 }
@@ -174,11 +176,11 @@ function imprimirDashboard() {
     const tabProd = document.getElementById('listaTopProdutosTab').innerHTML, tabCli = document.getElementById('listaTopClientesTab').innerHTML;
 
     const janela = window.open('', '', 'width=800,height=900');
-    janela.document.write(`<html><head><title>Relatório Mensal - ${mesFormatado}</title><style>body { font-family: sans-serif; padding: 40px; color: #334155; } .header { text-align: center; margin-bottom: 40px; border-bottom: 2px solid #e2e8f0; padding-bottom: 20px; } h1 { color: #3E4095; margin: 0 0 10px 0; font-size: 28px; text-transform: uppercase; } .cards { display: flex; gap: 20px; margin-bottom: 40px; } .card { border: 1px solid #e2e8f0; padding: 20px; border-radius: 8px; flex: 1; background: #f8fafc; text-align: center; } .card h3 { margin: 0 0 10px 0; font-size: 12px; text-transform: uppercase; color: #64748b; } .card p { margin: 0; font-size: 24px; font-weight: bold; color: #0f172a; } .card.lucro p { color: #10b981; } .card.desp p { color: #ef4444; } h2 { color: #3E4095; font-size: 16px; text-transform: uppercase; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px; margin-top: 40px; } table { width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 14px; } th, td { border-bottom: 1px solid #e2e8f0; padding: 12px 8px; text-align: left; } th { background: #f1f5f9; color: #475569; font-size: 12px; text-transform: uppercase; } .text-right { text-align: right; } .text-center { text-align: center; } @media print { body { padding: 0; } }</style></head><body><div class="header"><h1>Relatório de Desempenho</h1><p style="margin:0; color:#64748b; font-weight:bold;">Período: ${mesFormatado}</p></div><div class="cards"><div class="card"><h3>Faturamento Bruto</h3><p>${fat}</p></div><div class="card desp"><h3>Total de Despesas</h3><p>${desp}</p></div><div class="card lucro"><h3>Saldo / Lucro</h3><p>${lucro}</p></div></div><h2>Produtos Mais Vendidos</h2><table><thead><tr><th>Produto</th><th class="text-center">Qtd Vendida</th><th class="text-right">Receita Gerada</th></tr></thead><tbody>${tabProd}</tbody></table><h2>Melhores Clientes</h2><table><thead><tr><th>Cliente</th><th class="text-right">Volume Comprado</th></tr></thead><tbody>${tabCli}</tbody></table><div style="text-align:center; margin-top:50px; font-size:12px; color:#94a3b8;">Gerado pelo sistema GVAsist em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}</div><script>setTimeout(() => { window.print(); window.close(); }, 800);</script></body></html>`);
+    janela.document.write(`<html><head><title>Relatório Mensal - ${mesFormatado}</title><style>body { font-family: sans-serif; padding: 40px; color: #334155; } .header { text-align: center; margin-bottom: 40px; border-bottom: 2px solid #e2e8f0; padding-bottom: 20px; } h1 { color: #3E4095; margin: 0 0 10px 0; font-size: 28px; text-transform: uppercase; } .cards { display: flex; gap: 20px; margin-bottom: 40px; } .card { border: 1px solid #e2e8f0; padding: 20px; border-radius: 8px; flex: 1; background: #f8fafc; text-align: center; } .card h3 { margin: 0 0 10px 0; font-size: 12px; text-transform: uppercase; color: #64748b; } .card p { margin: 0; font-size: 24px; font-weight: bold; color: #0f172a; } .card.lucro p { color: #10b981; } .card.desp p { color: #ef4444; } h2 { color: #3E4095; font-size: 16px; text-transform: uppercase; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px; margin-top: 40px; } table { width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 14px; } th, td { border-bottom: 1px solid #e2e8f0; padding: 12px 8px; text-align: left; } th { background: #f1f5f9; color: #475569; font-size: 12px; text-transform: uppercase; } .text-right { text-align: right; } .text-center { text-align: center; } @media print { body { padding: 0; } }</style></head><body><div class="header"><h1>Relatório de Desempenho</h1><p style="margin:0; color:#64748b; font-weight:bold;">Período: ${mesFormatado}</p></div><div class="cards"><div class="card"><h3>Faturamento Bruto</h3><p>${fat}</p></div><div class="card desp"><h3>Total de Despesas</h3><p>${desp}</p></div><div class="card lucro"><h3>Saldo / Lucro</h3><p>${lucro}</p></div></div><h2>Produtos Mais Vendidos</h2><table><thead><tr><th>Produto</th><th class="text-center">Qtd Vendida</th><th class="text-right">Receita Bruta (S/ Desc)</th></tr></thead><tbody>${tabProd}</tbody></table><h2>Melhores Clientes</h2><table><thead><tr><th>Cliente</th><th class="text-right">Volume Comprado</th></tr></thead><tbody>${tabCli}</tbody></table><div style="text-align:center; margin-top:50px; font-size:12px; color:#94a3b8;">Gerado pelo sistema GVAsist em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}</div><script>setTimeout(() => { window.print(); window.close(); }, 800);</script></body></html>`);
     janela.document.close();
 }
 
-// --- KANBAN DE PRODUÇÃO (MINIMIZADO E COM BOTÃO DE RECEBER) ---
+// --- KANBAN DE PRODUÇÃO ---
 function renderKanbanProducao() {
     const container = document.getElementById('kanbanContainer');
     if(!container) return;
@@ -221,8 +223,34 @@ function gerarCardPedido(p) {
         <div class="flex justify-between items-start mb-2"><span class="text-[9px] font-bold text-slate-400">${dataFormatada}</span><span class="text-[10px] font-black text-indigo-600">${visualizaPrecos ? 'R$ ' + p.total.toFixed(2) : ''}</span></div><h4 class="font-bold text-slate-800 text-xs mb-2">${p.clienteNome}</h4><div class="text-[9px] text-slate-500 mb-3 space-y-1">${p.itens.map(i => `<p>• ${i.qtdCarrinho}x ${i.nome} <span class="opacity-70">(${i.desc})</span></p>`).join('')}</div><div class="mt-3 pt-3 border-t border-slate-100 flex gap-2"><select onchange="mudarStatusPedido('${p.id}', this.value)" class="flex-1 p-2 bg-slate-50 border border-slate-200 rounded text-[10px] font-bold outline-none focus:ring-2 focus:ring-indigo-500">${options}</select>${btnReceber}${btnArquivar}${btnZAP}${btnImprimir}</div></div>`;
 }
 
-async function mudarStatusPedido(id, novoStatus) { try { await db.collection("pedidos").doc(id).update({ status: novoStatus }); } catch(e) { alert("Erro ao atualizar status."); } }
-async function arquivarPedido(id) { if(confirm("Deseja remover este pedido do painel de produção? Ele continuará salvo no histórico e financeiro.")) { try { await db.collection("pedidos").doc(id).update({ arquivado: true }); } catch(e) { alert("Erro ao arquivar pedido."); } } }
+// --- ATUALIZAÇÃO DE STATUS E ESTORNO AUTOMÁTICO ---
+async function mudarStatusPedido(id, novoStatus) {
+    try {
+        const pedidoRef = db.collection("pedidos").doc(id);
+        const doc = await pedidoRef.get();
+        if (!doc.exists) return;
+        const p = doc.data();
+
+        await pedidoRef.update({ status: novoStatus });
+
+        // Se mudou para Cancelado/Estorno e o cliente já tinha pago algo, gera a despesa
+        if (novoStatus === 'Cancelado / Estorno' && p.valorPago > 0) {
+            await db.collection("despesas").add({
+                descricao: `ESTORNO - Pedido: ${p.clienteNome}`,
+                valor: p.valorPago,
+                data: new Date()
+            });
+            alert(`Pedido cancelado! Um estorno de R$ ${p.valorPago.toFixed(2)} foi registrado nas Saídas do Financeiro.`);
+        }
+    } catch(e) { alert("Erro ao atualizar status."); }
+}
+
+async function arquivarPedido(id) {
+    if(confirm("Deseja remover este pedido do painel de produção? Ele continuará salvo no histórico e financeiro.")) {
+        try { await db.collection("pedidos").doc(id).update({ arquivado: true }); } 
+        catch(e) { alert("Erro ao arquivar pedido."); }
+    }
+}
 
 // --- HISTÓRICO GERAL DE PEDIDOS (COM EXCLUSÃO PARA ADMIN) ---
 function abrirHistoricoGeral() {
@@ -282,28 +310,6 @@ async function excluirPedido(id) {
         catch(e) { alert("Erro ao excluir pedido."); }
     }
 }
-// --- ATUALIZAÇÃO DE STATUS E ESTORNO AUTOMÁTICO ---
-async function mudarStatusPedido(id, novoStatus) {
-    try {
-        const pedidoRef = db.collection("pedidos").doc(id);
-        const doc = await pedidoRef.get();
-        if (!doc.exists) return;
-        const p = doc.data();
-
-        await pedidoRef.update({ status: novoStatus });
-
-        // Se mudou para Cancelado/Estorno e o cliente já tinha pago algo, gera a despesa
-        if (novoStatus === 'Cancelado / Estorno' && p.valorPago > 0) {
-            await db.collection("despesas").add({
-                descricao: `ESTORNO - Pedido: ${p.clienteNome}`,
-                valor: p.valorPago,
-                data: new Date()
-            });
-            alert(`Pedido cancelado! Um estorno de R$ ${p.valorPago.toFixed(2)} foi registrado nas Saídas do Financeiro.`);
-        }
-    } catch(e) { alert("Erro ao atualizar status."); }
-}
-
 // --- WHATSAPP ---
 function enviarWhatsApp(idPedido, tipo, objPedido = null) {
     const p = objPedido || bdPedidos.find(x => x.id === idPedido);
@@ -999,7 +1005,7 @@ function calcularPrecoAoVivo() {
                 a = p.larguraMax;
             }
             
-            erroMax.innerHTML = `<i class="fa fa-ban text-lg mt-0.5"></i><span>Atenção: A medida excede a largura máxima permitida (${p.larguraMax}m). O valor foi ajustado automaticamente.</span>`;
+            document.getElementById('textoErroMedidaMax').innerText = `Atenção: A medida excede a largura máxima permitida (${p.larguraMax}m). O valor foi ajustado automaticamente.`;
             
             // Recalcula o menor lado após a correção
             menorLado = Math.min(l, a);
@@ -1483,6 +1489,42 @@ function editCli(id) { const c = bdClientes.find(x => x.id === id); document.get
 function limparFormCli() { document.querySelectorAll('#sub-cli input').forEach(i => i.value = ''); document.getElementById('cliId').value = ''; document.getElementById('tituloCliForm').innerText = "Novo Cliente"; }
 function renderCliTable() { const tab = document.getElementById('listaClientesTab'); if(!tab) return; const termo = document.getElementById('buscaClienteTab')?.value.toLowerCase() || ''; let filtrados = bdClientes; if (termo) filtrados = bdClientes.filter(c => c.nome.toLowerCase().includes(termo) || (c.documento && c.documento.includes(termo))); tab.innerHTML = filtrados.map(c => `<tr class="border-b border-slate-50 hover:bg-slate-50"><td class="p-4 font-bold text-slate-700">${c.nome}</td><td class="p-4 text-slate-500">${c.responsavel || '-'}</td><td class="p-4 font-bold ${c.credito >= 0 ? 'text-emerald-500' : 'text-red-500'}">R$ ${(c.credito || 0).toFixed(2)}</td><td class="p-4 text-center space-x-3"><button type="button" onclick="verHistoricoCliente('${c.id}')" class="text-indigo-400 text-[10px] font-black uppercase hover:text-indigo-500">Histórico</button><button type="button" onclick="editCli('${c.id}')" class="text-slate-400 text-[10px] font-black uppercase hover:text-indigo-500">Editar</button><button type="button" onclick="db.collection('clientes').doc('${c.id}').delete()" class="text-red-300 hover:text-red-500">✕</button></td></tr>`).join(''); }
 function verHistoricoCliente(idCli) { const cliente = bdClientes.find(x => x.id === idCli); const pedidosCli = bdPedidos.filter(p => p.clienteId === idCli); document.getElementById('histNomeCli').innerText = `Pedidos de: ${cliente.nome}`; const corpo = document.getElementById('corpoHistoricoCli'); corpo.innerHTML = pedidosCli.length === 0 ? "<p class='text-center text-slate-400 py-10'>Nenhum pedido.</p>" : pedidosCli.map(p => `<div class="bg-slate-50 p-4 rounded border border-slate-100"><div class="flex justify-between font-bold text-indigo-900 mb-2"><span>${p.data.toDate().toLocaleDateString('pt-BR')}</span><span>R$ ${p.total.toFixed(2)}</span></div><div class="text-xs text-slate-500 mb-3">${p.itens.map(i => `• ${i.qtdCarrinho}x ${i.nome}`).join('<br/>')}</div><div class="flex gap-4"><button type="button" onclick="abrirDetalhesPedido('${p.id}')" class="text-[10px] font-bold text-indigo-500 uppercase hover:underline"><i class="fa fa-eye"></i> Ver Detalhes</button><button type="button" onclick="${p.status === 'Orçamento' ? `imprimirOrcamento('${p.id}')` : `imprimirRecibo('${p.id}')`}" class="text-[10px] font-bold text-indigo-500 uppercase hover:underline"><i class="${p.status === 'Orçamento' ? 'fa fa-file-pdf' : 'fa fa-print'}"></i> ${p.status === 'Orçamento' ? 'Gerar PDF' : 'Imprimir Recibo'}</button></div></div>`).join(''); document.getElementById('modalHistoricoCli').classList.remove('hidden'); }
+
+// --- NOVO: RENDERIZAR ABA "A RECEBER" ---
+function renderAReceber() {
+    const tab = document.getElementById('listaAReceberTab');
+    if(!tab) return;
+
+    let devedores = {};
+
+    bdPedidos.forEach(p => {
+        if(p.saldoDevedor > 0 && p.status !== 'Cancelado / Estorno' && p.status !== 'Orçamento') {
+            const cliNome = p.clienteNome || "Consumidor Final";
+            if(!devedores[cliNome]) devedores[cliNome] = { total: 0, qtd: 0, clienteId: p.clienteId };
+            devedores[cliNome].total += p.saldoDevedor;
+            devedores[cliNome].qtd += 1;
+        }
+    });
+
+    const arrayDevedores = Object.keys(devedores).map(nome => ({
+        nome: nome,
+        total: devedores[nome].total,
+        qtd: devedores[nome].qtd,
+        clienteId: devedores[nome].clienteId
+    })).sort((a, b) => b.total - a.total);
+
+    tab.innerHTML = arrayDevedores.length === 0 ? `<tr><td colspan="4" class="p-4 text-center text-slate-400 text-xs">Nenhum cliente com saldo devedor.</td></tr>` : 
+        arrayDevedores.map(d => `
+        <tr class="border-b border-slate-50 hover:bg-slate-50">
+            <td class="p-4 font-bold text-slate-700">${d.nome}</td>
+            <td class="p-4 text-center text-slate-500">${d.qtd}</td>
+            <td class="p-4 text-right font-black text-red-500">R$ ${d.total.toFixed(2)}</td>
+            <td class="p-4 text-center">
+                <button type="button" onclick="verHistoricoCliente('${d.clienteId}')" class="text-indigo-400 text-[10px] font-black uppercase hover:text-indigo-500">Ver Pedidos</button>
+            </td>
+        </tr>
+    `).join('');
+}
 
 async function salvarUsuario() { const email = document.getElementById('userEmail').value.trim(), nome = document.getElementById('userNome').value.trim(), role = document.getElementById('userRole').value, senha = document.getElementById('userSenha').value; if(!email || !nome) return alert("Preencha Nome e E-mail."); try { if (senha) { if (senha.length < 6) return alert("A senha precisa ter no mínimo 6 caracteres."); let secondaryApp; try { secondaryApp = firebase.app("Secondary"); } catch(e) { secondaryApp = firebase.initializeApp(firebaseConfig, "Secondary"); } await secondaryApp.auth().createUserWithEmailAndPassword(email, senha); await secondaryApp.auth().signOut(); } await db.collection("usuarios").doc(email).set({ nome: nome, email: email, role: role }); alert("Conta de funcionário salva com sucesso!"); document.getElementById('userEmail').value = ''; document.getElementById('userNome').value = ''; document.getElementById('userSenha').value = ''; } catch (e) { alert("Erro ao salvar usuário: " + e.message); } }
 function renderUsuariosTab() { const tab = document.getElementById('listaUsuariosTab'); if(!tab) return; tab.innerHTML = bdUsuarios.map(u => `<tr class="border-b border-slate-50"><td class="p-4 text-slate-700 font-bold">${u.nome} <br/><span class="text-[10px] font-normal text-slate-400">${u.email}</span></td><td class="p-4 font-bold text-indigo-600 uppercase text-[10px]">${u.role}</td><td class="p-4 text-right"><button type="button" onclick="editUsuario('${u.email}')" class="text-indigo-400 hover:text-indigo-600 mr-2"><i class="fa fa-edit"></i></button><button type="button" onclick="if(confirm('Excluir acesso?')) db.collection('usuarios').doc('${u.email}').delete()" class="text-red-300 hover:text-red-500"><i class="fa fa-trash"></i></button></td></tr>`).join(''); }
