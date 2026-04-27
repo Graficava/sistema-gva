@@ -1,0 +1,21 @@
+{
+  "name": "GVAsist ERP",
+  "short_name": "GVAsist",
+  "description": "Sistema de Gestão e PDV GVA Gráfica",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#3E4095",
+  "icons":[
+    {
+      "src": "https://i.postimg.cc/1RCc58qN/gva-br-1-ERP-26.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://i.postimg.cc/1RCc58qN/gva-br-1-ERP-26.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
