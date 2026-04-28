@@ -104,8 +104,7 @@ function aplicarPermissoes() {
 
     if (role === 'admin') {[...btnLoja, ...btnProducao, ...btnFinanceiro, ...btnConfig, ...btnDashboard].forEach(b => b.classList.remove('hidden'));[btnSubCli, btnSubAReceber, btnSubProd, btnSubCat, btnSubAcab, btnSubUsuarios].forEach(b => { if(b) b.classList.remove('hidden'); });
         mudarAba('dashboard');
-    } else if (role === 'vendedor') {
-        [...btnLoja, ...btnProducao, ...btnFinanceiro, ...btnConfig].forEach(b => b.classList.remove('hidden'));
+    } else if (role === 'vendedor') {[...btnLoja, ...btnProducao, ...btnFinanceiro, ...btnConfig].forEach(b => b.classList.remove('hidden'));
         if(btnSubCli) btnSubCli.classList.remove('hidden'); 
         if(btnSubAReceber) btnSubAReceber.classList.remove('hidden'); 
         mudarAba('loja'); mudarSubAba('sub-cli');
@@ -215,44 +214,18 @@ function gerarCardPedido(p) {
     let btnReceber = (visualizaPrecos && p.saldoDevedor > 0) ? `<button type="button" onclick="receberSaldo('${p.id}')" class="bg-emerald-500 text-white px-3 rounded hover:bg-emerald-600 transition" title="Receber Saldo (Falta R$ ${p.saldoDevedor.toFixed(2)})"><i class="fa fa-hand-holding-usd"></i></button>` : '';
     let btnZAP = !visualizaPrecos ? '' : `<button type="button" onclick="enviarWhatsApp('${p.id}', '${p.status === 'Pronto para Retirada' ? 'retirada' : (p.status === 'Orçamento' ? 'orcamento' : 'recibo')}')" class="bg-green-500 text-white px-3 rounded hover:bg-green-600 transition" title="Enviar WhatsApp"><i class="fab fa-whatsapp"></i></button>`;
     let btnImprimir = !visualizaPrecos ? '' : `<button type="button" onclick="${p.status === 'Orçamento' ? `imprimirOrcamento('${p.id}')` : `imprimirRecibo('${p.id}')`}" class="bg-slate-800 text-white px-3 rounded hover:bg-slate-700 transition" title="${p.status === 'Orçamento' ? 'Gerar PDF' : 'Imprimir Recibo'}"><i class="${p.status === 'Orçamento' ? 'fa fa-file-pdf' : 'fa fa-print'}"></i></button>`;
+    
+    // NOVO: Botão de Etiqueta (Visível para todos)
+    let btnEtiqueta = `<button type="button" onclick="imprimirEtiqueta('${p.id}', '6x4')" class="bg-purple-500 text-white px-3 rounded hover:bg-purple-600 transition" title="Imprimir Etiqueta 6x4"><i class="fa fa-tag"></i></button>`;
 
     let etiquetaFalta = (p.saldoDevedor > 0 && visualizaPrecos) ? `<div class="absolute -top-2 -right-2 bg-red-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full shadow-md">FALTA R$ ${p.saldoDevedor.toFixed(2)}</div>` : '';
 
     return `<div class="bg-white p-4 rounded-lg shadow-sm border border-slate-200 border-l-4 ${corBorda} relative">
         ${etiquetaFalta}
-        <div class="flex justify-between items-start mb-2"><span class="text-[9px] font-bold text-slate-400">${dataFormatada}</span><span class="text-[10px] font-black text-indigo-600">${visualizaPrecos ? 'R$ ' + p.total.toFixed(2) : ''}</span></div><h4 class="font-bold text-slate-800 text-xs mb-2">${p.clienteNome}</h4><div class="text-[9px] text-slate-500 mb-3 space-y-1">${p.itens.map(i => `<p>• ${i.qtdCarrinho}x ${i.nome} <span class="opacity-70">(${i.desc})</span></p>`).join('')}</div><div class="mt-3 pt-3 border-t border-slate-100 flex gap-2"><select onchange="mudarStatusPedido('${p.id}', this.value)" class="flex-1 p-2 bg-slate-50 border border-slate-200 rounded text-[10px] font-bold outline-none focus:ring-2 focus:ring-indigo-500">${options}</select>${btnReceber}${btnArquivar}${btnZAP}${btnImprimir}</div></div>`;
+        <div class="flex justify-between items-start mb-2"><span class="text-[9px] font-bold text-slate-400">${dataFormatada}</span><span class="text-[10px] font-black text-indigo-600">${visualizaPrecos ? 'R$ ' + p.total.toFixed(2) : ''}</span></div><h4 class="font-bold text-slate-800 text-xs mb-2">${p.clienteNome}</h4><div class="text-[9px] text-slate-500 mb-3 space-y-1">${p.itens.map(i => `<p>• ${i.qtdCarrinho}x ${i.nome} <span class="opacity-70">(${i.desc})</span></p>`).join('')}</div><div class="mt-3 pt-3 border-t border-slate-100 flex gap-2 flex-wrap"><select onchange="mudarStatusPedido('${p.id}', this.value)" class="flex-1 p-2 bg-slate-50 border border-slate-200 rounded text-[10px] font-bold outline-none focus:ring-2 focus:ring-indigo-500 min-w-[100px]">${options}</select>${btnReceber}${btnEtiqueta}${btnArquivar}${btnZAP}${btnImprimir}</div></div>`;
 }
 
-// --- ATUALIZAÇÃO DE STATUS E ESTORNO AUTOMÁTICO ---
-async function mudarStatusPedido(id, novoStatus) {
-    try {
-        const pedidoRef = db.collection("pedidos").doc(id);
-        const doc = await pedidoRef.get();
-        if (!doc.exists) return;
-        const p = doc.data();
-
-        await pedidoRef.update({ status: novoStatus });
-
-        // Se mudou para Cancelado/Estorno e o cliente já tinha pago algo, gera a despesa
-        if (novoStatus === 'Cancelado / Estorno' && p.valorPago > 0) {
-            await db.collection("despesas").add({
-                descricao: `ESTORNO - Pedido: ${p.clienteNome}`,
-                valor: p.valorPago,
-                data: new Date()
-            });
-            alert(`Pedido cancelado! Um estorno de R$ ${p.valorPago.toFixed(2)} foi registrado nas Saídas do Financeiro.`);
-        }
-    } catch(e) { alert("Erro ao atualizar status."); }
-}
-
-async function arquivarPedido(id) {
-    if(confirm("Deseja remover este pedido do painel de produção? Ele continuará salvo no histórico e financeiro.")) {
-        try { await db.collection("pedidos").doc(id).update({ arquivado: true }); } 
-        catch(e) { alert("Erro ao arquivar pedido."); }
-    }
-}
-
-// --- HISTÓRICO GERAL DE PEDIDOS (COM EXCLUSÃO PARA ADMIN) ---
+// --- HISTÓRICO GERAL DE PEDIDOS ---
 function abrirHistoricoGeral() {
     document.getElementById('buscaHistoricoGeral').value = '';
     renderHistoricoGeral();
@@ -288,27 +261,13 @@ function renderHistoricoGeral() {
             <td class="p-3 text-center">
                 ${btnDesarquivar}
                 <button type="button" onclick="abrirDetalhesPedido('${p.id}')" class="text-indigo-400 hover:text-indigo-600 mx-1" title="Ver Detalhes"><i class="fa fa-eye"></i></button>
-                <button type="button" onclick="${p.status === 'Orçamento' ? `imprimirOrcamento('${p.id}')` : `imprimirRecibo('${p.id}')`}" class="text-slate-400 hover:text-slate-600 mx-1" title="Imprimir"><i class="fa fa-print"></i></button>
+                <button type="button" onclick="imprimirEtiqueta('${p.id}', '6x4')" class="text-purple-400 hover:text-purple-600 mx-1" title="Imprimir Etiqueta"><i class="fa fa-tag"></i></button>
+                <button type="button" onclick="${p.status === 'Orçamento' ? `imprimirOrcamento('${p.id}')` : `imprimirRecibo('${p.id}')`}" class="text-slate-400 hover:text-slate-600 mx-1" title="Imprimir Recibo/PDF"><i class="fa fa-print"></i></button>
                 ${btnExcluir}
             </td>
         </tr>
         `;
     }).join('');
-}
-
-async function desarquivarPedido(id) {
-    if(confirm("Deseja voltar este pedido para o painel de Produção?")) {
-        try { await db.collection("pedidos").doc(id).update({ arquivado: false }); renderHistoricoGeral(); } 
-        catch(e) { alert("Erro ao desarquivar pedido."); }
-    }
-}
-
-async function excluirPedido(id) {
-    if(usuarioAtual.role !== 'admin') return alert("Sem permissão.");
-    if(confirm("ATENÇÃO: Tem certeza que deseja EXCLUIR PERMANENTEMENTE este pedido? Esta ação não pode ser desfeita.")) {
-        try { await db.collection("pedidos").doc(id).delete(); renderHistoricoGeral(); } 
-        catch(e) { alert("Erro ao excluir pedido."); }
-    }
 }
 // --- WHATSAPP ---
 function enviarWhatsApp(idPedido, tipo, objPedido = null) {
@@ -526,6 +485,71 @@ function imprimirOrcamento(idPedido, objPedido) {
         </script>
         </body></html>
     `;
+    janela.document.write(html);
+    janela.document.close();
+}
+
+// --- IMPRESSÃO DE ETIQUETA TÉRMICA ---
+function imprimirEtiqueta(idPedido, tamanho = '6x4') {
+    const p = bdPedidos.find(x => x.id === idPedido);
+    if (!p) return;
+
+    let telefone = "Não informado";
+    if (p.clienteId && p.clienteId !== "Consumidor Final") {
+        const cli = bdClientes.find(c => c.id === p.clienteId);
+        if (cli && cli.telefone) telefone = cli.telefone;
+    }
+
+    const janela = window.open('', '', 'width=400,height=300');
+    let html = '';
+
+    if (tamanho === '6x4') {
+        html = `
+            <html><head><style>
+                @page { size: 60mm 40mm; margin: 0; }
+                body { 
+                    width: 60mm; height: 40mm; margin: 0; padding: 2mm; 
+                    box-sizing: border-box; font-family: sans-serif; 
+                    text-align: center; display: flex; flex-direction: column; 
+                    justify-content: center; align-items: center; color: #000;
+                }
+                img.logo { max-width: 40mm; max-height: 12mm; margin-bottom: 3mm; filter: grayscale(100%); }
+                .cliente { font-size: 14px; font-weight: bold; line-height: 1.1; margin-bottom: 1mm; width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+                .telefone { font-size: 11px; margin-bottom: 2mm; }
+                .pedido { font-size: 9px; border-top: 1px dashed #000; padding-top: 1mm; width: 100%; }
+            </style></head><body>
+                <img src="https://i.postimg.cc/GtwRkLBF/gva-pr-ERP-26.png" class="logo" alt="GVA Gráfica" />
+                <div class="cliente">${p.clienteNome}</div>
+                <div class="telefone">${telefone}</div>
+                <div class="pedido">Pedido: #${idPedido.substring(0,6).toUpperCase()}</div>
+                <script>setTimeout(() => { window.print(); window.close(); }, 500);</script>
+            </body></html>
+        `;
+    } else if (tamanho === '10x15') {
+        // Estrutura pronta para quando as etiquetas maiores chegarem
+        html = `
+            <html><head><style>
+                @page { size: 100mm 150mm; margin: 0; }
+                body { 
+                    width: 100mm; height: 150mm; margin: 0; padding: 5mm; 
+                    box-sizing: border-box; font-family: sans-serif; 
+                    text-align: center; display: flex; flex-direction: column; 
+                    justify-content: flex-start; align-items: center; color: #000;
+                }
+                img.logo { max-width: 80mm; max-height: 30mm; margin-bottom: 10mm; filter: grayscale(100%); }
+                .cliente { font-size: 24px; font-weight: bold; line-height: 1.2; margin-bottom: 5mm; }
+                .telefone { font-size: 18px; margin-bottom: 10mm; }
+                .pedido { font-size: 14px; border-top: 2px dashed #000; padding-top: 5mm; width: 100%; }
+            </style></head><body>
+                <img src="https://i.postimg.cc/GtwRkLBF/gva-pr-ERP-26.png" class="logo" alt="GVA Gráfica" />
+                <div class="cliente">${p.clienteNome}</div>
+                <div class="telefone">${telefone}</div>
+                <div class="pedido">Pedido: #${idPedido.substring(0,6).toUpperCase()}</div>
+                <script>setTimeout(() => { window.print(); window.close(); }, 500);</script>
+            </body></html>
+        `;
+    }
+
     janela.document.write(html);
     janela.document.close();
 }
@@ -992,26 +1016,13 @@ function calcularPrecoAoVivo() {
         
         let menorLado = Math.min(l, a);
         
-        // NOVO: Trava e correção automática do m2
         if (p && p.larguraMax > 0 && menorLado > p.larguraMax) {
             erroMax.classList.remove('hidden');
-            
-            // Corrige o valor digitado de volta para o limite máximo
-            if (l === menorLado) {
-                document.getElementById('w2pLargura').value = p.larguraMax;
-                l = p.larguraMax;
-            } else {
-                document.getElementById('w2pAltura').value = p.larguraMax;
-                a = p.larguraMax;
-            }
-            
+            if (l === menorLado) { document.getElementById('w2pLargura').value = p.larguraMax; l = p.larguraMax; } 
+            else { document.getElementById('w2pAltura').value = p.larguraMax; a = p.larguraMax; }
             document.getElementById('textoErroMedidaMax').innerText = `Atenção: A medida excede a largura máxima permitida (${p.larguraMax}m). O valor foi ajustado automaticamente.`;
-            
-            // Recalcula o menor lado após a correção
             menorLado = Math.min(l, a);
-        } else {
-            erroMax.classList.add('hidden');
-        }
+        } else { erroMax.classList.add('hidden'); }
 
         if (p && p.larguraBobina > 0 && menorLado > p.larguraBobina) avisoBobina.classList.remove('hidden');
         else avisoBobina.classList.add('hidden');
@@ -1183,7 +1194,6 @@ async function enviarPedido(imprimir = false, isOrcamento = false) {
     const idCli = document.getElementById('cartClienteId').value;
     const nomeCliInput = document.getElementById('cartClienteInput').value;
     
-    // NOVO: Trava de Cliente Obrigatório
     if (!idCli) {
         return alert("ATENÇÃO: É obrigatório pesquisar e selecionar um cliente cadastrado na lista para gerar o pedido ou orçamento.");
     }
@@ -1419,6 +1429,7 @@ function abrirDetalhesPedido(id) {
         </div>
         <div class="mt-6 flex gap-2">
             ${btnReceber}
+            <button type="button" onclick="imprimirEtiqueta('${p.id}', '6x4')" class="flex-1 bg-purple-500 text-white py-3 rounded font-bold text-xs hover:bg-purple-600 transition uppercase tracking-widest shadow-md"><i class="fa fa-tag"></i> Etiqueta</button>
             <button type="button" onclick="enviarWhatsApp('${p.id}', '${p.status === 'Orçamento' ? 'orcamento' : 'recibo'}')" class="flex-1 bg-green-500 text-white py-3 rounded font-bold text-xs hover:bg-green-600 transition uppercase tracking-widest shadow-md"><i class="fab fa-whatsapp"></i> Zap</button>
             <button type="button" onclick="${p.status === 'Orçamento' ? `imprimirOrcamento('${p.id}')` : `imprimirRecibo('${p.id}')`}" class="flex-1 bg-indigo-600 text-white py-3 rounded font-bold text-xs hover:bg-indigo-700 transition uppercase tracking-widest shadow-md"><i class="${p.status === 'Orçamento' ? 'fa fa-file-pdf' : 'fa fa-print'}"></i> ${p.status === 'Orçamento' ? 'PDF' : 'Imprimir'}</button>
         </div>
@@ -1490,7 +1501,6 @@ function limparFormCli() { document.querySelectorAll('#sub-cli input').forEach(i
 function renderCliTable() { const tab = document.getElementById('listaClientesTab'); if(!tab) return; const termo = document.getElementById('buscaClienteTab')?.value.toLowerCase() || ''; let filtrados = bdClientes; if (termo) filtrados = bdClientes.filter(c => c.nome.toLowerCase().includes(termo) || (c.documento && c.documento.includes(termo))); tab.innerHTML = filtrados.map(c => `<tr class="border-b border-slate-50 hover:bg-slate-50"><td class="p-4 font-bold text-slate-700">${c.nome}</td><td class="p-4 text-slate-500">${c.responsavel || '-'}</td><td class="p-4 font-bold ${c.credito >= 0 ? 'text-emerald-500' : 'text-red-500'}">R$ ${(c.credito || 0).toFixed(2)}</td><td class="p-4 text-center space-x-3"><button type="button" onclick="verHistoricoCliente('${c.id}')" class="text-indigo-400 text-[10px] font-black uppercase hover:text-indigo-500">Histórico</button><button type="button" onclick="editCli('${c.id}')" class="text-slate-400 text-[10px] font-black uppercase hover:text-indigo-500">Editar</button><button type="button" onclick="db.collection('clientes').doc('${c.id}').delete()" class="text-red-300 hover:text-red-500">✕</button></td></tr>`).join(''); }
 function verHistoricoCliente(idCli) { const cliente = bdClientes.find(x => x.id === idCli); const pedidosCli = bdPedidos.filter(p => p.clienteId === idCli); document.getElementById('histNomeCli').innerText = `Pedidos de: ${cliente.nome}`; const corpo = document.getElementById('corpoHistoricoCli'); corpo.innerHTML = pedidosCli.length === 0 ? "<p class='text-center text-slate-400 py-10'>Nenhum pedido.</p>" : pedidosCli.map(p => `<div class="bg-slate-50 p-4 rounded border border-slate-100"><div class="flex justify-between font-bold text-indigo-900 mb-2"><span>${p.data.toDate().toLocaleDateString('pt-BR')}</span><span>R$ ${p.total.toFixed(2)}</span></div><div class="text-xs text-slate-500 mb-3">${p.itens.map(i => `• ${i.qtdCarrinho}x ${i.nome}`).join('<br/>')}</div><div class="flex gap-4"><button type="button" onclick="abrirDetalhesPedido('${p.id}')" class="text-[10px] font-bold text-indigo-500 uppercase hover:underline"><i class="fa fa-eye"></i> Ver Detalhes</button><button type="button" onclick="${p.status === 'Orçamento' ? `imprimirOrcamento('${p.id}')` : `imprimirRecibo('${p.id}')`}" class="text-[10px] font-bold text-indigo-500 uppercase hover:underline"><i class="${p.status === 'Orçamento' ? 'fa fa-file-pdf' : 'fa fa-print'}"></i> ${p.status === 'Orçamento' ? 'Gerar PDF' : 'Imprimir Recibo'}</button></div></div>`).join(''); document.getElementById('modalHistoricoCli').classList.remove('hidden'); }
 
-// --- NOVO: RENDERIZAR ABA "A RECEBER" ---
 function renderAReceber() {
     const tab = document.getElementById('listaAReceberTab');
     if(!tab) return;
