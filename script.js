@@ -13,7 +13,7 @@ const db = firebase.firestore();
 
 let bdCategorias=[], bdProdutos=[], bdClientes=[], bdPedidos=[], bdDespesas=[], bdAcabamentos=[], bdUsuarios=[], carrinho=[];
 let usuarioAtual=null, filtroSetor='Todos', filtroCategoria='Todas', filtroSubcategoria='Todas';
-const STATUSES=["Orçamento","Aguardando pagamento","Em produção","Acabamento","Pronto para Retirada","Entregue","Cancelado / Estorno"];
+const STATUSES=["Orçamento","Na fila de impressão","Em produção","Acabamento","Pronto para Retirada","Entregue","Cancelado / Estorno"];
 
 auth.onAuthStateChanged(async user => {
     const telaLogin = document.getElementById('telaLogin'), appInterface = document.getElementById('appInterface'), btnEntrar = document.getElementById('btnEntrar');
@@ -131,7 +131,7 @@ function gerarCardPedido(p) {
     const dataFormatada = p.data.toDate().toLocaleDateString('pt-BR') + ' ' + p.data.toDate().toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
     let options = STATUSES.map(s => `<option value="${s}" ${p.status === s ? 'selected' : ''}>${s}</option>`).join('');
     let corBorda = 'border-l-slate-400';
-    if(p.status === 'Orçamento') corBorda = 'border-l-blue-400'; else if(p.status === 'Aguardando pagamento') corBorda = 'border-l-amber-400'; else if(p.status === 'Em produção') corBorda = 'border-l-blue-500'; else if(p.status === 'Acabamento') corBorda = 'border-l-indigo-500'; else if(p.status === 'Pronto para Retirada') corBorda = 'border-l-emerald-400'; else if(p.status === 'Entregue') corBorda = 'border-l-emerald-600'; else if(p.status === 'Cancelado / Estorno') corBorda = 'border-l-red-500';
+    if(p.status === 'Orçamento') corBorda = 'border-l-blue-400'; else if(p.status === 'Na fila de impressão') corBorda = 'border-l-amber-400'; else if(p.status === 'Em produção') corBorda = 'border-l-blue-500'; else if(p.status === 'Acabamento') corBorda = 'border-l-indigo-500'; else if(p.status === 'Pronto para Retirada') corBorda = 'border-l-emerald-400'; else if(p.status === 'Entregue') corBorda = 'border-l-emerald-600'; else if(p.status === 'Cancelado / Estorno') corBorda = 'border-l-red-500';
 
     let btnArquivar = (p.status === 'Entregue' || p.status === 'Cancelado / Estorno') ? `<button type="button" onclick="arquivarPedido('${p.id}')" class="bg-slate-200 text-slate-600 px-3 rounded hover:bg-slate-300 transition" title="Arquivar Pedido"><i class="fa fa-archive"></i></button>` : '';
     let visualizaPrecos = (!usuarioAtual || usuarioAtual.role !== 'producao');
@@ -542,7 +542,7 @@ async function enviarPedido(imprimir = false, isOrcamento = false) {
     let pago = parseFloat(document.getElementById('cartValorPago').value) || 0, formaPagto = document.getElementById('cartPagamento').value;
     if (isOrcamento) { pago = 0; formaPagto = ''; }
     const desconto = parseFloat(document.getElementById('cartDesconto').value) || 0, taxaPagto = parseFloat(document.getElementById('cartTaxaPagto').innerText.replace("R$ ","")) || 0, frete = parseFloat(document.getElementById('cartFreteValor').value) || 0;
-    const saldo = total - pago; let statusInicial = "Em produção"; if (isOrcamento) statusInicial = "Orçamento"; else if (saldo > 0) statusInicial = "Aguardando pagamento";
+    const saldo = total - pago; let statusInicial = "Em produção"; if (isOrcamento) statusInicial = "Orçamento"; else if (saldo > 0) statusInicial = "Na fila de impressão";
 
     const pedido = {
         clienteId: idCli, clienteNome: bdClientes.find(x => x.id === idCli).nome, itens: carrinho, total: total, desconto: desconto, taxaPagto: taxaPagto, frete: frete, formaPagamento: formaPagto, valorPago: pago, saldoDevedor: saldo, data: new Date(), status: statusInicial, arquivado: false, pagamentos: pago > 0 ?[{ data: new Date(), valor: pago, forma: formaPagto }] :[]
@@ -626,7 +626,7 @@ async function confirmarRecebimentoSaldo() {
     if (valorRecebido > (p.saldoDevedor + 0.01)) return alert("O valor recebido não pode ser maior que o saldo devedor.");
 
     const novoPago = p.valorPago + valorRecebido; let novoSaldo = p.saldoDevedor - valorRecebido; if (novoSaldo < 0) novoSaldo = 0;
-    const novoStatus = (novoSaldo === 0 && (p.status === 'Aguardando pagamento' || p.status === 'Orçamento')) ? 'Em produção' : p.status;
+    const novoStatus = (novoSaldo === 0 && (p.status === 'Na fila de impressão' || p.status === 'Orçamento')) ? 'Em produção' : p.status;
     const novoPagamento = { data: new Date(), valor: valorRecebido, forma: formaPagto };
 
     let pagamentosAtualizados = p.pagamentos ||[];
