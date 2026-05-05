@@ -212,7 +212,10 @@ function gerarCardPedido(p) {
     let btnReceber = (visualizaPrecos && p.saldoDevedor > 0) ? `<button type="button" onclick="receberSaldo('${p.id}')" class="bg-emerald-500 text-white px-3 rounded hover:bg-emerald-600 transition" title="Receber Saldo (Falta R$ ${p.saldoDevedor.toFixed(2)})"><i class="fa fa-hand-holding-usd"></i></button>` : '';
     let btnZAP = !visualizaPrecos ? '' : `<button type="button" onclick="enviarWhatsApp('${p.id}', '${p.status === 'Pronto para Retirada' ? 'retirada' : (p.status === 'Orçamento' ? 'orcamento' : 'recibo')}')" class="bg-green-500 text-white px-3 rounded hover:bg-green-600 transition" title="Enviar WhatsApp"><i class="fab fa-whatsapp"></i></button>`;
     let btnImprimir = !visualizaPrecos ? '' : `<button type="button" onclick="${p.status === 'Orçamento' ? `imprimirOrcamento('${p.id}')` : `imprimirRecibo('${p.id}')`}" class="bg-slate-800 text-white px-3 rounded hover:bg-slate-700 transition" title="${p.status === 'Orçamento' ? 'Gerar PDF' : 'Imprimir Recibo'}"><i class="${p.status === 'Orçamento' ? 'fa fa-file-pdf' : 'fa fa-print'}"></i></button>`;
-    let btnEtiqueta = `<button type="button" onclick="imprimirEtiqueta('${p.id}', '6x4')" class="bg-purple-500 text-white px-3 rounded hover:bg-purple-600 transition" title="Imprimir Etiqueta 6x4"><i class="fa fa-tag"></i></button>`;
+    
+    // NOVO BOTÃO TÉRMICA
+    let btnTermica = `<button type="button" onclick="imprimirTermica('${p.id}')" class="bg-purple-500 text-white px-3 rounded hover:bg-purple-600 transition" title="Imprimir Cupom Térmico (2 Vias)"><i class="fa fa-receipt"></i></button>`;
+    
     let etiquetaFalta = (p.saldoDevedor > 0 && visualizaPrecos) ? `<div class="absolute -top-2 -right-2 bg-red-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full shadow-md z-10">FALTA R$ ${p.saldoDevedor.toFixed(2)}</div>` : '';
 
     let infoExtra = '';
@@ -224,7 +227,7 @@ function gerarCardPedido(p) {
 
     let htmlItens = p.itens ? p.itens.map(i => `<p>• ${i.qtdCarrinho || i.qtd || 1}x ${i.nome} <span class="opacity-70">(${i.desc || ''})</span></p>`).join('') : '';
 
-    return `<div class="bg-white p-4 rounded-lg shadow-sm border border-slate-200 border-l-4 ${corBorda} relative mt-2">${etiquetaFalta}<div class="flex justify-between items-start mb-2"><span class="text-[9px] font-bold text-slate-400">${dataFormatada}</span><span class="text-[10px] font-black text-indigo-600">${visualizaPrecos ? 'R$ ' + (p.total || 0).toFixed(2) : ''}</span></div><h4 class="font-bold text-slate-800 text-xs mb-2">${p.clienteNome || 'Cliente'}</h4><div class="text-[9px] text-slate-500 mb-3 space-y-1">${htmlItens}${infoExtra}</div><div class="mt-3 pt-3 border-t border-slate-100 flex gap-2 flex-wrap"><select onchange="mudarStatusPedido('${p.id}', this.value)" class="flex-1 p-2 bg-slate-50 border border-slate-200 rounded text-[10px] font-bold outline-none focus:ring-2 focus:ring-indigo-500 min-w-[100px]">${options}</select>${btnReceber}${btnEtiqueta}${btnArquivar}${btnZAP}${btnImprimir}</div></div>`;
+    return `<div class="bg-white p-4 rounded-lg shadow-sm border border-slate-200 border-l-4 ${corBorda} relative mt-2">${etiquetaFalta}<div class="flex justify-between items-start mb-2"><span class="text-[9px] font-bold text-slate-400">${dataFormatada}</span><span class="text-[10px] font-black text-indigo-600">${visualizaPrecos ? 'R$ ' + (p.total || 0).toFixed(2) : ''}</span></div><h4 class="font-bold text-slate-800 text-xs mb-2">${p.clienteNome || 'Cliente'}</h4><div class="text-[9px] text-slate-500 mb-3 space-y-1">${htmlItens}${infoExtra}</div><div class="mt-3 pt-3 border-t border-slate-100 flex gap-2 flex-wrap"><select onchange="mudarStatusPedido('${p.id}', this.value)" class="flex-1 p-2 bg-slate-50 border border-slate-200 rounded text-[10px] font-bold outline-none focus:ring-2 focus:ring-indigo-500 min-w-[100px]">${options}</select>${btnReceber}${btnTermica}${btnArquivar}${btnZAP}${btnImprimir}</div></div>`;
 }
 
 async function mudarStatusPedido(id, novoStatus) {
@@ -263,7 +266,7 @@ async function salvarDadosEmpresa() {
     try { await db.collection("empresa").doc("dados").set(dados); alert("Dados Bancários/PIX salvos com sucesso!"); } catch(e) { alert("Erro ao salvar dados da empresa."); }
 }
 
-// --- WHATSAPP UTILS ---
+// --- WHATSAPP UTILS (ABRE DIRETO NO APP) ---
 function enviarWhatsApp(idPedido, acao) {
     const pedido = bdPedidos.find(p => p.id === idPedido); if(!pedido) return;
     const zapModal = document.getElementById('modalWhatsApp');
@@ -285,7 +288,10 @@ function confirmarEnvioWhatsApp() {
     const tel = document.getElementById('zapTelefone').value.replace(/\D/g, '');
     const msg = encodeURIComponent(document.getElementById('zapMensagem').value);
     if(tel.length < 10) { alert("Informe um número de telefone válido com DDD."); return; }
-    window.open(`https://wa.me/${tel}?text=${msg}`, '_blank');
+    
+    // Tenta abrir direto no aplicativo do PC (whatsapp://)
+    window.open(`whatsapp://send?phone=${tel}&text=${msg}`, '_self');
+    
     document.getElementById('modalWhatsApp').classList.add('hidden');
 }
 
@@ -388,10 +394,16 @@ function renderVitrine() {
     if (filtroCategoria !== 'Todas') filtrados = filtrados.filter(p => p.categoria === filtroCategoria);
     if (filtroSubcategoria !== 'Todas') filtrados = filtrados.filter(p => p.subcategoria === filtroSubcategoria);
 
-    grade.innerHTML = filtrados.length === 0 ? `<p class="col-span-full text-center text-slate-400 py-10">Nenhum produto encontrado.</p>` : filtrados.map(p => `
-        <div onclick="abrirModalW2P('${p.id}')" class="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden cursor-pointer hover:shadow-lg hover:border-indigo-300 transition-all group flex flex-col h-full">
-            <div class="h-40 bg-slate-100 relative flex items-center justify-center p-4">
-                ${p.foto ? `<img src="${p.foto}" class="max-h-full object-contain group-hover:scale-105 transition-transform" />` : `<i class="fa fa-image text-4xl text-slate-300"></i>`}
+    grade.innerHTML = filtrados.length === 0 ? `<p class="col-span-full text-center text-slate-400 py-10">Nenhum produto encontrado.</p>` : filtrados.map(p => {
+        let corSetor = 'bg-slate-100 text-slate-500'; let borderSetor = 'hover:border-slate-400';
+        if(p.setor === 'Gráfico') { corSetor = 'bg-yellow-100 text-yellow-800'; borderSetor = 'hover:border-yellow-400'; }
+        else if(p.setor === 'Com. Visual') { corSetor = 'bg-blue-100 text-blue-800'; borderSetor = 'hover:border-blue-400'; }
+        else if(p.setor === 'Outros') { corSetor = 'bg-emerald-100 text-emerald-800'; borderSetor = 'hover:border-emerald-400'; }
+
+        return `
+        <div onclick="abrirModalW2P('${p.id}')" class="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden cursor-pointer hover:shadow-lg ${borderSetor} transition-all group flex flex-col h-full">
+            <div class="h-40 ${corSetor} relative flex items-center justify-center p-4 transition-colors">
+                ${p.foto ? `<img src="${p.foto}" class="max-h-full object-contain group-hover:scale-105 transition-transform" />` : `<i class="fa fa-image text-4xl opacity-50"></i>`}
                 <span class="absolute top-2 right-2 bg-white/90 backdrop-blur text-indigo-700 text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded shadow-sm">${p.regraPreco || 'unidade'}</span>
             </div>
             <div class="p-4 flex flex-col flex-1">
@@ -403,15 +415,14 @@ function renderVitrine() {
                 </div>
             </div>
         </div>
-    `).join('');
+        `;
+    }).join('');
 }
 
 let prodAtualW2P = null;
 function abrirModalW2P(id) {
     prodAtualW2P = bdProdutos.find(p => p.id === id); if(!prodAtualW2P) return;
-    
-    // PATCH PARA PRODUTOS ANTIGOS
-    if(!prodAtualW2P.precos) prodAtualW2P.precos = { base: prodAtualW2P.preco || 0, pacotes: [], progressivo:[], combinacoes: { valores:[] } };
+    if(!prodAtualW2P.precos) prodAtualW2P.precos = { base: prodAtualW2P.preco || 0, pacotes:[], progressivo:[], combinacoes: { valores:[] } };
     if(!prodAtualW2P.regraPreco) prodAtualW2P.regraPreco = 'unidade';
 
     document.getElementById('modalProdId').value = prodAtualW2P.id;
@@ -430,17 +441,19 @@ function abrirModalW2P(id) {
     document.getElementById('avisoBobina').classList.add('hidden'); document.getElementById('erroMedidaMax').classList.add('hidden');
 
     let htmlMedidas = '';
+    let inputQtdGeral = `<div class="space-y-1 mt-4 col-span-2 border-t border-slate-100 pt-4"><label class="text-[10px] font-bold text-slate-400 uppercase">Quantidade (Multiplicador)</label><input type="number" id="w2pQtd" value="1" min="1" oninput="calcularPrecoW2P()" class="w-full p-3 border border-slate-200 bg-white rounded text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500" /></div>`;
+
     if(prodAtualW2P.regraPreco === 'm2') {
-        htmlMedidas = `<div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">Largura (m)</label><input type="number" id="w2pLargura" value="1.00" step="0.01" oninput="calcularPrecoW2P()" class="w-full p-3 border border-slate-200 bg-white rounded text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500" /></div><div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">Altura (m)</label><input type="number" id="w2pAltura" value="1.00" step="0.01" oninput="calcularPrecoW2P()" class="w-full p-3 border border-slate-200 bg-white rounded text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500" /></div><div class="space-y-1 col-span-2"><label class="text-[10px] font-bold text-slate-400 uppercase">Quantidade de Lonas/Adesivos</label><input type="number" id="w2pQtd" value="1" min="1" oninput="calcularPrecoW2P()" class="w-full p-3 border border-slate-200 bg-white rounded text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500" /></div>`;
+        htmlMedidas = `<div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">Largura (m)</label><input type="number" id="w2pLargura" value="1.00" step="0.01" oninput="calcularPrecoW2P()" class="w-full p-3 border border-slate-200 bg-white rounded text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500" /></div><div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">Altura (m)</label><input type="number" id="w2pAltura" value="1.00" step="0.01" oninput="calcularPrecoW2P()" class="w-full p-3 border border-slate-200 bg-white rounded text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500" /></div>` + inputQtdGeral;
     } else if(prodAtualW2P.regraPreco === 'pacote') {
         let opts = (prodAtualW2P.precos.pacotes||[]).map(p => `<option value="${p.qtd}" data-preco="${p.preco}">${p.qtd} un. - R$ ${p.preco.toFixed(2)}</option>`).join('');
-        htmlMedidas = `<div class="space-y-1 col-span-2"><label class="text-[10px] font-bold text-slate-400 uppercase">Selecione o Pacote</label><select id="w2pPacote" onchange="calcularPrecoW2P()" class="w-full p-3 border border-slate-200 bg-white rounded text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500"><option value="">Selecione...</option>${opts}</select></div><input type="hidden" id="w2pQtd" value="1" />`;
+        htmlMedidas = `<div class="space-y-1 col-span-2"><label class="text-[10px] font-bold text-slate-400 uppercase">Selecione o Pacote</label><select id="w2pPacote" onchange="calcularPrecoW2P()" class="w-full p-3 border border-slate-200 bg-white rounded text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500"><option value="">Selecione...</option>${opts}</select></div>` + inputQtdGeral;
     } else if(prodAtualW2P.regraPreco === 'combinacao') {
         let opts1 =[...new Set((prodAtualW2P.precos.combinacoes.valores||[]).map(v => v.v1))].map(v => `<option value="${v}">${v}</option>`).join('');
         let opts2 =[...new Set((prodAtualW2P.precos.combinacoes.valores||[]).map(v => v.v2))].map(v => `<option value="${v}">${v}</option>`).join('');
-        htmlMedidas = `<div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">${prodAtualW2P.precos.combinacoes.attr1 || 'Opção 1'}</label><select id="w2pComb1" onchange="calcularPrecoW2P()" class="w-full p-3 border border-slate-200 bg-white rounded text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500"><option value="">Selecione...</option>${opts1}</select></div><div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">${prodAtualW2P.precos.combinacoes.attr2 || 'Opção 2'}</label><select id="w2pComb2" onchange="calcularPrecoW2P()" class="w-full p-3 border border-slate-200 bg-white rounded text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500"><option value="">Selecione...</option>${opts2}</select></div><input type="hidden" id="w2pQtd" value="1" />`;
+        htmlMedidas = `<div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">${prodAtualW2P.precos.combinacoes.attr1 || 'Opção 1'}</label><select id="w2pComb1" onchange="calcularPrecoW2P()" class="w-full p-3 border border-slate-200 bg-white rounded text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500"><option value="">Selecione...</option>${opts1}</select></div><div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">${prodAtualW2P.precos.combinacoes.attr2 || 'Opção 2'}</label><select id="w2pComb2" onchange="calcularPrecoW2P()" class="w-full p-3 border border-slate-200 bg-white rounded text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500"><option value="">Selecione...</option>${opts2}</select></div>` + inputQtdGeral;
     } else {
-        htmlMedidas = `<div class="space-y-1 col-span-2"><label class="text-[10px] font-bold text-slate-400 uppercase">Quantidade Unitária</label><input type="number" id="w2pQtd" value="1" min="1" oninput="calcularPrecoW2P()" class="w-full p-3 border border-slate-200 bg-white rounded text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500" /></div>`;
+        htmlMedidas = inputQtdGeral;
     }
     document.getElementById('modalCorpoMedidas').innerHTML = htmlMedidas;
 
@@ -460,7 +473,8 @@ function abrirModalW2P(id) {
 function calcularPrecoW2P() {
     if(!prodAtualW2P) return;
     let total = 0; const regra = prodAtualW2P.regraPreco;
-    let qtd = 1, largura = 0, altura = 0;
+    let qtdMultiplicador = parseInt(document.getElementById('w2pQtd').value) || 1; 
+    let largura = 0, altura = 0;
 
     document.getElementById('avisoBobina').classList.add('hidden');
     document.getElementById('erroMedidaMax').classList.add('hidden');
@@ -469,9 +483,8 @@ function calcularPrecoW2P() {
 
     if(regra === 'm2') {
         largura = parseFloat(document.getElementById('w2pLargura').value) || 0; altura = parseFloat(document.getElementById('w2pAltura').value) || 0;
-        qtd = parseInt(document.getElementById('w2pQtd').value) || 1;
         let m2 = largura * altura; if(m2 < 1) m2 = 1; 
-        total = m2 * qtd * prodAtualW2P.precos.base;
+        total = m2 * qtdMultiplicador * prodAtualW2P.precos.base;
 
         if(prodAtualW2P.medidas) {
             const lMax = parseFloat(prodAtualW2P.medidas.largMax); const cMax = parseFloat(prodAtualW2P.medidas.compMax); const lBob = parseFloat(prodAtualW2P.medidas.largBobina);
@@ -483,23 +496,23 @@ function calcularPrecoW2P() {
             } else if(lBob > 0 && menorLado > lBob) { document.getElementById('avisoBobina').classList.remove('hidden'); }
         }
     } else if(regra === 'pacote') {
-        const sel = document.getElementById('w2pPacote'); if(sel && sel.selectedIndex > 0) { const opt = sel.options[sel.selectedIndex]; qtd = parseInt(opt.value); total = parseFloat(opt.getAttribute('data-preco')); }
+        const sel = document.getElementById('w2pPacote'); 
+        if(sel && sel.selectedIndex > 0) { const opt = sel.options[sel.selectedIndex]; total = parseFloat(opt.getAttribute('data-preco')) * qtdMultiplicador; }
     } else if(regra === 'progressivo') {
-        qtd = parseInt(document.getElementById('w2pQtd').value) || 1; let pUnit = prodAtualW2P.precos.base;
-        if(prodAtualW2P.precos.progressivo) { const faixas =[...prodAtualW2P.precos.progressivo].sort((a,b) => b.minQtd - a.minQtd); for(let f of faixas) { if(qtd >= f.minQtd) { pUnit = f.precoUnit; break; } } }
-        total = qtd * pUnit;
+        let pUnit = prodAtualW2P.precos.base;
+        if(prodAtualW2P.precos.progressivo) { const faixas =[...prodAtualW2P.precos.progressivo].sort((a,b) => b.minQtd - a.minQtd); for(let f of faixas) { if(qtdMultiplicador >= f.minQtd) { pUnit = f.precoUnit; break; } } }
+        total = qtdMultiplicador * pUnit;
     } else if(regra === 'combinacao') {
         const v1 = document.getElementById('w2pComb1') ? document.getElementById('w2pComb1').value : ''; const v2 = document.getElementById('w2pComb2') ? document.getElementById('w2pComb2').value : '';
-        qtd = parseInt(v2) || 1; 
-        if(v1 && v2 && prodAtualW2P.precos.combinacoes) { const match = prodAtualW2P.precos.combinacoes.valores.find(x => x.v1 === v1 && x.v2 === v2); if(match) total = match.preco; }
+        if(v1 && v2 && prodAtualW2P.precos.combinacoes) { const match = prodAtualW2P.precos.combinacoes.valores.find(x => x.v1 === v1 && x.v2 === v2); if(match) total = match.preco * qtdMultiplicador; }
     } else {
-        qtd = parseInt(document.getElementById('w2pQtd').value) || 1; total = qtd * prodAtualW2P.precos.base;
+        total = qtdMultiplicador * prodAtualW2P.precos.base;
     }
 
     document.querySelectorAll('input[name="w2pCheckAcab"]:checked').forEach(chk => {
         const pAcab = parseFloat(chk.getAttribute('data-preco')), rAcab = chk.getAttribute('data-regra');
-        if(rAcab === 'm2' && regra === 'm2') total += (largura * altura * qtd * pAcab);
-        else if(rAcab === 'unidade') total += (qtd * pAcab);
+        if(rAcab === 'm2' && regra === 'm2') total += (largura * altura * qtdMultiplicador * pAcab);
+        else if(rAcab === 'unidade') total += (qtdMultiplicador * pAcab);
         else if(rAcab === 'lote') total += pAcab;
     });
 
@@ -516,10 +529,12 @@ function confirmarAdicaoCarrinho() {
     if(valorTotal <= 0 && prodAtualW2P.precos.base > 0) { alert("Selecione corretamente as opções para gerar o preço."); return; }
 
     let qtdFinal = 1; let descExtra = "";
-    if(prodAtualW2P.regraPreco === 'm2') { const l = document.getElementById('w2pLargura').value; const a = document.getElementById('w2pAltura').value; qtdFinal = document.getElementById('w2pQtd').value; descExtra = `${l}m x ${a}m`; }
-    else if(prodAtualW2P.regraPreco === 'pacote') { const sel = document.getElementById('w2pPacote'); if(sel.selectedIndex === 0) return; qtdFinal = sel.value; descExtra = `Pacote c/ ${qtdFinal}`; }
-    else if(prodAtualW2P.regraPreco === 'combinacao') { const v1 = document.getElementById('w2pComb1').value; const v2 = document.getElementById('w2pComb2').value; if(!v1 || !v2) return; qtdFinal = v2; descExtra = `${v1} | ${v2}`; }
-    else { qtdFinal = document.getElementById('w2pQtd').value; }
+    const qtdMultiplicador = document.getElementById('w2pQtd').value;
+
+    if(prodAtualW2P.regraPreco === 'm2') { const l = document.getElementById('w2pLargura').value; const a = document.getElementById('w2pAltura').value; qtdFinal = qtdMultiplicador; descExtra = `${l}m x ${a}m`; }
+    else if(prodAtualW2P.regraPreco === 'pacote') { const sel = document.getElementById('w2pPacote'); if(sel.selectedIndex === 0) return; qtdFinal = qtdMultiplicador; descExtra = `Pacote c/ ${sel.value}`; }
+    else if(prodAtualW2P.regraPreco === 'combinacao') { const v1 = document.getElementById('w2pComb1').value; const v2 = document.getElementById('w2pComb2').value; if(!v1 || !v2) return; qtdFinal = qtdMultiplicador; descExtra = `${v1} | ${v2}`; }
+    else { qtdFinal = qtdMultiplicador; }
 
     let acabExtras = []; document.querySelectorAll('input[name="w2pCheckAcab"]:checked').forEach(chk => { const a = bdAcabamentos.find(x => x.id === chk.value); if(a) acabExtras.push(a.nome); });
     if(acabExtras.length > 0) descExtra += ` | Acab: ${acabExtras.join(', ')}`;
@@ -529,7 +544,7 @@ function confirmarAdicaoCarrinho() {
 }
 
 function renderCarrinho() {
-    document.getElementById('listaCarrinho').innerHTML = carrinho.length === 0 ? '<p class="text-xs text-slate-400 text-center py-4">Carrinho vazio.</p>' : carrinho.map((item, index) => `<div class="flex justify-between items-center bg-slate-50 p-2 rounded border border-slate-100"><div class="flex-1"><p class="text-[10px] font-bold text-slate-700 leading-tight">${item.nome}</p><p class="text-[9px] text-slate-500">${item.desc} ${item.regraPreco!=='pacote'&&item.regraPreco!=='combinacao' ? `(Qtd: ${item.qtdCarrinho})` : ''}</p></div><div class="text-right ml-2"><p class="text-xs font-black text-indigo-600">R$ ${item.valor.toFixed(2)}</p><button type="button" onclick="removerDoCarrinho(${index})" class="text-[9px] text-red-500 hover:underline font-bold mt-1">Remover</button></div></div>`).join('');
+    document.getElementById('listaCarrinho').innerHTML = carrinho.length === 0 ? '<p class="text-xs text-slate-400 text-center py-4">Carrinho vazio.</p>' : carrinho.map((item, index) => `<div class="flex justify-between items-center bg-slate-50 p-2 rounded border border-slate-100"><div class="flex-1"><p class="text-[10px] font-bold text-slate-700 leading-tight">${item.nome}</p><p class="text-[9px] text-slate-500">${item.desc} (Qtd: ${item.qtdCarrinho})</p></div><div class="text-right ml-2"><p class="text-xs font-black text-indigo-600">R$ ${item.valor.toFixed(2)}</p><button type="button" onclick="removerDoCarrinho(${index})" class="text-[9px] text-red-500 hover:underline font-bold mt-1">Remover</button></div></div>`).join('');
     atualizarTotalFinal();
 }
 
@@ -629,12 +644,17 @@ function renderAReceber() {
 }
 
 function receberSaldo(idPedido) { const p = bdPedidos.find(x => x.id === idPedido); if(!p) return; document.getElementById('recSaldoIdPedido').value = p.id; document.getElementById('recSaldoValor').value = p.saldoDevedor.toFixed(2); document.getElementById('modalReceberSaldo').classList.remove('hidden'); }
+
+// AUTOMAÇÃO DE STATUS AO RECEBER SALDO
 async function confirmarRecebimentoSaldo() {
     const id = document.getElementById('recSaldoIdPedido').value; const valorDigitado = parseFloat(document.getElementById('recSaldoValor').value) || 0; const forma = document.getElementById('recSaldoForma').value;
     const p = bdPedidos.find(x => x.id === id); if(!p) return; if(valorDigitado <= 0 || valorDigitado > p.saldoDevedor) { alert("Valor inválido."); return; }
     const novoSaldo = p.saldoDevedor - valorDigitado; const novoValorPago = p.valorPago + valorDigitado;
     let hist = p.historicoPagamentos ||[]; hist.push({ data: new Date().toISOString(), valor: valorDigitado, forma: forma });
-    let novoStatus = p.status; if(novoSaldo <= 0 && p.status === 'Aguardando pagamento') novoStatus = 'Em produção';
+    
+    let novoStatus = p.status; 
+    if(novoSaldo <= 0 && p.status === 'Aguardando pagamento') novoStatus = 'Em produção'; // Automação
+    
     try { await db.collection("pedidos").doc(id).update({ saldoDevedor: novoSaldo, valorPago: novoValorPago, historicoPagamentos: hist, status: novoStatus }); document.getElementById('modalReceberSaldo').classList.add('hidden'); alert("Pagamento recebido e registrado no caixa!"); } catch(e) { alert("Erro ao receber saldo."); }
 }
 
@@ -657,33 +677,41 @@ function abrirDetalhesPedido(id) {
     document.getElementById('modalDetalhesPedido').classList.remove('hidden');
 }
 
-function gerarPixPayload(chave, valor, nome = "GVA Grafica", cidade = "Brasil") {
-    if(!chave) return "";
-    let payloadFormat = "000201"; let merchantAccount = "0014BR.GOV.BCB.PIX" + `01${chave.length.toString().padStart(2, '0')}${chave}`;
-    let merchantAccLen = merchantAccount.length.toString().padStart(2, '0');
-    let p1 = `${payloadFormat}26${merchantAccLen}${merchantAccount}520400005303986`;
-    if (valor > 0) p1 += `54${valor.toFixed(2).length.toString().padStart(2, '0')}${valor.toFixed(2)}`;
-    p1 += `5802BR59${nome.length.toString().padStart(2, '0')}${nome}60${cidade.length.toString().padStart(2, '0')}${cidade}62070503***6304`;
-    let crc = 0xFFFF; for (let c = 0; c < p1.length; c++) { crc ^= p1.charCodeAt(c) << 8; for (let i = 0; i < 8; i++) { if (crc & 0x8000) crc = (crc << 1) ^ 0x1021; else crc = crc << 1; } }
-    return p1 + (crc & 0xFFFF).toString(16).toUpperCase().padStart(4, '0');
-}
-
+// --- GERAÇÃO DE PDF (COR #3E4095 E QR CODE ITAU) ---
 function gerarCorpoPDF(p, tipoDoc) {
-    const dataFormatada = p.data && p.data.toDate ? p.data.toDate().toLocaleString('pt-BR') : new Date(p.data||0).toLocaleString('pt-BR');
-    let htmlEmpresa = `<div class="mb-4 p-4 border border-slate-300 bg-slate-50 text-xs"><strong>GVA Gráfica (Venom Arts)</strong><br/>Telefone/WhatsApp: (Seu Contato Aqui)</div>`;
-    let itensHtml = p.itens ? p.itens.map(i => `<tr style="border-bottom: 1px solid #e2e8f0;"><td style="padding: 8px;"><strong>${i.qtdCarrinho || i.qtd || 1}x</strong></td><td style="padding: 8px;"><strong>${i.nome}</strong><br/><span style="font-size: 10px; color: #64748b;">${i.desc || ''}</span></td><td style="padding: 8px; text-align: right; font-weight: bold;">R$ ${(i.valor||0).toFixed(2)}</td></tr>`).join('') : '';
+    const dataObj = p.data && p.data.toDate ? p.data.toDate() : new Date(p.data||new Date());
+    const dataFormatada = dataObj.toLocaleDateString('pt-BR');
+    
+    let dataValidade = new Date(dataObj); dataValidade.setDate(dataValidade.getDate() + 7);
+    const validadeFormatada = dataValidade.toLocaleDateString('pt-BR');
 
-    let htmlPix = "";
-    if (bdEmpresa.pix && (tipoDoc === 'Orçamento' || p.saldoDevedor > 0)) {
-        const valorPix = tipoDoc === 'Orçamento' ? p.total : p.saldoDevedor;
-        const payload = gerarPixPayload(bdEmpresa.pix, valorPix, "GVA Grafica", "BR");
-        const qrCodeUrl = `https://chart.googleapis.com/chart?chs=150x150&cht=qr&chl=${encodeURIComponent(payload)}`;
-        htmlPix = `<div style="margin-top: 20px; padding: 15px; border: 2px dashed #cbd5e1; text-align: center; border-radius: 8px;"><p style="font-weight: bold; margin-bottom: 10px; text-transform: uppercase; font-size: 12px;">Pague via PIX (QR Code)</p><img src="${qrCodeUrl}" alt="QR Code PIX" style="width: 120px; height: 120px; margin-bottom: 10px;" /><p style="font-size: 11px;">Chave PIX: <strong>${bdEmpresa.pix}</strong></p><p style="font-size: 11px;">Banco: ${bdEmpresa.banco || '-'} | Ag: ${bdEmpresa.agencia || '-'} | CC: ${bdEmpresa.conta || '-'}</p><p style="font-size: 14px; font-weight: 900; margin-top: 5px; color: #dc2626;">Valor a pagar: R$ ${(valorPix||0).toFixed(2)}</p></div>`;
+    let itensHtml = p.itens ? p.itens.map(i => `<tr style="border-bottom: 1px solid #e2e8f0;"><td style="padding: 12px 5px;"><strong>${i.nome}</strong><br/><span style="font-size: 11px; color: #475569;">${i.desc || ''}</span></td><td style="padding: 12px 5px; text-align: center;">${i.qtdCarrinho || i.qtd || 1}</td><td style="padding: 12px 5px; text-align: right; color: #3E4095; font-weight: bold;">R$ ${(i.valor||0).toFixed(2)}</td></tr>`).join('') : '';
+
+    const linkImagemQRCode = "https://i.postimg.cc/QMFYyVqZ/QRCODE-ITAU.png";
+
+    let htmlPagamento = "";
+    if (tipoDoc === 'Orçamento') {
+        const valPix = p.total * 0.95; const valDebito = p.total; const valCredito = p.total * 1.05;
+        htmlPagamento = `<div style="margin-top: 30px; display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0;"><div style="flex: 1;"><h3 style="margin-top: 0; font-size: 13px; color: #3E4095; text-transform: uppercase;">Opções de Pagamento</h3><p style="margin: 5px 0; font-size: 13px;"><strong>Pix ou Dinheiro (-5%):</strong> <span style="color: #16a34a; font-weight: bold;">R$ ${valPix.toFixed(2)}</span></p><p style="margin: 5px 0; font-size: 13px;"><strong>Cartão de Débito:</strong> <span>R$ ${valDebito.toFixed(2)}</span></p><p style="margin: 5px 0; font-size: 13px;"><strong>Cartão de Crédito (+5%):</strong> <span style="color: #dc2626; font-weight: bold;">R$ ${valCredito.toFixed(2)}</span></p></div><div style="text-align: center; border-left: 1px solid #cbd5e1; padding-left: 20px;"><p style="font-size: 11px; margin-bottom: 5px; font-weight: bold; color: #3E4095;">PAGUE VIA PIX</p><img src="${linkImagemQRCode}" style="width: 100px; height: 100px;" /><p style="font-size: 10px; margin-top: 5px; color: #64748b;">Aponte a câmera do seu celular</p></div></div>`;
+    } else if (p.saldoDevedor > 0) {
+        htmlPagamento = `<div style="margin-top: 30px; text-align: center; padding: 20px; border: 2px dashed #cbd5e1; border-radius: 8px; background: #f8fafc;"><p style="font-size: 16px; font-weight: 900; color: #dc2626; margin-top: 0;">FALTA PAGAR: R$ ${p.saldoDevedor.toFixed(2)}</p><p style="font-size: 12px; margin-bottom: 10px; color: #475569;">Escaneie o QR Code abaixo para quitar o saldo via PIX:</p><img src="${linkImagemQRCode}" style="width: 120px; height: 120px;" /></div>`;
     }
 
-    return `<html><head><title>${tipoDoc} - ${p.id.substring(0,8)}</title><style>body { font-family: Arial, sans-serif; padding: 20px; color: #1e293b; max-width: 800px; margin: auto; } h1 { text-transform: uppercase; font-size: 24px; margin-bottom: 5px; color: #0f172a; } .header-flex { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid #0f172a; padding-bottom: 10px; margin-bottom: 20px; } .text-right { text-align: right; } table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 12px; } th { background-color: #f1f5f9; padding: 10px; text-align: left; text-transform: uppercase; font-size: 10px; color: #64748b; } .totals-box { width: 300px; float: right; background: #f8fafc; padding: 15px; border-radius: 5px; font-size: 12px; } .flex-row { display: flex; justify-content: space-between; margin-bottom: 5px; } .clear { clear: both; }</style></head><body onload="setTimeout(() => { window.print(); window.close(); }, 500)"><div class="header-flex"><div><h1>${tipoDoc}</h1><p style="margin: 0; font-size: 12px; font-weight: bold;">ID: ${p.id}</p><p style="margin: 0; font-size: 12px;">Data: ${dataFormatada}</p>${p.dataEntrega ? `<p style="margin: 0; font-size: 12px; color: #d97706; font-weight: bold; margin-top: 5px;">Data Prometida: ${new Date(p.dataEntrega).toLocaleString('pt-BR')}</p>` : ''}</div><div class="text-right" style="font-size: 12px;"><p style="margin: 0;"><strong>Cliente:</strong> ${p.clienteNome || 'Cliente'}</p><p style="margin: 0;"><strong>Vendedor:</strong> ${p.vendedor || 'Sistema'}</p></div></div>${htmlEmpresa}<table><thead><tr><th>Qtd</th><th>Descrição do Serviço</th><th style="text-align: right;">Total Item</th></tr></thead><tbody>${itensHtml}</tbody></table><div class="totals-box"><div class="flex-row"><span>Subtotal:</span> <span>R$ ${(p.subtotal||0).toFixed(2)}</span></div><div class="flex-row"><span>Descontos:</span> <span style="color:red">- R$ ${(p.desconto || 0).toFixed(2)}</span></div><div class="flex-row" style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #cbd5e1; font-weight: 900; font-size: 16px;"><span>TOTAL:</span> <span>R$ ${(p.total||0).toFixed(2)}</span></div>${tipoDoc === 'Recibo' ? `<div class="flex-row" style="margin-top: 10px; color: #16a34a; font-weight: bold;"><span>Valor Pago:</span> <span>R$ ${(p.valorPago||0).toFixed(2)}</span></div><div class="flex-row" style="color: #dc2626; font-weight: bold;"><span>Saldo Devedor:</span> <span>R$ ${(p.saldoDevedor||0).toFixed(2)}</span></div>` : ''}</div><div class="clear"></div>${htmlPix}<div style="margin-top: 40px; text-align: center; font-size: 10px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 10px;">Gerado por GVAsist ERP - Sistema Gráfico</div></body></html>`;
+    return `<html><head><title>${tipoDoc} - ${p.id.substring(0,8)}</title><style>body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; color: #1e293b; } .container { max-width: 800px; margin: 0 auto; padding: 40px; } .header { background-color: #3E4095; color: white; padding: 30px 40px; display: flex; justify-content: space-between; align-items: center; } .header img { height: 40px; } .header-info { text-align: right; font-size: 11px; line-height: 1.6; } .client-section { display: flex; justify-content: space-between; margin-top: 30px; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px; } table { width: 100%; border-collapse: collapse; margin-top: 30px; font-size: 12px; } th { background-color: #3E4095; color: white; padding: 12px 5px; text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; } .totals-box { width: 300px; float: right; margin-top: 20px; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; } .linha-resumo { display: flex; justify-content: space-between; padding: 8px 0; font-size: 13px; color: #475569; } .linha-total { display: flex; justify-content: space-between; padding: 15px 0 5px 0; font-size: 18px; font-weight: 900; color: #1e293b; border-top: 2px solid #cbd5e1; margin-top: 10px; } .validade { text-align: center; margin-top: 30px; padding: 15px; border: 1px solid #1e293b; border-radius: 5px; font-weight: bold; font-size: 12px; clear: both; }</style></head><body onload="setTimeout(() => { window.print(); window.close(); }, 800)"><div class="header"><img src="https://i.postimg.cc/1RCc58qN/gva-br-1-ERP-26.png" alt="GVA Gráfica" /><div class="header-info"><strong>GRÁFICA VENOM ARTS LTDA</strong><br/>CNPJ: 17.184.159/0001-06<br/>Rua Lopes Trovão nº 474 Lojas 202 e 201<br/>Icaraí, Niterói - RJ 24220-071<br/>WhatsApp: (21) 99993-0190</div></div><div class="container"><div class="client-section"><div><p style="font-size: 9px; font-weight: bold; color: #64748b; margin: 0 0 5px 0; letter-spacing: 1px;">${tipoDoc.toUpperCase()} PREPARADO PARA:</p><h2 style="margin: 0; font-size: 18px; color: #0f172a;">${p.clienteNome || 'Consumidor Final'}</h2></div><div style="text-align: right;"><p style="font-size: 9px; font-weight: bold; color: #64748b; margin: 0 0 2px 0; letter-spacing: 1px;">Nº DO ${tipoDoc.toUpperCase()}</p><p style="margin: 0 0 10px 0; font-weight: bold; color: #3E4095;">#${p.id.substring(0,6).toUpperCase()}</p><p style="font-size: 9px; font-weight: bold; color: #64748b; margin: 0 0 2px 0; letter-spacing: 1px;">DATA DE EMISSÃO</p><p style="margin: 0; font-weight: bold; color: #0f172a;">${dataFormatada}</p></div></div><table><thead><tr><th>Item / Descrição</th><th style="text-align: center;">Qtd</th><th style="text-align: right;">Total</th></tr></thead><tbody>${itensHtml}</tbody></table><div class="totals-box"><div class="linha-resumo"><span>Subtotal:</span> <span>R$ ${(p.subtotal||0).toFixed(2)}</span></div>${(p.desconto > 0 || p.taxaPgto !== 0) ? `<div class="linha-resumo"><span>Descontos/Taxas:</span> <span>R$ ${((p.desconto||0) * -1 + (p.taxaPgto||0)).toFixed(2)}</span></div>` : ''}<div class="linha-total"><span style="color: #3E4095;">Total Final:</span> <span style="color: #3E4095;">R$ ${(p.total||0).toFixed(2)}</span></div>${tipoDoc === 'Recibo' ? `<div class="linha-resumo" style="color: #16a34a; font-weight: bold; margin-top: 10px;"><span>Valor Pago:</span> <span>R$ ${(p.valorPago||0).toFixed(2)}</span></div>` : ''}</div><div class="validade">Este orçamento é válido até ${validadeFormatada} (7 dias).</div>${htmlPagamento}<div style="margin-top: 40px; text-align: center; font-size: 10px; color: #64748b;">Agradecemos a oportunidade de apresentar nossa proposta.<br/>Para aprovar este orçamento, por favor entre em contato conosco via WhatsApp.</div></div></body></html>`;
 }
 
 function imprimirOrcamento(id, pedidoDireto = null) { const p = pedidoDireto || bdPedidos.find(x => x.id === id); if(!p) return; const win = window.open('', '_blank'); win.document.write(gerarCorpoPDF(p, 'Orçamento')); win.document.close(); }
 function imprimirRecibo(id, pedidoDireto = null) { const p = pedidoDireto || bdPedidos.find(x => x.id === id); if(!p) return; const win = window.open('', '_blank'); win.document.write(gerarCorpoPDF(p, 'Recibo')); win.document.close(); }
-function imprimirEtiqueta(id, tamanho) { const p = bdPedidos.find(x => x.id === id); if(!p) return; const win = window.open('', '_blank', 'width=400,height=300'); win.document.write(`<html><head><style>@page { margin: 0; } body { margin: 0; padding: 10px; font-family: Arial, sans-serif; width: 10cm; height: 6cm; display: flex; flex-direction: column; justify-content: center; text-align: center; border: 1px solid #ccc; box-sizing: border-box; } h2 { margin: 0; font-size: 16px; text-transform: uppercase; } h1 { margin: 5px 0; font-size: 20px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } p { margin: 3px 0; font-size: 12px; } .id-code { font-size: 10px; letter-spacing: 2px; }</style></head><body onload="window.print(); window.close();"><h2>GVA Gráfica</h2><h1>${p.clienteNome || 'Cliente'}</h1><p><strong>Total:</strong> R$ ${(p.total||0).toFixed(2)} | <strong>Falta:</strong> R$ ${(p.saldoDevedor||0).toFixed(2)}</p>${p.dataEntrega ? `<p><strong>Entregar:</strong> ${new Date(p.dataEntrega).toLocaleString('pt-BR')}</p>` : ''}<p class="id-code">PED: ${p.id.substring(0,8).toUpperCase()}</p></body></html>`); win.document.close(); }
+
+// --- IMPRESSÃO TÉRMICA (80mm - 2 VIAS) ---
+function imprimirTermica(id) { 
+    const p = bdPedidos.find(x => x.id === id); if(!p) return; 
+    const dataObj = p.data && p.data.toDate ? p.data.toDate() : new Date(p.data||new Date());
+    const win = window.open('', '_blank', 'width=400,height=600'); 
+    
+    let itensHtml = p.itens ? p.itens.map(i => `<div style="display: flex; justify-content: space-between; margin-bottom: 5px; border-bottom: 1px dotted #ccc; padding-bottom: 5px;"><span>${i.qtdCarrinho || i.qtd || 1}x ${i.nome}</span> <span>R$ ${(i.valor||0).toFixed(2)}</span></div><div style="font-size: 10px; color: #555; margin-top:-3px; margin-bottom: 5px;">${i.desc || ''}</div>`).join('') : '';
+    let itensProdHtml = p.itens ? p.itens.map(i => `<div style="margin-bottom: 8px; border-bottom: 1px solid #000; padding-bottom: 5px;"><strong>${i.qtdCarrinho || i.qtd || 1}x ${i.nome}</strong><br/><span style="font-size: 12px;">${i.desc || ''}</span></div>`).join('') : '';
+
+    win.document.write(`<html><head><style>@page { margin: 0; size: 80mm auto; } body { margin: 0; padding: 5mm; font-family: 'Courier New', Courier, monospace; width: 70mm; font-size: 12px; color: #000; } h2 { margin: 0 0 5px 0; font-size: 16px; text-align: center; text-transform: uppercase; } .center { text-align: center; } .bold { font-weight: bold; } .divider { border-top: 1px dashed #000; margin: 10px 0; } .cut-line { border-top: 2px dashed #000; margin: 30px 0; position: relative; } .cut-line::after { content: '✂ CORTE AQUI ✂'; position: absolute; top: -8px; left: 50%; transform: translateX(-50%); background: #fff; padding: 0 5px; font-size: 10px; }</style></head><body onload="setTimeout(() => { window.print(); window.close(); }, 500)"><h2>GVA Gráfica</h2><div class="center" style="font-size: 10px; margin-bottom: 10px;">(21) 99993-0190</div><div><strong>Data:</strong> ${dataObj.toLocaleDateString('pt-BR')} ${dataObj.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'})}</div><div><strong>Pedido:</strong> #${p.id.substring(0,6).toUpperCase()}</div><div><strong>Cliente:</strong> ${p.clienteNome || 'Consumidor Final'}</div><div class="divider"></div><div class="bold" style="margin-bottom: 5px;">ITENS DO PEDIDO</div>${itensHtml}<div class="divider"></div><div style="display: flex; justify-content: space-between;"><span>Total:</span> <span class="bold">R$ ${(p.total||0).toFixed(2)}</span></div><div style="display: flex; justify-content: space-between;"><span>Pago:</span> <span>R$ ${(p.valorPago||0).toFixed(2)}</span></div><div style="display: flex; justify-content: space-between; font-size: 14px; margin-top: 5px;"><span>Falta:</span> <span class="bold">R$ ${(p.saldoDevedor||0).toFixed(2)}</span></div><div class="center" style="margin-top: 15px; font-size: 10px;">Obrigado pela preferência!</div><div class="cut-line"></div><h2 style="background: #000; color: #fff; padding: 5px;">VIA PRODUÇÃO</h2><div><strong>Pedido:</strong> #${p.id.substring(0,6).toUpperCase()}</div><div><strong>Cliente:</strong> ${p.clienteNome || 'Consumidor Final'}</div>${p.dataEntrega ? `<div style="border: 2px solid #000; padding: 5px; margin: 10px 0; text-align: center; font-weight: bold; font-size: 14px;">ENTREGAR:<br/>${new Date(p.dataEntrega).toLocaleString('pt-BR')}</div>` : ''}<div class="divider"></div>${itensProdHtml}${p.linkArte ? `<div style="margin-top: 10px; padding: 5px; border: 1px solid #000; text-align: center; font-weight: bold;">[ ARTE ANEXADA NO SISTEMA ]</div>` : ''}<div style="margin-top: 20px;"></div></body></html>`); 
+    win.document.close(); 
+}
