@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>GVA Gráfica ERP | GVAsist</title>
     
-    <!-- TAGS PARA TRANSFORMAR EM APLICATIVO (PWA) -->
     <link rel="manifest" href="manifest.json" />
     <meta name="theme-color" content="#3E4095" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -21,11 +20,8 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
     <style>
-        /* Estilos do Menu Desktop */
         aside .active-aba { background-color: #f1f5f9; color: #0f172a; border-left: 4px solid #1e293b; }
-        /* Estilos do Menu Mobile (App) */
         .bottom-nav .active-aba { color: #3E4095; }
-        
         .active-sub { color: #1e293b; border-bottom: 3px solid #1e293b; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
@@ -43,9 +39,7 @@
             <div class="space-y-4">
                 <input type="email" id="email" onkeypress="if(event.key === 'Enter') entrar()" placeholder="E-mail" class="w-full p-3 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-slate-500" />
                 <input type="password" id="senha" onkeypress="if(event.key === 'Enter') entrar()" placeholder="Senha" class="w-full p-3 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-slate-500" />
-                
                 <button type="button" id="btnEntrar" onclick="entrar()" class="w-full bg-[#1e293b] text-white font-bold py-3 rounded hover:bg-slate-800 transition shadow-lg">Entrar no Sistema</button>
-                
                 <p id="msgErro" class="text-red-500 text-xs hidden font-bold">Acesso negado. Verifique os dados.</p>
             </div>
         </div>
@@ -60,6 +54,7 @@
                 <img src="https://i.postimg.cc/1RCc58qN/gva-br-1-ERP-26.png" alt="GVA Gráfica" class="h-8 object-contain" />
                 <nav class="hidden md:flex gap-6 ml-10 text-slate-400 text-[11px] font-bold uppercase">
                     <button type="button" onclick="mudarAba('loja')" class="btn-menu-loja hover:text-white transition hidden">Vendas</button>
+                    <button type="button" onclick="mudarAba('orcamentos')" class="btn-menu-loja hover:text-white transition hidden">Orçamentos</button>
                     <button type="button" onclick="mudarAba('producao')" class="btn-menu-producao hover:text-white transition hidden">Produção</button>
                     <button type="button" onclick="mudarAba('financeiro')" class="btn-menu-financeiro hover:text-white transition hidden">Financeiro</button>
                     <button type="button" onclick="mudarAba('cadastros')" class="btn-menu-config hover:text-white transition hidden">Configurações</button>
@@ -83,6 +78,9 @@
                     <button type="button" onclick="mudarAba('loja')" class="aba-btn btn-menu-loja w-full flex items-center gap-3 p-4 font-bold text-slate-500 hover:bg-slate-50 hidden">
                         <i class="fa fa-shopping-cart w-5"></i> Loja PDV
                     </button>
+                    <button type="button" onclick="mudarAba('orcamentos')" class="aba-btn btn-menu-loja w-full flex items-center gap-3 p-4 font-bold text-slate-500 hover:bg-slate-50 hidden">
+                        <i class="fa fa-file-invoice w-5"></i> Orçamentos
+                    </button>
                     <button type="button" onclick="mudarAba('producao')" class="aba-btn btn-menu-producao w-full flex items-center gap-3 p-4 font-bold text-slate-500 hover:bg-slate-50 hidden">
                         <i class="fa fa-tasks w-5"></i> Produção
                     </button>
@@ -93,7 +91,6 @@
                         <i class="fa fa-cog w-5"></i> Configurações
                     </button>
                     
-                    <!-- Dashboard no rodapé -->
                     <div class="mt-auto border-t border-slate-200">
                         <button type="button" onclick="mudarAba('dashboard')" class="aba-btn btn-menu-dashboard w-full flex items-center gap-3 p-4 font-bold text-slate-500 hover:bg-slate-50 hidden">
                             <i class="fa fa-chart-pie w-5"></i> Dashboard
@@ -105,7 +102,7 @@
             <!-- CONTEUDO PRINCIPAL -->
             <main class="flex-1 p-6 pb-24 md:pb-6 overflow-hidden flex flex-col relative">
 
-                <!-- ABA DASHBOARD (RELATÓRIOS) -->
+                <!-- ABA DASHBOARD -->
                 <section id="aba-dashboard" class="aba-content hidden h-full overflow-y-auto pr-2">
                     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                         <h2 class="text-2xl font-bold text-slate-900 uppercase italic tracking-tighter">Relatório Mensal</h2>
@@ -135,14 +132,14 @@
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                         <div class="bg-white rounded shadow-sm border border-slate-200 overflow-hidden">
                             <div class="bg-slate-50 p-4 border-b border-slate-200 flex justify-between items-center">
                                 <h3 class="font-bold text-slate-800 uppercase text-xs tracking-widest"><i class="fa fa-star text-amber-400 mr-2"></i> Produtos Mais Vendidos</h3>
                             </div>
                             <table class="w-full text-left text-xs">
                                 <thead class="bg-slate-50 text-slate-400 uppercase tracking-wider text-[10px]">
-                                    <tr><th class="p-3">Produto</th><th class="p-3 text-center">Qtd Vendida</th><th class="p-3 text-right">Receita Bruta (S/ Desc)</th></tr>
+                                    <tr><th class="p-3">Produto</th><th class="p-3 text-center">Qtd</th><th class="p-3 text-right">Receita Bruta</th></tr>
                                 </thead>
                                 <tbody id="listaTopProdutosTab"></tbody>
                             </table>
@@ -160,8 +157,42 @@
                             </table>
                         </div>
                     </div>
+                    
+                    <!-- NOVO: Gráfico/Tabela de Despesas por Categoria -->
+                    <div class="bg-white rounded shadow-sm border border-slate-200 overflow-hidden max-w-3xl">
+                        <div class="bg-slate-50 p-4 border-b border-slate-200">
+                            <h3 class="font-bold text-slate-800 uppercase text-xs tracking-widest"><i class="fa fa-chart-bar text-red-400 mr-2"></i> Despesas por Categoria</h3>
+                        </div>
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-slate-50 text-slate-400 uppercase tracking-wider text-[10px]">
+                                <tr><th class="p-3">Categoria</th><th class="p-3 text-right">Total Gasto no Mês</th></tr>
+                            </thead>
+                            <tbody id="listaDespesasCatTab"></tbody>
+                        </table>
+                    </div>
                 </section>
-<!-- ABA LOJA -->
+
+                <!-- NOVO: ABA ORÇAMENTOS (FOLLOW-UP) -->
+                <section id="aba-orcamentos" class="aba-content hidden h-full overflow-y-auto pr-2">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-2xl font-bold text-slate-900 uppercase italic tracking-tighter">Follow-up de Orçamentos</h2>
+                    </div>
+                    <div class="bg-white rounded shadow-sm border border-slate-200 overflow-hidden">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-slate-50 text-slate-400 uppercase tracking-wider text-[10px]">
+                                <tr>
+                                    <th class="p-4">Data / Status</th>
+                                    <th class="p-4">Cliente</th>
+                                    <th class="p-4 text-right">Valor</th>
+                                    <th class="p-4 text-center">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="listaOrcamentosTab"></tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- ABA LOJA -->
                 <section id="aba-loja" class="aba-content hidden h-full overflow-y-auto pr-2">
                     <div class="flex flex-col lg:flex-row gap-6">
                         <div class="flex-1">
@@ -198,10 +229,21 @@
                                 <input type="hidden" id="cartClienteId" />
                             </div>
 
-                            <div id="listaCarrinho" class="space-y-3 mb-6 max-h-60 overflow-y-auto pr-1"></div>
+                            <!-- NOVO: Data de Entrega e Link da Arte -->
+                            <div class="grid grid-cols-1 gap-3 mb-6 border-b border-slate-100 pb-4">
+                                <div class="space-y-1">
+                                    <label class="text-[10px] font-bold text-slate-400 uppercase">Data/Hora Prometida</label>
+                                    <input type="datetime-local" id="cartDataEntrega" class="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500" />
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="text-[10px] font-bold text-slate-400 uppercase">Link da Arte (Drive/WeTransfer)</label>
+                                    <input type="url" id="cartLinkArte" placeholder="https://..." class="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500" />
+                                </div>
+                            </div>
+
+                            <div id="listaCarrinho" class="space-y-3 mb-6 max-h-40 overflow-y-auto pr-1"></div>
                             
                             <div class="border-t border-slate-100 pt-4 space-y-3">
-                                
                                 <div class="grid grid-cols-2 gap-2">
                                     <div class="space-y-1">
                                         <label class="text-[10px] font-bold text-slate-400 uppercase">Pagamento</label>
@@ -279,7 +321,6 @@
                         </div>
                     </div>
                 </section>
-
                 <!-- ABA PRODUÇÃO -->
                 <section id="aba-producao" class="aba-content hidden flex-col h-full overflow-hidden">
                     <div class="flex justify-between items-center mb-6 shrink-0">
@@ -301,7 +342,7 @@
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                         <div class="bg-emerald-50 p-6 rounded border border-emerald-100 shadow-sm">
                             <p class="text-[10px] font-bold text-emerald-600 uppercase tracking-widest mb-1">Entradas Hoje</p>
                             <p id="finEntradas" class="text-3xl font-black text-emerald-700">R$ 0.00</p>
@@ -316,14 +357,33 @@
                         </div>
                     </div>
 
+                    <!-- NOVO: Fechamento de Caixa Detalhado -->
+                    <div class="bg-white p-4 rounded shadow-sm border border-slate-200 mb-6">
+                        <h3 class="font-bold text-slate-800 mb-3 uppercase text-xs tracking-widest border-b border-slate-100 pb-2"><i class="fa fa-wallet text-emerald-500 mr-2"></i> Entradas por Forma de Pagamento</h3>
+                        <div id="resumoPagamentos" class="flex flex-wrap gap-6 text-xs font-bold text-slate-600">
+                            <!-- Preenchido via JS -->
+                        </div>
+                    </div>
+
                     <div class="bg-white p-6 rounded shadow-sm border border-slate-200 mb-6">
                         <h3 class="font-bold text-slate-800 mb-4 uppercase text-xs tracking-widest">Registrar Nova Saída/Despesa</h3>
                         <div class="flex flex-col md:flex-row gap-4 items-end">
                             <div class="flex-1 space-y-1">
                                 <label class="text-[10px] font-bold text-slate-400 uppercase">Descrição da Despesa</label>
-                                <input type="text" id="finDesc" placeholder="Ex: Conta de Luz, Compra de Material, Pagamento..." class="w-full p-3 bg-slate-50 border border-slate-200 rounded text-sm outline-none focus:ring-2 focus:ring-red-500" />
+                                <input type="text" id="finDesc" placeholder="Ex: Conta de Luz, Compra de Material..." class="w-full p-3 bg-slate-50 border border-slate-200 rounded text-sm outline-none focus:ring-2 focus:ring-red-500" />
                             </div>
                             <div class="w-full md:w-48 space-y-1">
+                                <label class="text-[10px] font-bold text-slate-400 uppercase">Categoria</label>
+                                <select id="finCategoria" class="w-full p-3 bg-slate-50 border border-slate-200 rounded text-sm font-bold outline-none focus:ring-2 focus:ring-red-500">
+                                    <option value="Insumos/Material">Insumos/Material</option>
+                                    <option value="Contas Fixas">Contas Fixas</option>
+                                    <option value="Folha de Pagamento">Folha de Pagamento</option>
+                                    <option value="Manutenção">Manutenção</option>
+                                    <option value="Impostos">Impostos</option>
+                                    <option value="Outros">Outros</option>
+                                </select>
+                            </div>
+                            <div class="w-full md:w-32 space-y-1">
                                 <label class="text-[10px] font-bold text-slate-400 uppercase">Valor R$</label>
                                 <input type="number" id="finValor" placeholder="0.00" class="w-full p-3 bg-slate-50 border border-slate-200 rounded text-sm font-bold outline-none focus:ring-2 focus:ring-red-500" />
                             </div>
@@ -354,6 +414,7 @@
                         <button type="button" id="btn-sub-cat" onclick="mudarSubAba('sub-cat')" class="sub-aba-btn pb-4 font-bold text-slate-400 hidden">Categorias</button>
                         <button type="button" id="btn-sub-acab" onclick="mudarSubAba('sub-acab')" class="sub-aba-btn pb-4 font-bold text-slate-400 hidden">Acabamentos</button>
                         <button type="button" id="btn-sub-usuarios" onclick="mudarSubAba('sub-usuarios')" class="sub-aba-btn pb-4 font-bold text-slate-400 hidden">Usuários/Permissões</button>
+                        <button type="button" id="btn-sub-empresa" onclick="mudarSubAba('sub-empresa')" class="sub-aba-btn pb-4 font-bold text-slate-400 hidden">Empresa (PIX/Banco)</button>
                     </div>
 
                     <!-- CLIENTES -->
@@ -395,7 +456,7 @@
                         </div>
                     </div>
 
-                    <!-- NOVO: A RECEBER (FATURADOS) -->
+                    <!-- A RECEBER (FATURADOS) -->
                     <div id="sub-areceber" class="sub-aba-content hidden">
                         <div class="bg-white p-6 rounded shadow-sm border border-slate-200 mb-6">
                             <h3 class="font-bold text-slate-800 uppercase text-xs tracking-widest mb-2"><i class="fa fa-file-invoice-dollar text-red-500 mr-2"></i> Clientes com Saldo Devedor (Faturados)</h3>
@@ -642,6 +703,34 @@
                             </table>
                         </div>
                     </div>
+
+                    <!-- NOVO: EMPRESA (DADOS BANCÁRIOS E PIX) -->
+                    <div id="sub-empresa" class="sub-aba-content hidden">
+                        <div class="bg-white p-6 rounded shadow-sm border border-slate-200 mb-8 max-w-3xl">
+                            <h3 class="font-bold text-slate-800 mb-6 uppercase text-xs tracking-widest"><i class="fa fa-building text-indigo-500 mr-2"></i> Dados da Empresa (Para Orçamentos e Recibos)</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                                <div class="space-y-1">
+                                    <label class="text-[10px] font-bold text-slate-400 uppercase">Chave PIX</label>
+                                    <input type="text" id="empresaPix" placeholder="CNPJ, E-mail, Telefone ou Aleatória" class="w-full p-2 bg-slate-50 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-indigo-500" />
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="text-[10px] font-bold text-slate-400 uppercase">Nome do Banco</label>
+                                    <input type="text" id="empresaBanco" placeholder="Ex: Nubank, Itaú, Inter..." class="w-full p-2 bg-slate-50 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-indigo-500" />
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="text-[10px] font-bold text-slate-400 uppercase">Agência</label>
+                                    <input type="text" id="empresaAgencia" placeholder="Ex: 0001" class="w-full p-2 bg-slate-50 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-indigo-500" />
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="text-[10px] font-bold text-slate-400 uppercase">Conta Corrente</label>
+                                    <input type="text" id="empresaConta" placeholder="Ex: 123456-7" class="w-full p-2 bg-slate-50 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-indigo-500" />
+                                </div>
+                            </div>
+                            <button type="button" onclick="salvarDadosEmpresa()" class="bg-slate-800 text-white px-8 py-3 rounded font-bold text-xs hover:bg-slate-700 transition shadow-md uppercase tracking-widest">Salvar Dados</button>
+                            <p class="text-[10px] text-slate-400 mt-3"><i class="fa fa-info-circle"></i> Estes dados aparecerão no rodapé dos PDFs gerados pelo sistema para facilitar o pagamento do cliente.</p>
+                        </div>
+                    </div>
+
                 </section>
 
                 <!-- MODAL HISTÓRICO GERAL DE PEDIDOS -->
@@ -676,11 +765,11 @@
 
                 <!-- MENU MOBILE (BOTTOM NAV) -->
                 <nav class="bottom-nav md:hidden fixed bottom-0 left-0 w-full bg-white border-t border-slate-200 flex justify-around items-center text-[10px] font-bold text-slate-400 z-50 pb-2 pt-2 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-                    <button type="button" onclick="mudarAba('dashboard')" class="aba-btn btn-menu-dashboard flex-1 flex flex-col items-center gap-1 hidden">
-                        <i class="fa fa-chart-pie text-lg"></i> Dash
-                    </button>
                     <button type="button" onclick="mudarAba('loja')" class="aba-btn btn-menu-loja flex-1 flex flex-col items-center gap-1 hidden">
                         <i class="fa fa-shopping-cart text-lg"></i> PDV
+                    </button>
+                    <button type="button" onclick="mudarAba('orcamentos')" class="aba-btn btn-menu-loja flex-1 flex flex-col items-center gap-1 hidden">
+                        <i class="fa fa-file-invoice text-lg"></i> Orç.
                     </button>
                     <button type="button" onclick="mudarAba('producao')" class="aba-btn btn-menu-producao flex-1 flex flex-col items-center gap-1 hidden">
                         <i class="fa fa-tasks text-lg"></i> Prod
@@ -787,7 +876,6 @@
                         <option value="Credito_Vista">Crédito à Vista</option>
                         <option value="Credito_Parcelado">Crédito Parcelado</option>
                         <option value="Saldo_Cliente">Saldo de Crédito</option>
-                        <option value="Faturado">Faturado</option>
                     </select>
                 </div>
                 <button type="button" onclick="confirmarRecebimentoSaldo()" class="w-full bg-emerald-600 text-white py-3 rounded font-bold text-xs hover:bg-emerald-700 transition uppercase tracking-widest shadow-md mt-2">Confirmar Pagamento</button>
@@ -827,6 +915,6 @@
         }
     </script>
 
-    <script src="script.js?v=5"></script>
+    <script src="script.js?v=7"></script>
 </body>
 </html>
