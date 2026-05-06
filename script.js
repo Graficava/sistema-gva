@@ -213,7 +213,6 @@ function gerarCardPedido(p) {
     let btnZAP = !visualizaPrecos ? '' : `<button type="button" onclick="enviarWhatsApp('${p.id}', '${p.status === 'Pronto para Retirada' ? 'retirada' : (p.status === 'Orçamento' ? 'orcamento' : 'recibo')}')" class="bg-green-500 text-white px-3 rounded hover:bg-green-600 transition" title="Enviar WhatsApp"><i class="fab fa-whatsapp"></i></button>`;
     let btnImprimir = !visualizaPrecos ? '' : `<button type="button" onclick="${p.status === 'Orçamento' ? `imprimirOrcamento('${p.id}')` : `imprimirRecibo('${p.id}')`}" class="bg-slate-800 text-white px-3 rounded hover:bg-slate-700 transition" title="${p.status === 'Orçamento' ? 'Gerar PDF' : 'Imprimir Recibo'}"><i class="${p.status === 'Orçamento' ? 'fa fa-file-pdf' : 'fa fa-print'}"></i></button>`;
     
-    // NOVO BOTÃO TÉRMICA
     let btnTermica = `<button type="button" onclick="imprimirTermica('${p.id}')" class="bg-purple-500 text-white px-3 rounded hover:bg-purple-600 transition" title="Imprimir Cupom Térmico (2 Vias)"><i class="fa fa-receipt"></i></button>`;
     
     let etiquetaFalta = (p.saldoDevedor > 0 && visualizaPrecos) ? `<div class="absolute -top-2 -right-2 bg-red-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full shadow-md z-10">FALTA R$ ${p.saldoDevedor.toFixed(2)}</div>` : '';
@@ -288,10 +287,7 @@ function confirmarEnvioWhatsApp() {
     const tel = document.getElementById('zapTelefone').value.replace(/\D/g, '');
     const msg = encodeURIComponent(document.getElementById('zapMensagem').value);
     if(tel.length < 10) { alert("Informe um número de telefone válido com DDD."); return; }
-    
-    // Tenta abrir direto no aplicativo do PC (whatsapp://)
     window.open(`whatsapp://send?phone=${tel}&text=${msg}`, '_self');
-    
     document.getElementById('modalWhatsApp').classList.add('hidden');
 }
 
@@ -373,7 +369,81 @@ async function salvarProduto() {
 
 function renderProdTable() { const tbody = document.getElementById('listaProdutosTab'); if(!tbody) return; tbody.innerHTML = bdProdutos.map(p => `<tr class="border-b border-slate-50"><td class="p-3 text-slate-700 font-bold">${p.nome} <br><span class="text-[9px] text-slate-400 font-normal">${p.categoria} - ${p.subcategoria || ''}</span></td><td class="p-3 text-[10px] uppercase font-bold text-slate-500">${p.setor}</td><td class="p-3 text-center"><button type="button" onclick="editProduto('${p.id}')" class="bg-slate-200 text-slate-600 px-3 py-1 rounded text-[10px] font-bold uppercase hover:bg-slate-300">Editar</button> <button type="button" onclick="delProduto('${p.id}')" class="bg-red-100 text-red-600 px-3 py-1 rounded text-[10px] font-bold uppercase hover:bg-red-200 ml-1"><i class="fa fa-trash"></i></button></td></tr>`).join(''); }
 async function delProduto(id) { if(confirm("Apagar produto permanentemente?")) await db.collection("produtos").doc(id).delete(); }
-function editProduto(id) { alert("Para editar, implementaremos o carregamento de todos os arrays complexos na próxima atualização. Você pode editar preços diretamente no firebase ou excluir e recriar."); }
+
+// --- NOVO: EDIÇÃO COMPLETA DE PRODUTO ---
+function editProduto(id) { 
+    const p = bdProdutos.find(x => x.id === id); 
+    if(!p) return; 
+
+    document.getElementById('prodId').value = p.id;
+    document.getElementById('prodNome').value = p.nome || '';
+    document.getElementById('prodSetor').value = p.setor || 'Gráfico';
+    document.getElementById('prodCategoria').value = p.categoria || '';
+    document.getElementById('prodSubcategoria').value = p.subcategoria || '';
+    document.getElementById('prodRef').value = p.referencia || '';
+    document.getElementById('prodMaterial').value = p.material || '';
+    document.getElementById('prodGramatura').value = p.gramatura || '';
+    document.getElementById('prodPrazo').value = p.prazo || '';
+    document.getElementById('prodFoto').value = p.foto || '';
+    document.getElementById('prodObs').value = p.obs || '';
+    
+    document.getElementById('prodPreco').value = (p.precos && p.precos.base) ? p.precos.base : (p.preco || 0);
+    document.getElementById('prodRegraPreco').value = p.regraPreco || 'unidade';
+    document.getElementById('prodAcabObrigatorio').checked = p.acabObrigatorio || false;
+
+    if (p.medidas) {
+        document.getElementById('prodLargBobina').value = p.medidas.largBobina || '';
+        document.getElementById('prodLargMax').value = p.medidas.largMax || '';
+        document.getElementById('prodCompMax').value = p.medidas.compMax || '';
+    } else {
+        document.getElementById('prodLargBobina').value = ''; document.getElementById('prodLargMax').value = ''; document.getElementById('prodCompMax').value = '';
+    }
+
+    document.getElementById('listaGradePacotes').innerHTML = '';
+    if (p.precos && p.precos.pacotes) {
+        p.precos.pacotes.forEach(pct => {
+            const div = document.createElement('div'); div.className = 'flex gap-2 items-center';
+            div.innerHTML = `<input type="number" value="${pct.qtd}" placeholder="Qtd" class="p-2 border border-amber-200 rounded text-xs w-20 outline-none" /><input type="number" value="${pct.preco}" placeholder="Preço do Pacote R$" class="p-2 border border-amber-200 rounded text-xs flex-1 outline-none" /><button type="button" onclick="this.parentElement.remove()" class="text-red-500 font-bold px-2">X</button>`;
+            document.getElementById('listaGradePacotes').appendChild(div);
+        });
+    }
+
+    document.getElementById('listaGradeProgressivo').innerHTML = '';
+    if (p.precos && p.precos.progressivo) {
+        p.precos.progressivo.forEach(prog => {
+            const div = document.createElement('div'); div.className = 'flex gap-2 items-center';
+            div.innerHTML = `<input type="number" value="${prog.minQtd}" placeholder="A partir de Qtd" class="p-2 border border-emerald-200 rounded text-xs w-28 outline-none" /><input type="number" value="${prog.precoUnit}" placeholder="Preço Unitário R$" class="p-2 border border-emerald-200 rounded text-xs flex-1 outline-none" /><button type="button" onclick="this.parentElement.remove()" class="text-red-500 font-bold px-2">X</button>`;
+            document.getElementById('listaGradeProgressivo').appendChild(div);
+        });
+    }
+
+    document.getElementById('listaGradeCombinacoes').innerHTML = '';
+    if (p.precos && p.precos.combinacoes) {
+        document.getElementById('combNome1').value = p.precos.combinacoes.attr1 || '';
+        document.getElementById('combNome2').value = p.precos.combinacoes.attr2 || '';
+        if(p.precos.combinacoes.valores && p.precos.combinacoes.valores.length > 0) {
+            const v1s =[...new Set(p.precos.combinacoes.valores.map(v => v.v1))];
+            const v2s =[...new Set(p.precos.combinacoes.valores.map(v => v.v2))];
+            document.getElementById('combValores1').value = v1s.join(', ');
+            document.getElementById('combValores2').value = v2s.join(', ');
+            let html = '';
+            p.precos.combinacoes.valores.forEach(val => {
+                html += `<div class="flex justify-between items-center bg-white p-2 rounded border border-purple-100 text-[10px] font-bold"><span class="text-purple-700">${val.v1} + ${val.v2}</span><div class="flex gap-2 items-center">R$ <input type="number" value="${val.preco}" data-v1="${val.v1}" data-v2="${val.v2}" class="p-1 border border-purple-200 rounded text-xs w-24 outline-none comb-price" placeholder="Preço Fixo" /></div></div>`;
+            });
+            document.getElementById('listaGradeCombinacoes').innerHTML = html;
+        }
+    }
+
+    atualizarListaAcabamentosProduto();
+    setTimeout(() => {
+        document.querySelectorAll('.check-acab-prod').forEach(chk => {
+            chk.checked = p.acabamentos && p.acabamentos.includes(chk.value);
+        });
+    }, 100);
+
+    ajustarCamposProduto();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
 
 function setFiltroSetor(setor) { filtroSetor = setor; filtroCategoria = 'Todas'; filtroSubcategoria = 'Todas'; document.querySelectorAll('.btn-setor').forEach(b => b.classList.remove('ring-2', 'ring-offset-2', 'ring-indigo-500')); document.querySelector(`.data-setor-${setor.replace(/\s/g,'')}`).classList.add('ring-2', 'ring-offset-2', 'ring-indigo-500'); renderFiltrosCatSub(); renderVitrine(); }
 function renderFiltrosCatSub() {
@@ -653,7 +723,7 @@ async function confirmarRecebimentoSaldo() {
     let hist = p.historicoPagamentos ||[]; hist.push({ data: new Date().toISOString(), valor: valorDigitado, forma: forma });
     
     let novoStatus = p.status; 
-    if(novoSaldo <= 0 && p.status === 'Aguardando pagamento') novoStatus = 'Em produção'; // Automação
+    if(novoSaldo <= 0 && p.status === 'Aguardando pagamento') novoStatus = 'Em produção'; 
     
     try { await db.collection("pedidos").doc(id).update({ saldoDevedor: novoSaldo, valorPago: novoValorPago, historicoPagamentos: hist, status: novoStatus }); document.getElementById('modalReceberSaldo').classList.add('hidden'); alert("Pagamento recebido e registrado no caixa!"); } catch(e) { alert("Erro ao receber saldo."); }
 }
