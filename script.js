@@ -212,9 +212,7 @@ function gerarCardPedido(p) {
     let btnReceber = (visualizaPrecos && p.saldoDevedor > 0) ? `<button type="button" onclick="receberSaldo('${p.id}')" class="bg-emerald-500 text-white px-3 rounded hover:bg-emerald-600 transition" title="Receber Saldo (Falta R$ ${p.saldoDevedor.toFixed(2)})"><i class="fa fa-hand-holding-usd"></i></button>` : '';
     let btnZAP = !visualizaPrecos ? '' : `<button type="button" onclick="enviarWhatsApp('${p.id}', '${p.status === 'Pronto para Retirada' ? 'retirada' : (p.status === 'Orçamento' ? 'orcamento' : 'recibo')}')" class="bg-green-500 text-white px-3 rounded hover:bg-green-600 transition" title="Enviar WhatsApp"><i class="fab fa-whatsapp"></i></button>`;
     let btnImprimir = !visualizaPrecos ? '' : `<button type="button" onclick="${p.status === 'Orçamento' ? `imprimirOrcamento('${p.id}')` : `imprimirRecibo('${p.id}')`}" class="bg-slate-800 text-white px-3 rounded hover:bg-slate-700 transition" title="${p.status === 'Orçamento' ? 'Gerar PDF' : 'Imprimir Recibo'}"><i class="${p.status === 'Orçamento' ? 'fa fa-file-pdf' : 'fa fa-print'}"></i></button>`;
-    
     let btnTermica = `<button type="button" onclick="imprimirTermica('${p.id}')" class="bg-purple-500 text-white px-3 rounded hover:bg-purple-600 transition" title="Imprimir Cupom Térmico (2 Vias)"><i class="fa fa-receipt"></i></button>`;
-    
     let etiquetaFalta = (p.saldoDevedor > 0 && visualizaPrecos) ? `<div class="absolute -top-2 -right-2 bg-red-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full shadow-md z-10">FALTA R$ ${p.saldoDevedor.toFixed(2)}</div>` : '';
 
     let infoExtra = '';
@@ -265,7 +263,7 @@ async function salvarDadosEmpresa() {
     try { await db.collection("empresa").doc("dados").set(dados); alert("Dados Bancários/PIX salvos com sucesso!"); } catch(e) { alert("Erro ao salvar dados da empresa."); }
 }
 
-// --- WHATSAPP UTILS (ABRE DIRETO NO APP) ---
+// --- WHATSAPP UTILS ---
 function enviarWhatsApp(idPedido, acao) {
     const pedido = bdPedidos.find(p => p.id === idPedido); if(!pedido) return;
     const zapModal = document.getElementById('modalWhatsApp');
@@ -335,6 +333,41 @@ function atualizarListaAcabamentosProduto() {
     div.innerHTML = acabamentosFiltrados.length === 0 ? '<p class="text-[10px] text-slate-400">Nenhum acabamento para esta categoria.</p>' : acabamentosFiltrados.map(a => `<label class="flex items-center gap-2 text-xs text-slate-600 bg-white p-2 rounded border border-slate-100 shadow-sm cursor-pointer hover:bg-slate-50 transition"><input type="checkbox" class="check-acab-prod accent-indigo-500" value="${a.id}" /> ${a.nome} <span class="text-[9px] font-bold text-emerald-600 ml-auto">+ R$ ${a.preco.toFixed(2)}</span></label>`).join('');
 }
 
+// --- NOVO: FUNÇÕES PARA ATRIBUTOS (VARIAÇÕES INDEPENDENTES) ---
+function addAtributoManual(atr = null) {
+    const divId = 'attr_' + Date.now() + Math.floor(Math.random() * 1000);
+    const div = document.createElement('div');
+    div.className = 'bg-white p-3 rounded border border-slate-200 shadow-sm item-atributo';
+    div.id = divId;
+
+    let nomeVal = atr ? atr.nome : '';
+    let obrigatorio = atr && atr.obrigatorio ? 'checked' : '';
+
+    let htmlOpcoes = '';
+    if (atr && atr.opcoes) {
+        atr.opcoes.forEach(op => {
+            htmlOpcoes += `<div class="flex gap-2 mt-2 item-opcao"><input type="text" value="${op.nome}" placeholder="Nome da Opção" class="p-2 border border-slate-200 rounded text-xs flex-1 outline-none op-nome" /><input type="number" value="${op.preco}" placeholder="Preço + R$" class="p-2 border border-slate-200 rounded text-xs w-24 outline-none op-preco" /><button type="button" onclick="this.parentElement.remove()" class="text-red-500 font-bold px-2">X</button></div>`;
+        });
+    }
+
+    div.innerHTML = `
+        <div class="flex justify-between items-center mb-2 border-b border-slate-100 pb-2">
+            <input type="text" value="${nomeVal}" placeholder="Nome do Grupo (Ex: Tipo de Impressão)" class="p-2 border border-slate-200 rounded text-xs font-bold flex-1 outline-none atr-nome" />
+            <label class="ml-2 text-[10px] font-bold text-slate-500 flex items-center gap-1"><input type="checkbox" class="atr-obrigatorio accent-indigo-500" ${obrigatorio}> Obrigatório</label>
+            <button type="button" onclick="document.getElementById('${divId}').remove()" class="text-red-500 font-bold px-2 ml-2"><i class="fa fa-trash"></i></button>
+        </div>
+        <div class="lista-opcoes">${htmlOpcoes}</div>
+        <button type="button" onclick="addOpcaoAtributo('${divId}')" class="mt-2 text-[10px] font-bold text-indigo-500 uppercase tracking-widest bg-indigo-50 px-3 py-1 rounded hover:bg-indigo-100">+ Add Opção</button>
+    `;
+    document.getElementById('listaAtributos').appendChild(div);
+}
+
+function addOpcaoAtributo(divId) {
+    const div = document.createElement('div'); div.className = 'flex gap-2 mt-2 item-opcao';
+    div.innerHTML = `<input type="text" placeholder="Nome da Opção" class="p-2 border border-slate-200 rounded text-xs flex-1 outline-none op-nome" /><input type="number" placeholder="Preço + R$" class="p-2 border border-slate-200 rounded text-xs w-24 outline-none op-preco" /><button type="button" onclick="this.parentElement.remove()" class="text-red-500 font-bold px-2">X</button>`;
+    document.querySelector(`#${divId} .lista-opcoes`).appendChild(div);
+}
+
 function addLinhaPacote() { const div = document.createElement('div'); div.className = 'flex gap-2 items-center'; div.innerHTML = `<input type="number" placeholder="Qtd" class="p-2 border border-amber-200 rounded text-xs w-20 outline-none" /><input type="number" placeholder="Preço do Pacote R$" class="p-2 border border-amber-200 rounded text-xs flex-1 outline-none" /><button type="button" onclick="this.parentElement.remove()" class="text-red-500 font-bold px-2">X</button>`; document.getElementById('listaGradePacotes').appendChild(div); }
 function addLinhaProgressivo() { const div = document.createElement('div'); div.className = 'flex gap-2 items-center'; div.innerHTML = `<input type="number" placeholder="A partir de Qtd" class="p-2 border border-emerald-200 rounded text-xs w-28 outline-none" /><input type="number" placeholder="Preço Unitário R$" class="p-2 border border-emerald-200 rounded text-xs flex-1 outline-none" /><button type="button" onclick="this.parentElement.remove()" class="text-red-500 font-bold px-2">X</button>`; document.getElementById('listaGradeProgressivo').appendChild(div); }
 function gerarGradeCombinacoes() {
@@ -347,7 +380,7 @@ function gerarGradeCombinacoes() {
 }
 
 function limparFormProd() {
-    document.getElementById('prodId').value = ''; document.getElementById('prodNome').value = ''; document.getElementById('prodSubcategoria').value = ''; document.getElementById('prodRef').value = ''; document.getElementById('prodMaterial').value = ''; document.getElementById('prodGramatura').value = ''; document.getElementById('prodPrazo').value = ''; document.getElementById('prodPreco').value = ''; document.getElementById('prodFoto').value = ''; document.getElementById('prodObs').value = ''; document.getElementById('prodRegraPreco').value = 'unidade'; document.getElementById('prodAcabObrigatorio').checked = false; document.getElementById('listaGradePacotes').innerHTML = ''; document.getElementById('listaGradeProgressivo').innerHTML = ''; document.getElementById('listaGradeCombinacoes').innerHTML = ''; document.querySelectorAll('.check-acab-prod').forEach(c => c.checked = false); ajustarCamposProduto();
+    document.getElementById('prodId').value = ''; document.getElementById('prodNome').value = ''; document.getElementById('prodSubcategoria').value = ''; document.getElementById('prodRef').value = ''; document.getElementById('prodMaterial').value = ''; document.getElementById('prodGramatura').value = ''; document.getElementById('prodPrazo').value = ''; document.getElementById('prodPreco').value = ''; document.getElementById('prodFoto').value = ''; document.getElementById('prodObs').value = ''; document.getElementById('prodRegraPreco').value = 'unidade'; document.getElementById('prodAcabObrigatorio').checked = false; document.getElementById('listaGradePacotes').innerHTML = ''; document.getElementById('listaGradeProgressivo').innerHTML = ''; document.getElementById('listaGradeCombinacoes').innerHTML = ''; document.getElementById('listaAtributos').innerHTML = ''; document.querySelectorAll('.check-acab-prod').forEach(c => c.checked = false); ajustarCamposProduto();
 }
 
 async function salvarProduto() {
@@ -362,7 +395,21 @@ async function salvarProduto() {
 
     let acabamentosSelecionados =[]; document.querySelectorAll('.check-acab-prod:checked').forEach(c => acabamentosSelecionados.push(c.value));
 
-    const p = { nome, setor: document.getElementById('prodSetor').value, categoria: document.getElementById('prodCategoria').value, subcategoria: document.getElementById('prodSubcategoria').value.trim(), referencia: document.getElementById('prodRef').value.trim(), material: document.getElementById('prodMaterial').value.trim(), gramatura: document.getElementById('prodGramatura').value.trim(), prazo: document.getElementById('prodPrazo').value, foto: document.getElementById('prodFoto').value.trim(), obs: document.getElementById('prodObs').value.trim(), regraPreco: regra, precos, medidas: { largBobina: document.getElementById('prodLargBobina').value, largMax: document.getElementById('prodLargMax').value, compMax: document.getElementById('prodCompMax').value }, acabamentos: acabamentosSelecionados, acabObrigatorio: document.getElementById('prodAcabObrigatorio').checked };
+    // LENDO OS ATRIBUTOS (VARIAÇÕES)
+    let atributos =[];
+    document.querySelectorAll('.item-atributo').forEach(divAtr => {
+        const nomeAtr = divAtr.querySelector('.atr-nome').value.trim();
+        const obrigatorio = divAtr.querySelector('.atr-obrigatorio').checked;
+        let opcoes =[];
+        divAtr.querySelectorAll('.item-opcao').forEach(divOp => {
+            const nomeOp = divOp.querySelector('.op-nome').value.trim();
+            const precoOp = parseFloat(divOp.querySelector('.op-preco').value) || 0;
+            if(nomeOp) opcoes.push({ nome: nomeOp, preco: precoOp });
+        });
+        if(nomeAtr && opcoes.length > 0) atributos.push({ nome: nomeAtr, obrigatorio, opcoes });
+    });
+
+    const p = { nome, setor: document.getElementById('prodSetor').value, categoria: document.getElementById('prodCategoria').value, subcategoria: document.getElementById('prodSubcategoria').value.trim(), referencia: document.getElementById('prodRef').value.trim(), material: document.getElementById('prodMaterial').value.trim(), gramatura: document.getElementById('prodGramatura').value.trim(), prazo: document.getElementById('prodPrazo').value, foto: document.getElementById('prodFoto').value.trim(), obs: document.getElementById('prodObs').value.trim(), regraPreco: regra, precos, medidas: { largBobina: document.getElementById('prodLargBobina').value, largMax: document.getElementById('prodLargMax').value, compMax: document.getElementById('prodCompMax').value }, acabamentos: acabamentosSelecionados, acabObrigatorio: document.getElementById('prodAcabObrigatorio').checked, atributos: atributos };
 
     try { if(id) await db.collection("produtos").doc(id).update(p); else await db.collection("produtos").add(p); limparFormProd(); alert("Produto salvo!"); } catch(e) { alert("Erro ao salvar produto."); }
 }
@@ -370,7 +417,6 @@ async function salvarProduto() {
 function renderProdTable() { const tbody = document.getElementById('listaProdutosTab'); if(!tbody) return; tbody.innerHTML = bdProdutos.map(p => `<tr class="border-b border-slate-50"><td class="p-3 text-slate-700 font-bold">${p.nome} <br><span class="text-[9px] text-slate-400 font-normal">${p.categoria} - ${p.subcategoria || ''}</span></td><td class="p-3 text-[10px] uppercase font-bold text-slate-500">${p.setor}</td><td class="p-3 text-center"><button type="button" onclick="editProduto('${p.id}')" class="bg-slate-200 text-slate-600 px-3 py-1 rounded text-[10px] font-bold uppercase hover:bg-slate-300">Editar</button> <button type="button" onclick="delProduto('${p.id}')" class="bg-red-100 text-red-600 px-3 py-1 rounded text-[10px] font-bold uppercase hover:bg-red-200 ml-1"><i class="fa fa-trash"></i></button></td></tr>`).join(''); }
 async function delProduto(id) { if(confirm("Apagar produto permanentemente?")) await db.collection("produtos").doc(id).delete(); }
 
-// --- NOVO: EDIÇÃO COMPLETA DE PRODUTO ---
 function editProduto(id) { 
     const p = bdProdutos.find(x => x.id === id); 
     if(!p) return; 
@@ -432,6 +478,12 @@ function editProduto(id) {
             });
             document.getElementById('listaGradeCombinacoes').innerHTML = html;
         }
+    }
+
+    // RESTAURA OS ATRIBUTOS (VARIAÇÕES INDEPENDENTES)
+    document.getElementById('listaAtributos').innerHTML = '';
+    if (p.atributos && p.atributos.length > 0) {
+        p.atributos.forEach(atr => addAtributoManual(atr));
     }
 
     atualizarListaAcabamentosProduto();
@@ -527,6 +579,21 @@ function abrirModalW2P(id) {
     }
     document.getElementById('modalCorpoMedidas').innerHTML = htmlMedidas;
 
+    // RENDERIZA OS ATRIBUTOS (VARIAÇÕES) NO MODAL
+    const divVar = document.getElementById('modalCorpoVariacoes');
+    const titVar = document.getElementById('tituloVariacoes');
+    if (prodAtualW2P.atributos && prodAtualW2P.atributos.length > 0) {
+        titVar.classList.remove('hidden');
+        let htmlVar = '';
+        prodAtualW2P.atributos.forEach((atr, index) => {
+            let opts = `<option value="">Selecione...</option>` + atr.opcoes.map(op => `<option value="${op.nome}" data-preco="${op.preco}">${op.nome} (+ R$ ${op.preco.toFixed(2)})</option>`).join('');
+            htmlVar += `<div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">${atr.nome} ${atr.obrigatorio ? '<span class="text-red-500">*</span>' : ''}</label><select id="w2pAtr_${index}" class="w-full p-3 border border-slate-200 bg-white rounded text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500 w2p-atributo-select" data-nome="${atr.nome}" data-obrigatorio="${atr.obrigatorio}" onchange="calcularPrecoW2P()">${opts}</select></div>`;
+        });
+        divVar.innerHTML = htmlVar;
+    } else {
+        titVar.classList.add('hidden'); divVar.innerHTML = '';
+    }
+
     const divAcab = document.getElementById('modalCorpoAcabamentos'); const titAcab = document.getElementById('tituloAcabamentos');
     if(prodAtualW2P.acabamentos && prodAtualW2P.acabamentos.length > 0) {
         titAcab.classList.remove('hidden');
@@ -579,6 +646,15 @@ function calcularPrecoW2P() {
         total = qtdMultiplicador * prodAtualW2P.precos.base;
     }
 
+    // SOMA OS ATRIBUTOS SELECIONADOS
+    document.querySelectorAll('.w2p-atributo-select').forEach(sel => {
+        if (sel.selectedIndex > 0) {
+            const opt = sel.options[sel.selectedIndex];
+            const pAtr = parseFloat(opt.getAttribute('data-preco')) || 0;
+            total += (pAtr * qtdMultiplicador);
+        }
+    });
+
     document.querySelectorAll('input[name="w2pCheckAcab"]:checked').forEach(chk => {
         const pAcab = parseFloat(chk.getAttribute('data-preco')), rAcab = chk.getAttribute('data-regra');
         if(rAcab === 'm2' && regra === 'm2') total += (largura * altura * qtdMultiplicador * pAcab);
@@ -593,7 +669,18 @@ function confirmarAdicaoCarrinho() {
     if(!prodAtualW2P) return;
     const nomeArq = document.getElementById('w2pNomeArquivo').value.trim();
     if(!nomeArq) { alert("A identificação/nome do arquivo é obrigatória."); return; }
+    
     if(document.getElementById('modalProdAcabObrigatorio').value === 'sim' && document.querySelectorAll('input[name="w2pCheckAcab"]:checked').length === 0) { alert("Este produto exige que você selecione pelo menos um acabamento."); return; }
+
+    // VALIDA ATRIBUTOS OBRIGATÓRIOS
+    let atributosValidos = true;
+    document.querySelectorAll('.w2p-atributo-select').forEach(sel => {
+        if (sel.getAttribute('data-obrigatorio') === 'true' && sel.selectedIndex === 0) {
+            alert(`O campo "${sel.getAttribute('data-nome')}" é obrigatório.`);
+            atributosValidos = false;
+        }
+    });
+    if (!atributosValidos) return;
 
     const valorTotal = parseFloat(document.getElementById('modalSubtotal').getAttribute('data-valor')) || 0;
     if(valorTotal <= 0 && prodAtualW2P.precos.base > 0) { alert("Selecione corretamente as opções para gerar o preço."); return; }
@@ -606,7 +693,12 @@ function confirmarAdicaoCarrinho() {
     else if(prodAtualW2P.regraPreco === 'combinacao') { const v1 = document.getElementById('w2pComb1').value; const v2 = document.getElementById('w2pComb2').value; if(!v1 || !v2) return; qtdFinal = qtdMultiplicador; descExtra = `${v1} | ${v2}`; }
     else { qtdFinal = qtdMultiplicador; }
 
-    let acabExtras = []; document.querySelectorAll('input[name="w2pCheckAcab"]:checked').forEach(chk => { const a = bdAcabamentos.find(x => x.id === chk.value); if(a) acabExtras.push(a.nome); });
+    // ADD ATRIBUTOS NA DESCRIÇÃO
+    document.querySelectorAll('.w2p-atributo-select').forEach(sel => {
+        if (sel.selectedIndex > 0) descExtra += ` | ${sel.getAttribute('data-nome')}: ${sel.value}`;
+    });
+
+    let acabExtras =[]; document.querySelectorAll('input[name="w2pCheckAcab"]:checked').forEach(chk => { const a = bdAcabamentos.find(x => x.id === chk.value); if(a) acabExtras.push(a.nome); });
     if(acabExtras.length > 0) descExtra += ` | Acab: ${acabExtras.join(', ')}`;
 
     carrinho.push({ idProduto: prodAtualW2P.id, nome: `${prodAtualW2P.nome} (${nomeArq})`, desc: descExtra, qtdCarrinho: qtdFinal, valor: valorTotal, setor: prodAtualW2P.setor });
