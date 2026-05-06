@@ -263,7 +263,7 @@ async function salvarDadosEmpresa() {
     try { await db.collection("empresa").doc("dados").set(dados); alert("Dados Bancários/PIX salvos com sucesso!"); } catch(e) { alert("Erro ao salvar dados da empresa."); }
 }
 
-// --- WHATSAPP UTILS (ABRE DIRETO NO APP) ---
+// --- WHATSAPP UTILS ---
 function enviarWhatsApp(idPedido, acao) {
     const pedido = bdPedidos.find(p => p.id === idPedido); if(!pedido) return;
     const zapModal = document.getElementById('modalWhatsApp');
@@ -333,7 +333,7 @@ function atualizarListaAcabamentosProduto() {
     div.innerHTML = acabamentosFiltrados.length === 0 ? '<p class="text-[10px] text-slate-400">Nenhum acabamento para esta categoria.</p>' : acabamentosFiltrados.map(a => `<label class="flex items-center gap-2 text-xs text-slate-600 bg-white p-2 rounded border border-slate-100 shadow-sm cursor-pointer hover:bg-slate-50 transition"><input type="checkbox" class="check-acab-prod accent-indigo-500" value="${a.id}" /> ${a.nome} <span class="text-[9px] font-bold text-emerald-600 ml-auto">+ R$ ${a.preco.toFixed(2)}</span></label>`).join('');
 }
 
-// --- NOVO: FUNÇÕES PARA ATRIBUTOS (VARIAÇÕES INDEPENDENTES) ---
+// --- ATRIBUTOS (VARIAÇÕES INDEPENDENTES) ---
 function addAtributoManual(atr = null) {
     const divId = 'attr_' + Date.now() + Math.floor(Math.random() * 1000);
     const div = document.createElement('div');
@@ -342,12 +342,22 @@ function addAtributoManual(atr = null) {
 
     let nomeVal = atr ? atr.nome : '';
     let obrigatorio = atr && atr.obrigatorio ? 'checked' : '';
-    let tipoCalculo = atr && atr.tipoCalculo ? atr.tipoCalculo : 'multiplica';
+    
+    // Resgata se era fixo ou multiplica
+    let tipoCalculo = 'multiplica';
+    if (atr) {
+        if (atr.tipoCalculo) tipoCalculo = atr.tipoCalculo;
+        else if (atr.regra) tipoCalculo = atr.regra;
+        else if (atr.tipo) tipoCalculo = atr.tipo;
+        else if (atr.multiplicar === false) tipoCalculo = 'fixo';
+    }
 
     let htmlOpcoes = '';
     if (atr && atr.opcoes) {
         atr.opcoes.forEach(op => {
-            htmlOpcoes += `<div class="flex gap-2 mt-2 item-opcao"><input type="text" value="${op.nome}" placeholder="Nome da Opção" class="p-2 border border-slate-200 rounded text-xs flex-1 outline-none op-nome" /><input type="number" value="${op.preco}" placeholder="Preço + R$" class="p-2 border border-slate-200 rounded text-xs w-24 outline-none op-preco" /><button type="button" onclick="this.parentElement.remove()" class="text-red-500 font-bold px-2">X</button></div>`;
+            let opNome = op.nome !== undefined ? op.nome : '';
+            let opPreco = op.preco !== undefined ? op.preco : (op.valor !== undefined ? op.valor : 0);
+            htmlOpcoes += `<div class="flex gap-2 mt-2 item-opcao"><input type="text" value="${opNome}" placeholder="Nome da Opção" class="p-2 border border-slate-200 rounded text-xs flex-1 outline-none op-nome" /><input type="number" value="${opPreco}" placeholder="Preço + R$" class="p-2 border border-slate-200 rounded text-xs w-24 outline-none op-preco" /><button type="button" onclick="this.parentElement.remove()" class="text-red-500 font-bold px-2">X</button></div>`;
         });
     }
 
@@ -400,7 +410,6 @@ async function salvarProduto() {
 
     let acabamentosSelecionados =[]; document.querySelectorAll('.check-acab-prod:checked').forEach(c => acabamentosSelecionados.push(c.value));
 
-    // LENDO OS ATRIBUTOS (VARIAÇÕES)
     let atributos =[];
     document.querySelectorAll('.item-atributo').forEach(divAtr => {
         const nomeAtr = divAtr.querySelector('.atr-nome').value.trim();
@@ -442,7 +451,6 @@ function editProduto(id) {
     
     document.getElementById('prodPreco').value = (p.precos && p.precos.base) ? p.precos.base : (p.preco || 0);
     
-    // TRADUTOR DE REGRA DE PREÇO ANTIGA PARA NOVA
     let regra = p.regraPreco || 'unidade';
     if (regra === 'Desconto Progressivo') regra = 'progressivo';
     if (regra === 'Matriz de Combinações') regra = 'combinacao';
@@ -463,10 +471,15 @@ function editProduto(id) {
 
     // RESGATA PACOTES
     document.getElementById('listaGradePacotes').innerHTML = '';
-    let pacArray = (p.precos && p.precos.pacotes) ? p.precos.pacotes : (p.tabelaPacotes || p.pacotes ||[]);
+    let pacArray =[];
+    if (p.precos && p.precos.pacotes && p.precos.pacotes.length > 0) pacArray = p.precos.pacotes;
+    else if (p.pacotes && p.pacotes.length > 0) pacArray = p.pacotes;
+    else if (p.tabelaPacotes && p.tabelaPacotes.length > 0) pacArray = p.tabelaPacotes;
+    else if (p.gradePacotes && p.gradePacotes.length > 0) pacArray = p.gradePacotes;
+
     pacArray.forEach(pct => {
-        let q = pct.qtd !== undefined ? pct.qtd : pct.quantidade;
-        let pr = pct.preco !== undefined ? pct.preco : pct.valor;
+        let q = pct.qtd !== undefined ? pct.qtd : (pct.quantidade !== undefined ? pct.quantidade : '');
+        let pr = pct.preco !== undefined ? pct.preco : (pct.valor !== undefined ? pct.valor : '');
         const div = document.createElement('div'); div.className = 'flex gap-2 items-center';
         div.innerHTML = `<input type="number" value="${q}" placeholder="Qtd" class="p-2 border border-amber-200 rounded text-xs w-20 outline-none" /><input type="number" value="${pr}" placeholder="Preço do Pacote R$" class="p-2 border border-amber-200 rounded text-xs flex-1 outline-none" /><button type="button" onclick="this.parentElement.remove()" class="text-red-500 font-bold px-2">X</button>`;
         document.getElementById('listaGradePacotes').appendChild(div);
@@ -474,10 +487,17 @@ function editProduto(id) {
 
     // RESGATA DESCONTO PROGRESSIVO
     document.getElementById('listaGradeProgressivo').innerHTML = '';
-    let progArray = (p.precos && p.precos.progressivo) ? p.precos.progressivo : (p.tabelaProgressiva || p.descontoProgressivo || p.progressivo ||[]);
+    let progArray =[];
+    if (p.precos && p.precos.progressivo && p.precos.progressivo.length > 0) progArray = p.precos.progressivo;
+    else if (p.progressivo && p.progressivo.length > 0) progArray = p.progressivo;
+    else if (p.tabelaProgressiva && p.tabelaProgressiva.length > 0) progArray = p.tabelaProgressiva;
+    else if (p.descontoProgressivo && p.descontoProgressivo.length > 0) progArray = p.descontoProgressivo;
+    else if (p.gradeProgressivo && p.gradeProgressivo.length > 0) progArray = p.gradeProgressivo;
+    else if (p.faixas && p.faixas.length > 0) progArray = p.faixas;
+
     progArray.forEach(prog => {
-        let minQ = prog.minQtd !== undefined ? prog.minQtd : (prog.qtd !== undefined ? prog.qtd : prog.quantidade);
-        let pUnit = prog.precoUnit !== undefined ? prog.precoUnit : (prog.preco !== undefined ? prog.preco : prog.valor);
+        let minQ = prog.minQtd !== undefined ? prog.minQtd : (prog.qtd !== undefined ? prog.qtd : (prog.quantidade !== undefined ? prog.quantidade : ''));
+        let pUnit = prog.precoUnit !== undefined ? prog.precoUnit : (prog.preco !== undefined ? prog.preco : (prog.valor !== undefined ? prog.valor : ''));
         const div = document.createElement('div'); div.className = 'flex gap-2 items-center';
         div.innerHTML = `<input type="number" value="${minQ}" placeholder="A partir de Qtd" class="p-2 border border-emerald-200 rounded text-xs w-28 outline-none" /><input type="number" value="${pUnit}" placeholder="Preço Unitário R$" class="p-2 border border-emerald-200 rounded text-xs flex-1 outline-none" /><button type="button" onclick="this.parentElement.remove()" class="text-red-500 font-bold px-2">X</button>`;
         document.getElementById('listaGradeProgressivo').appendChild(div);
@@ -485,22 +505,23 @@ function editProduto(id) {
 
     // RESGATA COMBINAÇÕES
     document.getElementById('listaGradeCombinacoes').innerHTML = '';
-    let combObj = (p.precos && p.precos.combinacoes) ? p.precos.combinacoes : (p.matrizCombinacoes || p.combinacoes || null);
-    if (combObj) {
+    let combObj = null;
+    if (p.precos && p.precos.combinacoes && p.precos.combinacoes.valores && p.precos.combinacoes.valores.length > 0) combObj = p.precos.combinacoes;
+    else if (p.combinacoes && p.combinacoes.valores && p.combinacoes.valores.length > 0) combObj = p.combinacoes;
+    else if (p.matrizCombinacoes && p.matrizCombinacoes.valores && p.matrizCombinacoes.valores.length > 0) combObj = p.matrizCombinacoes;
+
+    if (combObj && combObj.valores && combObj.valores.length > 0) {
         document.getElementById('combNome1').value = combObj.attr1 || combObj.nome1 || '';
         document.getElementById('combNome2').value = combObj.attr2 || combObj.nome2 || '';
-        let valores = combObj.valores || [];
-        if(valores.length > 0) {
-            const v1s =[...new Set(valores.map(v => v.v1))];
-            const v2s =[...new Set(valores.map(v => v.v2))];
-            document.getElementById('combValores1').value = v1s.join(', ');
-            document.getElementById('combValores2').value = v2s.join(', ');
-            let html = '';
-            valores.forEach(val => {
-                html += `<div class="flex justify-between items-center bg-white p-2 rounded border border-purple-100 text-[10px] font-bold"><span class="text-purple-700">${val.v1} + ${val.v2}</span><div class="flex gap-2 items-center">R$ <input type="number" value="${val.preco}" data-v1="${val.v1}" data-v2="${val.v2}" class="p-1 border border-purple-200 rounded text-xs w-24 outline-none comb-price" placeholder="Preço Fixo" /></div></div>`;
-            });
-            document.getElementById('listaGradeCombinacoes').innerHTML = html;
-        }
+        const v1s =[...new Set(combObj.valores.map(v => v.v1))];
+        const v2s =[...new Set(combObj.valores.map(v => v.v2))];
+        document.getElementById('combValores1').value = v1s.join(', ');
+        document.getElementById('combValores2').value = v2s.join(', ');
+        let html = '';
+        combObj.valores.forEach(val => {
+            html += `<div class="flex justify-between items-center bg-white p-2 rounded border border-purple-100 text-[10px] font-bold"><span class="text-purple-700">${val.v1} + ${val.v2}</span><div class="flex gap-2 items-center">R$ <input type="number" value="${val.preco || val.valor || 0}" data-v1="${val.v1}" data-v2="${val.v2}" class="p-1 border border-purple-200 rounded text-xs w-24 outline-none comb-price" placeholder="Preço Fixo" /></div></div>`;
+        });
+        document.getElementById('listaGradeCombinacoes').innerHTML = html;
     }
 
     // RESGATA OS ATRIBUTOS (VARIAÇÕES INDEPENDENTES)
@@ -545,7 +566,6 @@ function renderVitrine() {
         else if(p.setor === 'Com. Visual') { corSetor = 'bg-blue-100 text-blue-800'; borderSetor = 'hover:border-blue-400'; }
         else if(p.setor === 'Outros') { corSetor = 'bg-emerald-100 text-emerald-800'; borderSetor = 'hover:border-emerald-400'; }
 
-        // Tradutor visual para a vitrine
         let regraVisual = p.regraPreco || 'unidade';
         if (regraVisual === 'Desconto Progressivo') regraVisual = 'progressivo';
         if (regraVisual === 'Matriz de Combinações') regraVisual = 'combinacao';
@@ -576,7 +596,6 @@ let prodAtualW2P = null;
 function abrirModalW2P(id) {
     prodAtualW2P = bdProdutos.find(p => p.id === id); if(!prodAtualW2P) return;
     
-    // Tradutor de regra antiga para o modal
     let regra = prodAtualW2P.regraPreco || 'unidade';
     if (regra === 'Desconto Progressivo') regra = 'progressivo';
     if (regra === 'Matriz de Combinações') regra = 'combinacao';
@@ -608,15 +627,24 @@ function abrirModalW2P(id) {
     if(prodAtualW2P.regraPreco === 'm2') {
         htmlMedidas = `<div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">Largura (m)</label><input type="number" id="w2pLargura" value="1.00" step="0.01" oninput="calcularPrecoW2P()" class="w-full p-3 border border-slate-200 bg-white rounded text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500" /></div><div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">Altura (m)</label><input type="number" id="w2pAltura" value="1.00" step="0.01" oninput="calcularPrecoW2P()" class="w-full p-3 border border-slate-200 bg-white rounded text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500" /></div>` + inputQtdGeral;
     } else if(prodAtualW2P.regraPreco === 'pacote') {
-        let pacArray = (prodAtualW2P.precos && prodAtualW2P.precos.pacotes) ? prodAtualW2P.precos.pacotes : (prodAtualW2P.tabelaPacotes || prodAtualW2P.pacotes ||[]);
+        let pacArray =[];
+        if (prodAtualW2P.precos && prodAtualW2P.precos.pacotes && prodAtualW2P.precos.pacotes.length > 0) pacArray = prodAtualW2P.precos.pacotes;
+        else if (prodAtualW2P.pacotes && prodAtualW2P.pacotes.length > 0) pacArray = prodAtualW2P.pacotes;
+        else if (prodAtualW2P.tabelaPacotes && prodAtualW2P.tabelaPacotes.length > 0) pacArray = prodAtualW2P.tabelaPacotes;
+        else if (prodAtualW2P.gradePacotes && prodAtualW2P.gradePacotes.length > 0) pacArray = prodAtualW2P.gradePacotes;
+
         let opts = pacArray.map(p => {
             let q = p.qtd !== undefined ? p.qtd : p.quantidade;
             let pr = p.preco !== undefined ? p.preco : p.valor;
-            return `<option value="${q}" data-preco="${pr}">${q} un. - R$ ${pr.toFixed(2)}</option>`;
+            return `<option value="${q}" data-preco="${pr}">${q} un. - R$ ${parseFloat(pr).toFixed(2)}</option>`;
         }).join('');
         htmlMedidas = `<div class="space-y-1 col-span-2"><label class="text-[10px] font-bold text-slate-400 uppercase">Selecione o Pacote</label><select id="w2pPacote" onchange="calcularPrecoW2P()" class="w-full p-3 border border-slate-200 bg-white rounded text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500"><option value="">Selecione...</option>${opts}</select></div>` + inputQtdGeral;
     } else if(prodAtualW2P.regraPreco === 'combinacao') {
-        let combObj = (prodAtualW2P.precos && prodAtualW2P.precos.combinacoes) ? prodAtualW2P.precos.combinacoes : (prodAtualW2P.matrizCombinacoes || prodAtualW2P.combinacoes || null);
+        let combObj = null;
+        if (prodAtualW2P.precos && prodAtualW2P.precos.combinacoes && prodAtualW2P.precos.combinacoes.valores && prodAtualW2P.precos.combinacoes.valores.length > 0) combObj = prodAtualW2P.precos.combinacoes;
+        else if (prodAtualW2P.combinacoes && prodAtualW2P.combinacoes.valores && prodAtualW2P.combinacoes.valores.length > 0) combObj = prodAtualW2P.combinacoes;
+        else if (prodAtualW2P.matrizCombinacoes && prodAtualW2P.matrizCombinacoes.valores && prodAtualW2P.matrizCombinacoes.valores.length > 0) combObj = prodAtualW2P.matrizCombinacoes;
+
         if(combObj && combObj.valores) {
             let opts1 =[...new Set(combObj.valores.map(v => v.v1))].map(v => `<option value="${v}">${v}</option>`).join('');
             let opts2 =[...new Set(combObj.valores.map(v => v.v2))].map(v => `<option value="${v}">${v}</option>`).join('');
@@ -629,15 +657,18 @@ function abrirModalW2P(id) {
     }
     document.getElementById('modalCorpoMedidas').innerHTML = htmlMedidas;
 
-    // RENDERIZA OS ATRIBUTOS (VARIAÇÕES) NO MODAL
     const divVar = document.getElementById('modalCorpoVariacoes');
     const titVar = document.getElementById('tituloVariacoes');
     if (prodAtualW2P.atributos && prodAtualW2P.atributos.length > 0) {
         titVar.classList.remove('hidden');
         let htmlVar = '';
         prodAtualW2P.atributos.forEach((atr, index) => {
-            let opts = `<option value="">Selecione...</option>` + atr.opcoes.map(op => `<option value="${op.nome}" data-preco="${op.preco}">${op.nome} (+ R$ ${op.preco.toFixed(2)})</option>`).join('');
-            htmlVar += `<div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">${atr.nome} ${atr.obrigatorio ? '<span class="text-red-500">*</span>' : ''}</label><select id="w2pAtr_${index}" class="w-full p-3 border border-slate-200 bg-white rounded text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500 w2p-atributo-select" data-nome="${atr.nome}" data-obrigatorio="${atr.obrigatorio}" data-tipo-calculo="${atr.tipoCalculo || 'multiplica'}" onchange="calcularPrecoW2P()">${opts}</select></div>`;
+            let opts = `<option value="">Selecione...</option>` + atr.opcoes.map(op => {
+                let pOp = op.preco !== undefined ? op.preco : (op.valor !== undefined ? op.valor : 0);
+                return `<option value="${op.nome}" data-preco="${pOp}">${op.nome} (+ R$ ${parseFloat(pOp).toFixed(2)})</option>`;
+            }).join('');
+            let tipoCalc = atr.tipoCalculo || atr.regra || atr.tipo || (atr.multiplicar === false ? 'fixo' : 'multiplica');
+            htmlVar += `<div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">${atr.nome} ${atr.obrigatorio ? '<span class="text-red-500">*</span>' : ''}</label><select id="w2pAtr_${index}" class="w-full p-3 border border-slate-200 bg-white rounded text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500 w2p-atributo-select" data-nome="${atr.nome}" data-obrigatorio="${atr.obrigatorio}" data-tipo-calculo="${tipoCalc}" onchange="calcularPrecoW2P()">${opts}</select></div>`;
         });
         divVar.innerHTML = htmlVar;
     } else {
@@ -687,7 +718,14 @@ function calcularPrecoW2P() {
         if(sel && sel.selectedIndex > 0) { const opt = sel.options[sel.selectedIndex]; total = parseFloat(opt.getAttribute('data-preco')) * qtdMultiplicador; }
     } else if(regra === 'progressivo') {
         let pUnit = prodAtualW2P.precos.base;
-        let progArray = (prodAtualW2P.precos && prodAtualW2P.precos.progressivo) ? prodAtualW2P.precos.progressivo : (prodAtualW2P.tabelaProgressiva || prodAtualW2P.descontoProgressivo || prodAtualW2P.progressivo ||[]);
+        let progArray =[];
+        if (prodAtualW2P.precos && prodAtualW2P.precos.progressivo && prodAtualW2P.precos.progressivo.length > 0) progArray = prodAtualW2P.precos.progressivo;
+        else if (prodAtualW2P.progressivo && prodAtualW2P.progressivo.length > 0) progArray = prodAtualW2P.progressivo;
+        else if (prodAtualW2P.tabelaProgressiva && prodAtualW2P.tabelaProgressiva.length > 0) progArray = prodAtualW2P.tabelaProgressiva;
+        else if (prodAtualW2P.descontoProgressivo && prodAtualW2P.descontoProgressivo.length > 0) progArray = prodAtualW2P.descontoProgressivo;
+        else if (prodAtualW2P.gradeProgressivo && prodAtualW2P.gradeProgressivo.length > 0) progArray = prodAtualW2P.gradeProgressivo;
+        else if (prodAtualW2P.faixas && prodAtualW2P.faixas.length > 0) progArray = prodAtualW2P.faixas;
+
         if(progArray.length > 0) { 
             const faixas =[...progArray].sort((a,b) => {
                 let minA = a.minQtd !== undefined ? a.minQtd : (a.qtd !== undefined ? a.qtd : a.quantidade);
@@ -705,13 +743,22 @@ function calcularPrecoW2P() {
         total = qtdMultiplicador * pUnit;
     } else if(regra === 'combinacao') {
         const v1 = document.getElementById('w2pComb1') ? document.getElementById('w2pComb1').value : ''; const v2 = document.getElementById('w2pComb2') ? document.getElementById('w2pComb2').value : '';
-        let combObj = (prodAtualW2P.precos && prodAtualW2P.precos.combinacoes) ? prodAtualW2P.precos.combinacoes : (prodAtualW2P.matrizCombinacoes || prodAtualW2P.combinacoes || null);
-        if(v1 && v2 && combObj && combObj.valores) { const match = combObj.valores.find(x => x.v1 === v1 && x.v2 === v2); if(match) total = match.preco * qtdMultiplicador; }
+        let combObj = null;
+        if (prodAtualW2P.precos && prodAtualW2P.precos.combinacoes && prodAtualW2P.precos.combinacoes.valores && prodAtualW2P.precos.combinacoes.valores.length > 0) combObj = prodAtualW2P.precos.combinacoes;
+        else if (prodAtualW2P.combinacoes && prodAtualW2P.combinacoes.valores && prodAtualW2P.combinacoes.valores.length > 0) combObj = prodAtualW2P.combinacoes;
+        else if (prodAtualW2P.matrizCombinacoes && prodAtualW2P.matrizCombinacoes.valores && prodAtualW2P.matrizCombinacoes.valores.length > 0) combObj = prodAtualW2P.matrizCombinacoes;
+
+        if(v1 && v2 && combObj && combObj.valores) { 
+            const match = combObj.valores.find(x => x.v1 === v1 && x.v2 === v2); 
+            if(match) {
+                let pComb = match.preco !== undefined ? match.preco : (match.valor !== undefined ? match.valor : 0);
+                total = pComb * qtdMultiplicador; 
+            }
+        }
     } else {
         total = qtdMultiplicador * prodAtualW2P.precos.base;
     }
 
-    // SOMA OS ATRIBUTOS SELECIONADOS (FIXO OU MULTIPLICA)
     document.querySelectorAll('.w2p-atributo-select').forEach(sel => {
         if (sel.selectedIndex > 0) {
             const opt = sel.options[sel.selectedIndex];
@@ -742,7 +789,6 @@ function confirmarAdicaoCarrinho() {
     
     if(document.getElementById('modalProdAcabObrigatorio').value === 'sim' && document.querySelectorAll('input[name="w2pCheckAcab"]:checked').length === 0) { alert("Este produto exige que você selecione pelo menos um acabamento."); return; }
 
-    // VALIDA ATRIBUTOS OBRIGATÓRIOS
     let atributosValidos = true;
     document.querySelectorAll('.w2p-atributo-select').forEach(sel => {
         if (sel.getAttribute('data-obrigatorio') === 'true' && sel.selectedIndex === 0) {
@@ -763,7 +809,6 @@ function confirmarAdicaoCarrinho() {
     else if(prodAtualW2P.regraPreco === 'combinacao') { const v1 = document.getElementById('w2pComb1').value; const v2 = document.getElementById('w2pComb2').value; if(!v1 || !v2) return; qtdFinal = qtdMultiplicador; descExtra = `${v1} | ${v2}`; }
     else { qtdFinal = qtdMultiplicador; }
 
-    // ADD ATRIBUTOS NA DESCRIÇÃO
     document.querySelectorAll('.w2p-atributo-select').forEach(sel => {
         if (sel.selectedIndex > 0) descExtra += ` | ${sel.getAttribute('data-nome')}: ${sel.value}`;
     });
