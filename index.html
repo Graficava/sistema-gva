@@ -2,15 +2,8 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>GVA Gráfica ERP | GVAsist</title>
-    
-    <link rel="manifest" href="manifest.json" />
-    <meta name="theme-color" content="#3E4095" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="GVAsist" />
-    <link rel="apple-touch-icon" href="https://i.postimg.cc/1RCc58qN/gva-br-1-ERP-26.png" />
     
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
@@ -20,26 +13,32 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
     <style>
-        aside .active-aba { background-color: #f1f5f9; color: #0f172a; border-left: 4px solid #1e293b; }
-        .bottom-nav .active-aba { color: #3E4095; }
+        .active-aba { background-color: #f1f5f9; color: #0f172a; border-left: 4px solid #1e293b; }
         .active-sub { color: #1e293b; border-bottom: 3px solid #1e293b; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
-        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-        .vertical-text { writing-mode: vertical-rl; transform: rotate(180deg); }
+        input::-webkit-outer-spin-button, 
+        input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        .kanban-col { max-height: calc(100vh - 180px); min-width: 320px; }
     </style>
 </head>
 <body class="bg-[#f4f4f2] text-slate-700 font-sans overflow-hidden">
 
     <!-- TELA DE LOGIN -->
-    <div id="telaLogin" class="min-h-screen flex items-center justify-center bg-[#0f172a] px-4">
+    <div id="telaLogin" class="min-h-screen flex items-center justify-center bg-[#0f172a] px-4 absolute inset-0 z-[100]">
         <div class="bg-white p-10 rounded-lg shadow-2xl w-full max-w-sm text-center">
             <div class="bg-[#0f172a] p-4 rounded-lg mb-8">
-                <img src="https://i.postimg.cc/1RCc58qN/gva-br-1-ERP-26.png" alt="GVA Gráfica" class="mx-auto h-12 object-contain" />
+                <img src="https://i.postimg.cc/VvQwjfSj/gva-br-ERP-26.png" alt="GVA" class="mx-auto h-12 object-contain" />
             </div>
             <div class="space-y-4">
-                <input type="email" id="email" onkeypress="if(event.key === 'Enter') entrar()" placeholder="E-mail" class="w-full p-3 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-slate-500" />
-                <input type="password" id="senha" onkeypress="if(event.key === 'Enter') entrar()" placeholder="Senha" class="w-full p-3 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-slate-500" />
-                <button type="button" id="btnEntrar" onclick="entrar()" class="w-full bg-[#1e293b] text-white font-bold py-3 rounded hover:bg-slate-800 transition shadow-lg">Entrar no Sistema</button>
+                <div class="text-left space-y-1">
+                    <label class="text-[10px] font-bold text-slate-400 uppercase">E-mail</label>
+                    <input type="email" id="email" class="w-full p-3 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-slate-500" />
+                </div>
+                <div class="text-left space-y-1">
+                    <label class="text-[10px] font-bold text-slate-400 uppercase">Senha</label>
+                    <input type="password" id="senha" class="w-full p-3 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-slate-500" />
+                </div>
+                <button type="button" onclick="entrar()" class="w-full bg-[#1e293b] text-white font-bold py-3 rounded hover:bg-slate-800 transition shadow-lg mt-2">Entrar</button>
                 <p id="msgErro" class="text-red-500 text-xs hidden font-bold">Acesso negado. Verifique os dados.</p>
             </div>
         </div>
@@ -49,16 +48,14 @@
     <div id="appInterface" class="hidden h-screen flex flex-col">
         
         <!-- HEADER -->
-        <header class="h-16 bg-[#0f172a] flex items-center justify-between px-6 shrink-0 shadow-md z-50">
+        <header class="h-16 bg-[#0f172a] flex items-center justify-between px-6 shrink-0 shadow-md">
             <div class="flex items-center gap-4">
-                <img src="https://i.postimg.cc/1RCc58qN/gva-br-1-ERP-26.png" alt="GVA Gráfica" class="h-8 object-contain" />
+                <img src="https://i.postimg.cc/VvQwjfSj/gva-br-ERP-26.png" alt="GVA" class="h-8 object-contain" />
                 <nav class="hidden md:flex gap-6 ml-10 text-slate-400 text-[11px] font-bold uppercase">
-                    <button type="button" onclick="mudarAba('loja')" class="btn-menu-loja hover:text-white transition hidden">Vendas</button>
-                    <button type="button" onclick="mudarAba('orcamentos')" class="btn-menu-loja hover:text-white transition hidden">Orçamentos</button>
-                    <button type="button" onclick="mudarAba('producao')" class="btn-menu-producao hover:text-white transition hidden">Produção</button>
-                    <button type="button" onclick="mudarAba('financeiro')" class="btn-menu-financeiro hover:text-white transition hidden">Financeiro</button>
-                    <button type="button" onclick="mudarAba('cadastros')" class="btn-menu-config hover:text-white transition hidden">Configurações</button>
-                    <button type="button" onclick="mudarAba('dashboard')" class="btn-menu-dashboard hover:text-white transition hidden">Dashboard</button>
+                    <button type="button" onclick="mudarAba('loja', this)" class="hover:text-white transition">Vendas</button>
+                    <button type="button" onclick="mudarAba('producao', this)" class="hover:text-white transition">Produção</button>
+                    <button type="button" onclick="mudarAba('financeiro', this)" class="hover:text-white transition">Financeiro</button>
+                    <button type="button" onclick="mudarAba('cadastros', this)" class="hover:text-white transition">Configurações</button>
                 </nav>
             </div>
             <div class="flex items-center gap-4 text-white">
@@ -71,36 +68,34 @@
         </header>
 
         <div class="flex flex-1 overflow-hidden">
-            <!-- SIDEBAR (DESKTOP) -->
+            <!-- SIDEBAR -->
             <aside class="w-64 bg-white border-r border-slate-200 hidden md:flex flex-col shrink-0">
                 <div class="p-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Menu Principal</div>
-                <nav class="flex-1 flex flex-col space-y-1">
-                    <button type="button" onclick="mudarAba('loja')" class="aba-btn btn-menu-loja w-full flex items-center gap-3 p-4 font-bold text-slate-500 hover:bg-slate-50 hidden">
+                <nav class="flex-1 space-y-1 overflow-y-auto">
+                    <button type="button" onclick="mudarAba('loja', this)" class="aba-btn btn-menu-loja w-full flex items-center gap-3 p-4 font-bold text-slate-500 hover:bg-slate-50 active-aba">
                         <i class="fa fa-shopping-cart w-5"></i> Loja PDV
                     </button>
-                    <button type="button" onclick="mudarAba('orcamentos')" class="aba-btn btn-menu-loja w-full flex items-center gap-3 p-4 font-bold text-slate-500 hover:bg-slate-50 hidden">
+                    <button type="button" onclick="mudarAba('orcamentos', this)" class="aba-btn btn-menu-loja w-full flex items-center gap-3 p-4 font-bold text-slate-500 hover:bg-slate-50">
                         <i class="fa fa-file-invoice w-5"></i> Orçamentos
                     </button>
-                    <button type="button" onclick="mudarAba('producao')" class="aba-btn btn-menu-producao w-full flex items-center gap-3 p-4 font-bold text-slate-500 hover:bg-slate-50 hidden">
+                    <button type="button" onclick="mudarAba('producao', this)" class="aba-btn btn-menu-producao w-full flex items-center gap-3 p-4 font-bold text-slate-500 hover:bg-slate-50">
                         <i class="fa fa-tasks w-5"></i> Produção
                     </button>
-                    <button type="button" onclick="mudarAba('financeiro')" class="aba-btn btn-menu-financeiro w-full flex items-center gap-3 p-4 font-bold text-slate-500 hover:bg-slate-50 hidden">
+                    <button type="button" onclick="mudarAba('financeiro', this)" class="aba-btn btn-menu-financeiro w-full flex items-center gap-3 p-4 font-bold text-slate-500 hover:bg-slate-50">
                         <i class="fa fa-chart-line w-5"></i> Financeiro
                     </button>
-                    <button type="button" onclick="mudarAba('cadastros')" class="aba-btn btn-menu-config w-full flex items-center gap-3 p-4 font-bold text-slate-500 hover:bg-slate-50 hidden">
+                    <button type="button" onclick="mudarAba('cadastros', this)" class="aba-btn btn-menu-config w-full flex items-center gap-3 p-4 font-bold text-slate-500 hover:bg-slate-50">
                         <i class="fa fa-cog w-5"></i> Configurações
                     </button>
-                    
                     <div class="mt-auto border-t border-slate-200">
-                        <button type="button" onclick="mudarAba('dashboard')" class="aba-btn btn-menu-dashboard w-full flex items-center gap-3 p-4 font-bold text-slate-500 hover:bg-slate-50 hidden">
+                        <button type="button" onclick="mudarAba('dashboard', this)" class="aba-btn btn-menu-dashboard w-full flex items-center gap-3 p-4 font-bold text-slate-500 hover:bg-slate-50">
                             <i class="fa fa-chart-pie w-5"></i> Dashboard
                         </button>
                     </div>
                 </nav>
             </aside>
-
-            <!-- CONTEUDO PRINCIPAL -->
-            <main class="flex-1 p-6 pb-24 md:pb-6 overflow-hidden flex flex-col relative">
+<!-- CONTEUDO PRINCIPAL -->
+            <main class="flex-1 p-6 pb-24 md:pb-6 overflow-hidden flex flex-col relative bg-[#f4f4f2]">
 
                 <!-- ABA DASHBOARD -->
                 <section id="aba-dashboard" class="aba-content hidden h-full overflow-y-auto pr-2">
@@ -158,7 +153,6 @@
                         </div>
                     </div>
                     
-                    <!-- NOVO: Gráfico/Tabela de Despesas por Categoria -->
                     <div class="bg-white rounded shadow-sm border border-slate-200 overflow-hidden max-w-3xl">
                         <div class="bg-slate-50 p-4 border-b border-slate-200">
                             <h3 class="font-bold text-slate-800 uppercase text-xs tracking-widest"><i class="fa fa-chart-bar text-red-400 mr-2"></i> Despesas por Categoria</h3>
@@ -172,7 +166,7 @@
                     </div>
                 </section>
 
-                <!-- NOVO: ABA ORÇAMENTOS (FOLLOW-UP) -->
+                <!-- ABA ORÇAMENTOS (FOLLOW-UP) -->
                 <section id="aba-orcamentos" class="aba-content hidden h-full overflow-y-auto pr-2">
                     <div class="flex justify-between items-center mb-6">
                         <h2 class="text-2xl font-bold text-slate-900 uppercase italic tracking-tighter">Follow-up de Orçamentos</h2>
@@ -229,7 +223,6 @@
                                 <input type="hidden" id="cartClienteId" />
                             </div>
 
-                            <!-- NOVO: Data de Entrega e Link da Arte -->
                             <div class="grid grid-cols-1 gap-3 mb-6 border-b border-slate-100 pb-4">
                                 <div class="space-y-1">
                                     <label class="text-[10px] font-bold text-slate-400 uppercase">Data/Hora Prometida</label>
@@ -294,7 +287,7 @@
                                     </div>
                                     <div class="space-y-1 text-right">
                                         <label class="text-[10px] font-bold text-red-400 uppercase">Restante</label>
-                                        <div id="cartSaldoDevedor" class="text-sm font-black text-red-500">R$ 0.00</div>
+                                        <div id="cartSaldoDevedor" class="text-sm font-black text-red-500 mt-1">R$ 0.00</div>
                                     </div>
                                 </div>
 
@@ -321,6 +314,7 @@
                         </div>
                     </div>
                 </section>
+
                 <!-- ABA PRODUÇÃO -->
                 <section id="aba-producao" class="aba-content hidden flex-col h-full overflow-hidden">
                     <div class="flex justify-between items-center mb-6 shrink-0">
@@ -357,12 +351,9 @@
                         </div>
                     </div>
 
-                    <!-- NOVO: Fechamento de Caixa Detalhado -->
                     <div class="bg-white p-4 rounded shadow-sm border border-slate-200 mb-6">
                         <h3 class="font-bold text-slate-800 mb-3 uppercase text-xs tracking-widest border-b border-slate-100 pb-2"><i class="fa fa-wallet text-emerald-500 mr-2"></i> Entradas por Forma de Pagamento</h3>
-                        <div id="resumoPagamentos" class="flex flex-wrap gap-6 text-xs font-bold text-slate-600">
-                            <!-- Preenchido via JS -->
-                        </div>
+                        <div id="resumoPagamentos" class="flex flex-wrap gap-6 text-xs font-bold text-slate-600"></div>
                     </div>
 
                     <div class="bg-white p-6 rounded shadow-sm border border-slate-200 mb-6">
@@ -456,7 +447,7 @@
                         </div>
                     </div>
 
-                    <!-- A RECEBER (FATURADOS) -->
+                    <!-- A RECEBER -->
                     <div id="sub-areceber" class="sub-aba-content hidden">
                         <div class="bg-white p-6 rounded shadow-sm border border-slate-200 mb-6">
                             <h3 class="font-bold text-slate-800 uppercase text-xs tracking-widest mb-2"><i class="fa fa-file-invoice-dollar text-red-500 mr-2"></i> Clientes com Saldo Devedor (Faturados)</h3>
@@ -572,9 +563,13 @@
                                 </div>
                             </div>
 
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                                <div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">URL da Foto</label><input type="text" id="prodFoto" class="w-full p-2 bg-slate-50 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-indigo-500" /></div>
-                                <div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">Observações (Avisos, Prazos extras...)</label><textarea id="prodObs" rows="1" class="w-full p-2 bg-slate-50 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-indigo-500"></textarea></div>
+                            <div class="space-y-1 mb-6">
+                                <label class="text-[10px] font-bold text-slate-400 uppercase">URL da Foto</label>
+                                <input type="text" id="prodFoto" class="w-full p-2 bg-slate-50 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-indigo-500" />
+                            </div>
+                            <div class="space-y-1 mb-6">
+                                <label class="text-[10px] font-bold text-slate-400 uppercase">Observações (Avisos, Prazos extras...)</label>
+                                <textarea id="prodObs" rows="2" class="w-full p-2 bg-slate-50 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
                             </div>
                             
                             <div class="flex gap-2">
@@ -586,11 +581,7 @@
                         <div class="bg-white rounded shadow-sm border border-slate-200 overflow-hidden">
                             <table class="w-full text-left text-xs font-bold">
                                 <thead class="bg-slate-50 text-slate-400 uppercase tracking-wider">
-                                    <tr>
-                                        <th class="p-4">Produto</th>
-                                        <th class="p-4">Setor</th>
-                                        <th class="p-4 text-center">Ações</th>
-                                    </tr>
+                                    <tr><th class="p-4">Produto</th><th class="p-4">Regra</th><th class="p-4 text-center">Ações</th></tr>
                                 </thead>
                                 <tbody id="listaProdutosTab"></tbody>
                             </table>
@@ -607,17 +598,11 @@
                                     <label class="text-[10px] font-bold text-slate-400 uppercase">Nome da Categoria</label>
                                     <input type="text" id="catNome" class="w-full p-2 bg-slate-50 border border-slate-200 rounded outline-none font-bold focus:ring-2 focus:ring-indigo-500" />
                                 </div>
-                                <button type="button" onclick="salvarCategoria()" class="bg-slate-800 text-white px-6 py-2 h-[38px] rounded font-bold text-xs hover:bg-slate-700 transition">Salvar</button>
+                                <button type="button" onclick="salvarCategoria()" class="bg-slate-800 text-white px-6 py-2 h-[34px] rounded font-bold text-xs hover:bg-slate-700 transition">Salvar</button>
                             </div>
                         </div>
                         <div class="bg-white rounded shadow-sm border border-slate-200 max-w-md overflow-hidden">
                             <table class="w-full text-left text-xs font-bold">
-                                <thead class="bg-slate-50 text-slate-400 uppercase tracking-wider">
-                                    <tr>
-                                        <th class="p-4">Categoria</th>
-                                        <th class="p-4 text-right">Ações</th>
-                                    </tr>
-                                </thead>
                                 <tbody id="listaCategoriasTab"></tbody>
                             </table>
                         </div>
@@ -650,12 +635,7 @@
                         </div>
                         <div class="bg-white rounded shadow-sm border border-slate-200 overflow-hidden">
                             <table class="w-full text-left text-xs font-bold">
-                                <thead class="bg-slate-50 text-slate-400 uppercase tracking-wider">
-                                    <tr>
-                                        <th class="p-4">Acabamento</th>
-                                        <th class="p-4 text-center">Ações</th>
-                                    </tr>
-                                </thead>
+                                <thead class="bg-slate-50 text-slate-400 uppercase tracking-wider"><tr><th class="p-4">Acabamento</th><th class="p-4 text-center">Ações</th></tr></thead>
                                 <tbody id="listaAcabamentosTab"></tbody>
                             </table>
                         </div>
@@ -704,7 +684,7 @@
                         </div>
                     </div>
 
-                    <!-- NOVO: EMPRESA (DADOS BANCÁRIOS E PIX) -->
+                    <!-- EMPRESA (DADOS BANCÁRIOS E PIX) -->
                     <div id="sub-empresa" class="sub-aba-content hidden">
                         <div class="bg-white p-6 rounded shadow-sm border border-slate-200 mb-8 max-w-3xl">
                             <h3 class="font-bold text-slate-800 mb-6 uppercase text-xs tracking-widest"><i class="fa fa-building text-indigo-500 mr-2"></i> Dados da Empresa (Para Orçamentos e Recibos)</h3>
@@ -762,25 +742,6 @@
                         </div>
                     </div>
                 </div>
-
-                <!-- MENU MOBILE (BOTTOM NAV) -->
-                <nav class="bottom-nav md:hidden fixed bottom-0 left-0 w-full bg-white border-t border-slate-200 flex justify-around items-center text-[10px] font-bold text-slate-400 z-50 pb-2 pt-2 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-                    <button type="button" onclick="mudarAba('loja')" class="aba-btn btn-menu-loja flex-1 flex flex-col items-center gap-1 hidden">
-                        <i class="fa fa-shopping-cart text-lg"></i> PDV
-                    </button>
-                    <button type="button" onclick="mudarAba('orcamentos')" class="aba-btn btn-menu-loja flex-1 flex flex-col items-center gap-1 hidden">
-                        <i class="fa fa-file-invoice text-lg"></i> Orç.
-                    </button>
-                    <button type="button" onclick="mudarAba('producao')" class="aba-btn btn-menu-producao flex-1 flex flex-col items-center gap-1 hidden">
-                        <i class="fa fa-tasks text-lg"></i> Prod
-                    </button>
-                    <button type="button" onclick="mudarAba('financeiro')" class="aba-btn btn-menu-financeiro flex-1 flex flex-col items-center gap-1 hidden">
-                        <i class="fa fa-chart-line text-lg"></i> Caixa
-                    </button>
-                    <button type="button" onclick="mudarAba('cadastros')" class="aba-btn btn-menu-config flex-1 flex flex-col items-center gap-1 hidden">
-                        <i class="fa fa-cog text-lg"></i> Config
-                    </button>
-                </nav>
 
             </main>
         </div>
@@ -904,17 +865,6 @@
         </div>
     </div>
 
-    <!-- REGISTRO DO SERVICE WORKER (PWA) -->
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
-                    .then(reg => console.log('Service Worker registrado com sucesso!'))
-                    .catch(err => console.log('Erro ao registrar Service Worker:', err));
-            });
-        }
-    </script>
-
-    <script src="script.js?v=7"></script>
+    <script src="script.js"></script>
 </body>
 </html>
