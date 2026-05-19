@@ -23,7 +23,6 @@ auth.onAuthStateChanged(async user => {
     const btnEntrar = document.getElementById('btnEntrar');
     
     if (user) {
-        // VERIFICAÇÃO DE VIRADA DE DIA (AUTO-LOGOUT)
         const hoje = new Date().toDateString();
         const ultimoAcesso = localStorage.getItem('dataUltimoAcesso');
         if (ultimoAcesso && ultimoAcesso !== hoje) {
@@ -186,6 +185,7 @@ function mudarSubAba(sub, btn) {
 
 function fecharModal() { document.getElementById('modalW2P')?.classList.add('hidden'); }
 function fecharModalFora(event) { if (event.target.id === 'modalW2P') fecharModal(); }
+
 // --- DASHBOARD ---
 function renderDashboard() {
     const dashMesInput = document.getElementById('dashMesFiltro'); 
@@ -291,7 +291,6 @@ function renderOrcamentos() {
         `;
     }).join('');
 }
-
 // --- CLIENTES ---
 async function salvarCliente() { 
     const id = document.getElementById('cliId')?.value; 
@@ -570,14 +569,17 @@ async function salvarProduto() {
 
     if (!d.nome) return alert("Nome obrigatório!");
     
-    if (id) {
-        await db.collection("produtos").doc(id).update(d);
-    } else {
-        await db.collection("produtos").add(d);
+    try {
+        if (id) {
+            await db.collection("produtos").doc(id).update(d);
+        } else {
+            await db.collection("produtos").add(d);
+        }
+        alert("Produto salvo com sucesso!");
+        limparFormProd();
+    } catch (e) {
+        alert("Erro ao salvar produto: " + e.message);
     }
-    
-    alert("Produto salvo com sucesso!");
-    limparFormProd();
 }
 
 function editProd(id) {
@@ -881,7 +883,8 @@ function confirmarAdicaoCarrinho() {
         valorModal: totalItem, 
         qtdModal: qtdModal,
         qtdCarrinho: 1,
-        desc: varsEscolhidas.join(' | ') 
+        desc: varsEscolhidas.join(' | '),
+        prazo: p.prazo || 0 // Salva o prazo de produção para o orçamento
     });
     
     fecharModal(); 
@@ -928,8 +931,24 @@ function atualizarTotalFinal() {
     const frete = parseFloat(document.getElementById('cartFreteValor').value) || 0;
     const desc = parseFloat(document.getElementById('cartDesconto').value) || 0;
     const pago = parseFloat(document.getElementById('cartValorPago').value) || 0;
+    const formaPagto = document.getElementById('cartPagamento').value;
     
-    const totalPedido = (sub + frete) - desc;
+    let taxaPagto = 0;
+    if (formaPagto === 'Pix' || formaPagto === 'Dinheiro') {
+        taxaPagto = sub * -0.05; // Desconto de 5%
+    } else if (formaPagto === 'Credito_Vista' || formaPagto === 'Credito_Parcelado') {
+        taxaPagto = sub * 0.05; // Acréscimo de 5%
+    }
+
+    const elTaxa = document.getElementById('cartTaxaPagto');
+    if(elTaxa) {
+        elTaxa.innerText = "R$ " + taxaPagto.toFixed(2);
+        if(taxaPagto < 0) elTaxa.className = "text-emerald-500 font-bold";
+        else if(taxaPagto > 0) elTaxa.className = "text-red-500 font-bold";
+        else elTaxa.className = "text-slate-400 font-bold";
+    }
+    
+    const totalPedido = (sub + taxaPagto + frete) - desc;
     const saldo = totalPedido - pago;
     
     document.getElementById('totalCarrinho').innerText = "R$ " + totalPedido.toFixed(2);
@@ -979,6 +998,7 @@ async function enviarPedido(imprimir = false, isOrcamento = false) {
     let pago = parseFloat(document.getElementById('cartValorPago').value) || 0;
     const desc = parseFloat(document.getElementById('cartDesconto').value) || 0;
     const frete = parseFloat(document.getElementById('cartFreteValor').value) || 0;
+    const taxaPagto = parseFloat(document.getElementById('cartTaxaPagto').innerText.replace("R$ ","")) || 0;
     
     if(isOrcamento) pago = 0; // Orçamento não tem valor pago inicial
     
@@ -998,6 +1018,7 @@ async function enviarPedido(imprimir = false, isOrcamento = false) {
         total: total,
         desconto: desc,
         frete: frete,
+        taxaPagto: taxaPagto,
         valorPago: pago,
         saldoDevedor: saldo,
         data: new Date(),
@@ -1291,6 +1312,158 @@ function confirmarEnvioWhatsApp() {
     document.getElementById('modalWhatsApp').classList.add('hidden');
 }
 
+// --- FINANCEIRO ---
+async function salvarMovimentacao() {
+    const tipo = document.getElementById('finTipo').value;
+    const desc = document.getElementById('finDesc').value;
+    const valor = parseFloat(document.getElementById('finValor').value);
+
+    if(!desc || !valor) return alert("Preencha descrição e valor!");
+
+    await db.collection("transacoes").add({
+        tipo: tipo,
+        descricao: desc,
+        valor: valor,
+        data: new Date()
+    });
+
+    document.getElementById('finDesc').value = '';
+    document.getElementById('finValor').value = '';
+    alert("Movimentação lançada com sucesso!");
+}
+
+function renderPedidosFinanceiro() {
+    const tabPedidos = document.getElementById('listaPedidosTab');
+    if(tabPedidos) {
+        tabPedidos.innerHTML = bdPedidos.map(p => {
+            const dataObj = p.data && p.data.toDate ? p.data.toDate() : new Date(p.data);
+            return `
+            <tr class="border-b border-slate-50 hover:bg-slate-50 transition">
+                <td class="p-4 text-slate-400 font-medium">${dataObj.toLocaleDateString('pt-BR')}</td>
+                <td class="p-4 font-bold text-slate-700">${p.clienteNome}</td>
+                <td class="p-4 font-black text-indigo-600">R$ ${(p.total || 0).toFixed(2)}</td>
+                <td class="p-4 text-center"><span class="bg-indigo-50 text-indigo-500 px-3 py-1 rounded text-[10px] font-black uppercase">${p.status}</span></td>
+                <td class="p-4 text-center"><button type="button" onclick="imprimirRecibo('${p.id}')" class="text-slate-400 hover:text-indigo-600" title="Imprimir Recibo"><i class="fa fa-print"></i></button></td>
+            </tr>
+            `;
+        }).join('');
+    }
+
+    const tabExtrato = document.getElementById('listaExtratoTab');
+    if(tabExtrato) {
+        const hoje = new Date(); 
+        hoje.setHours(0,0,0,0);
+        const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+        
+        let vHoje = 0;
+        let eMes = 0;
+        let sMes = 0; 
+        let extrato = [];
+
+        bdPedidos.forEach(p => {
+            const d = p.data && p.data.toDate ? p.data.toDate() : new Date(p.data);
+            const v = p.valorPago || 0; 
+            const t = p.total || 0;
+            if(d >= hoje) vHoje += t;
+            if(d >= inicioMes) eMes += v;
+            if(v > 0) extrato.push({ data: d, desc: `Venda: ${p.clienteNome}`, valor: v, tipo: 'entrada' });
+        });
+
+        bdTransacoes.forEach(t => {
+            const d = t.data && t.data.toDate ? t.data.toDate() : new Date(t.data);
+            if(d >= inicioMes) { 
+                if(t.tipo === 'entrada') eMes += t.valor; 
+                else sMes += t.valor; 
+            }
+            extrato.push({ data: d, desc: t.descricao, valor: t.valor, tipo: t.tipo });
+        });
+
+        document.getElementById('finVendasHoje').innerText = "R$ " + vHoje.toFixed(2);
+        document.getElementById('finEntradasMes').innerText = "R$ " + eMes.toFixed(2);
+        document.getElementById('finSaidasMes').innerText = "R$ " + sMes.toFixed(2);
+        document.getElementById('finSaldoMes').innerText = "R$ " + (eMes - sMes).toFixed(2);
+
+        extrato.sort((a,b) => b.data - a.data);
+        tabExtrato.innerHTML = extrato.map(i => {
+            const corValor = i.tipo === 'entrada' ? 'text-emerald-600' : 'text-red-500';
+            const sinal = i.tipo === 'entrada' ? '+' : '-';
+            return `
+                <tr class="border-b border-slate-50 hover:bg-slate-50 transition">
+                    <td class="p-4 text-slate-400 font-medium">${i.data.toLocaleDateString('pt-BR')}</td>
+                    <td class="p-4 font-bold text-slate-700">${i.desc}</td>
+                    <td class="p-4 text-right font-black ${corValor}">${sinal} R$ ${i.valor.toFixed(2)}</td>
+                </tr>
+            `;
+        }).join('');
+    }
+}
+
+// --- USUÁRIOS ---
+async function salvarUsuario() { 
+    const email = document.getElementById('userEmail').value.trim();
+    const nome = document.getElementById('userNome').value.trim();
+    const role = document.getElementById('userRole').value;
+    const senha = document.getElementById('userSenha').value; 
+    
+    if(!email || !nome) return alert("Preencha Nome e E-mail."); 
+    
+    try { 
+        if (senha) { 
+            if (senha.length < 6) return alert("A senha precisa ter no mínimo 6 caracteres."); 
+            let secondaryApp; 
+            try { secondaryApp = firebase.app("Secondary"); } 
+            catch(e) { secondaryApp = firebase.initializeApp(firebaseConfig, "Secondary"); } 
+            await secondaryApp.auth().createUserWithEmailAndPassword(email, senha); 
+            await secondaryApp.auth().signOut(); 
+        } 
+        await db.collection("usuarios").doc(email).set({ nome: nome, email: email, role: role }); 
+        alert("Conta salva com sucesso!"); 
+        document.getElementById('userEmail').value = ''; 
+        document.getElementById('userNome').value = ''; 
+        document.getElementById('userSenha').value = ''; 
+    } catch (e) { 
+        alert("Erro ao salvar usuário: " + e.message); 
+    } 
+}
+
+function renderUsuariosTab() { 
+    const tab = document.getElementById('listaUsuariosTab'); 
+    if(!tab) return; 
+    tab.innerHTML = bdUsuarios.map(u => `
+        <tr class="border-b border-slate-50">
+            <td class="p-4 text-slate-700 font-bold">${u.nome} <br/><span class="text-[10px] font-normal text-slate-400">${u.email}</span></td>
+            <td class="p-4 font-bold text-indigo-600 uppercase text-[10px]">${u.role}</td>
+            <td class="p-4 text-right">
+                <button type="button" onclick="if(confirm('Excluir acesso?')) db.collection('usuarios').doc('${u.email}').delete()" class="text-red-300 hover:text-red-500"><i class="fa fa-trash"></i></button>
+            </td>
+        </tr>
+    `).join(''); 
+}
+
+// --- DADOS DA EMPRESA ---
+async function salvarDadosEmpresa() {
+    const pix = document.getElementById('empresaPix').value.trim();
+    const banco = document.getElementById('empresaBanco').value.trim();
+    const agencia = document.getElementById('empresaAgencia').value.trim();
+    const conta = document.getElementById('empresaConta').value.trim();
+    
+    try {
+        await db.collection("empresa").doc("dados").set({
+            pix: pix, banco: banco, agencia: agencia, conta: conta
+        });
+        alert("Dados bancários salvos com sucesso!");
+    } catch(e) {
+        alert("Erro ao salvar dados da empresa: " + e.message);
+    }
+}
+
+function editEmpresa() {
+    if(document.getElementById('empresaPix')) document.getElementById('empresaPix').value = bdEmpresa.pix || '';
+    if(document.getElementById('empresaBanco')) document.getElementById('empresaBanco').value = bdEmpresa.banco || '';
+    if(document.getElementById('empresaAgencia')) document.getElementById('empresaAgencia').value = bdEmpresa.agencia || '';
+    if(document.getElementById('empresaConta')) document.getElementById('empresaConta').value = bdEmpresa.conta || '';
+}
+
 // --- IMPRESSÃO DE RECIBO (TÉRMICA 80MM) ---
 function imprimirReciboDireto(idPedido, objPedido) {
     const p = objPedido || bdPedidos.find(x => x.id === idPedido);
@@ -1332,8 +1505,10 @@ function imprimirReciboDireto(idPedido, objPedido) {
             ${(p.itens || []).map(i => `<tr><td>${i.qtdCarrinho || 1}x (${i.qtdModal || 1} un.) ${i.nome}<br><small>${i.desc}</small></td><td class="right">R$ ${((i.valorModal || 0) * (i.qtdCarrinho || 1)).toFixed(2)}</td></tr>`).join('')}
         </table>
         <div class="linha"></div>
-        <div class="right bold">Subtotal: R$ ${((p.total || 0) + (p.desconto || 0)).toFixed(2)}</div>
-        <div class="right">Desconto: R$ ${(p.desconto || 0).toFixed(2)}</div>
+        <div class="right bold">Subtotal: R$ ${((p.total || 0) - (p.taxaPagto || 0) - (p.frete || 0) + (p.desconto || 0)).toFixed(2)}</div>
+        ${p.taxaPagto ? `<div class="right">Taxa/Desc. Pgto: ${p.taxaPagto > 0 ? '+' : ''} R$ ${p.taxaPagto.toFixed(2)}</div>` : ''}
+        ${p.frete > 0 ? `<div class="right">Frete: + R$ ${p.frete.toFixed(2)}</div>` : ''}
+        ${p.desconto > 0 ? `<div class="right">Desconto Manual: - R$ ${p.desconto.toFixed(2)}</div>` : ''}
         <div class="right bold">Total: R$ ${(p.total || 0).toFixed(2)}</div>
         <div class="right">Valor Pago: R$ ${(p.valorPago || 0).toFixed(2)}</div>
         <div class="right bold">Saldo: R$ ${(p.saldoDevedor || 0).toFixed(2)}</div>
@@ -1432,8 +1607,12 @@ function imprimirOrcamento(idPedido) {
     if(bdEmpresa.pix) dadosEmpresaHtml += `<br/>PIX: ${bdEmpresa.pix}`;
     if(bdEmpresa.banco) dadosEmpresaHtml += `<br/>Banco: ${bdEmpresa.banco} | Ag: ${bdEmpresa.agencia} | CC: ${bdEmpresa.conta}`;
 
+    const subtotal = p.itens.reduce((acc, i) => acc + ((i.valorModal || 0) * (i.qtdCarrinho || 1)), 0);
+    const valPix = subtotal * 0.95;
+    const valCredito = subtotal * 1.05;
+
     janela.document.write(`
-        <html><head><title>Orçamento - ${idPedido.substring(0,6).toUpperCase()}</title><style>body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; color: #334155; } .header { background-color: #3E4095; color: #ffffff; padding: 30px 40px; display: flex; justify-content: space-between; align-items: center; } .logo { max-width: 180px; filter: brightness(0) invert(1); } .company-info { text-align: right; font-size: 13px; line-height: 1.6; } .company-info strong { font-size: 16px; letter-spacing: 1px; } .content { padding: 40px; } .info-section { display: flex; justify-content: space-between; margin-bottom: 30px; background: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0; } .info-block { flex: 1; } .info-label { font-size: 10px; font-weight: bold; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; } .info-value { font-size: 16px; font-weight: bold; color: #0f172a; margin: 0; } table { width: 100%; border-collapse: collapse; margin-bottom: 30px; } th { background: #3E4095; color: #ffffff; text-align: left; padding: 12px; font-size: 12px; text-transform: uppercase; } td { padding: 15px 12px; border-bottom: 1px solid #e2e8f0; font-size: 14px; vertical-align: top; } .text-right { text-align: right; } .totals { width: 320px; margin-left: auto; background: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0; } .total-line { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px; color: #475569; } .total-line.grand-total { font-size: 22px; font-weight: 900; color: #3E4095; border-top: 2px solid #cbd5e1; padding-top: 15px; margin-top: 15px; } .footer { margin-top: 50px; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 20px; } .validade { display: inline-block; background: #eff6ff; color: #3E4095; padding: 10px 20px; border-radius: 6px; font-weight: bold; font-size: 13px; margin-top: 20px; border: 1px solid #bfdbfe; } @media print { body { padding: 0; } .validade { border: 1px solid #000; color: #000; background: transparent; } .header { background-color: #3E4095 !important; color: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; } th { background-color: #3E4095 !important; color: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; } }</style></head><body>
+        <html><head><title>Orçamento - ${idPedido.substring(0,6).toUpperCase()}</title><style>body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; color: #334155; } .header { background-color: #3E4095; color: #ffffff; padding: 30px 40px; display: flex; justify-content: space-between; align-items: center; } .logo { max-width: 180px; filter: brightness(0) invert(1); } .company-info { text-align: right; font-size: 13px; line-height: 1.6; } .company-info strong { font-size: 16px; letter-spacing: 1px; } .content { padding: 40px; } .info-section { display: flex; justify-content: space-between; margin-bottom: 30px; background: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0; } .info-block { flex: 1; } .info-label { font-size: 10px; font-weight: bold; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; } .info-value { font-size: 16px; font-weight: bold; color: #0f172a; margin: 0; } table { width: 100%; border-collapse: collapse; margin-bottom: 30px; } th { background: #3E4095; color: #ffffff; text-align: left; padding: 12px; font-size: 12px; text-transform: uppercase; } td { padding: 15px 12px; border-bottom: 1px solid #e2e8f0; font-size: 14px; vertical-align: top; } .text-right { text-align: right; } .totals { width: 320px; margin-left: auto; background: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0; } .total-line { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px; color: #475569; } .total-line.grand-total { font-size: 22px; font-weight: 900; color: #3E4095; border-top: 2px solid #cbd5e1; padding-top: 15px; margin-top: 15px; } .footer { margin-top: 50px; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 20px; } .validade { display: inline-block; background: #eff6ff; color: #3E4095; padding: 10px 20px; border-radius: 6px; font-weight: bold; font-size: 13px; margin-top: 20px; border: 1px solid #bfdbfe; } .payment-options { display: flex; gap: 15px; margin-top: 30px; justify-content: center; } .pay-card { border: 1px solid #e2e8f0; padding: 15px; border-radius: 8px; text-align: center; flex: 1; background: #fff; } .pay-card h4 { margin: 0 0 5px 0; font-size: 12px; color: #64748b; text-transform: uppercase; } .pay-card p { margin: 0; font-size: 18px; font-weight: bold; color: #0f172a; } @media print { body { padding: 0; } .validade { border: 1px solid #000; color: #000; background: transparent; } .header { background-color: #3E4095 !important; color: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; } th { background-color: #3E4095 !important; color: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; } }</style></head><body>
         <div class="header"><div><img src="https://i.postimg.cc/1RCc58qN/gva-br-1-ERP-26.png" class="logo" alt="GVA Gráfica" /></div><div class="company-info"><strong>GRÁFICA VENOM ARTS LTDA</strong><br/>${dadosEmpresaHtml}</div></div>
         <div class="content">
             <div class="info-section">
@@ -1442,13 +1621,24 @@ function imprimirOrcamento(idPedido) {
             </div>
             <table>
                 <thead><tr><th>Item / Descrição</th><th class="text-right" style="width: 80px;">Qtd</th><th class="text-right" style="width: 120px;">Total</th></tr></thead>
-                <tbody>${p.itens.map(i => `<tr><td><strong style="color: #0f172a;">${i.nome}</strong><br/><span style="color: #64748b; font-size: 12px; line-height: 1.4; display: inline-block; margin-top: 4px;">${i.desc.replace(/\|/g, '<br/>')}</span></td><td class="text-right font-bold">${i.qtdCarrinho}</td><td class="text-right font-bold">R$ ${((i.valorModal || 0) * (i.qtdCarrinho || 1)).toFixed(2)}</td></tr>`).join('')}</tbody>
+                <tbody>${p.itens.map(i => `<tr><td><strong style="color: #0f172a;">${i.nome}</strong><br/><span style="color: #64748b; font-size: 12px; line-height: 1.4; display: inline-block; margin-top: 4px;">${i.desc.replace(/\|/g, '<br/>')}</span><br/><span style="color: #10b981; font-size: 11px; font-weight: bold; display: inline-block; margin-top: 4px;"><i class="fa fa-clock"></i> Prazo de Produção: ${i.prazo || 0} dias úteis</span></td><td class="text-right font-bold">${i.qtdCarrinho}</td><td class="text-right font-bold">R$ ${((i.valorModal || 0) * (i.qtdCarrinho || 1)).toFixed(2)}</td></tr>`).join('')}</tbody>
             </table>
-            <div class="totals">
-                <div class="total-line"><span>Subtotal:</span><span>R$ ${(p.total - (p.desconto || 0)).toFixed(2)}</span></div>
-                ${p.desconto > 0 ? `<div class="total-line" style="color: #ef4444"><span>Desconto:</span><span>- R$ ${p.desconto.toFixed(2)}</span></div>` : ''}
-                <div class="total-line grand-total"><span>Total Final:</span><span>R$ ${p.total.toFixed(2)}</span></div>
+            
+            <div class="payment-options">
+                <div class="pay-card" style="border-color: #10b981; background: #f0fdf4;">
+                    <h4 style="color: #059669;">Pix / Dinheiro (-5%)</h4>
+                    <p style="color: #047857;">R$ ${valPix.toFixed(2)}</p>
+                </div>
+                <div class="pay-card">
+                    <h4>Débito (Normal)</h4>
+                    <p>R$ ${subtotal.toFixed(2)}</p>
+                </div>
+                <div class="pay-card" style="border-color: #f43f5e; background: #fff1f2;">
+                    <h4 style="color: #e11d48;">Crédito (+5%)</h4>
+                    <p style="color: #be123c;">R$ ${valCredito.toFixed(2)}</p>
+                </div>
             </div>
+
             <div style="text-align: center;"><div class="validade"><i class="fa fa-clock"></i> Este orçamento é válido até ${dataValidade.toLocaleDateString('pt-BR')} (7 dias).</div></div>
             <div class="footer">Agradecemos a oportunidade de apresentar nossa proposta.<br/>Para aprovar este orçamento, por favor entre em contato conosco via WhatsApp.</div>
         </div>
@@ -1483,3 +1673,5 @@ function verHistoricoCliente(idCli) {
     
     document.getElementById('modalHistoricoCli').classList.remove('hidden'); 
 }
+
+// FIM DO ARQUIVO
