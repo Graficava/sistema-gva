@@ -140,7 +140,7 @@ function iniciarLeitura() {
     });
     db.collection("pedidos").orderBy("data", "desc").limit(500).onSnapshot(s => {
         bdPedidos = s.docs.map(d => ({id: d.id, ...d.data()}));
-        renderPedidosFinanceiro(); renderKanbanProducao(); renderDashboard(); renderOrcamentos();
+        renderPedidosFinanceiro(); renderKanbanProducao(); renderDashboard(); renderOrcamentos(); renderAReceber();
     });
     db.collection("transacoes").orderBy("data", "desc").limit(500).onSnapshot(s => {
         bdTransacoes = s.docs.map(d => ({id: d.id, ...d.data()}));
@@ -1406,4 +1406,114 @@ function verHistoricoCliente(idCli) {
     }).join(''); 
     
     document.getElementById('modalHistoricoCli').classList.remove('hidden'); 
+}
+// --- A RECEBER (FATURADOS) ---
+function renderAReceber() {
+    const tab = document.getElementById('listaAReceberTab');
+    if(!tab) return;
+    
+    const devedores = bdPedidos.filter(p => p.saldoDevedor > 0 && p.status !== 'Cancelado / Estorno');
+    let html = '';
+    
+    const clientesDev = {};
+    devedores.forEach(p => {
+        if(!clientesDev[p.clienteId]) clientesDev[p.clienteId] = { nome: p.clienteNome, pedidos: [], total: 0 };
+        clientesDev[p.clienteId].pedidos.push(p);
+        clientesDev[p.clienteId].total += p.saldoDevedor;
+    });
+    
+    if(Object.keys(clientesDev).length === 0) {
+        tab.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-slate-400">Nenhum cliente com saldo devedor.</td></tr>`;
+        return;
+    }
+    
+    for(let cliId in clientesDev) {
+        const c = clientesDev[cliId];
+        html += `
+            <tr class="border-b border-slate-50 bg-slate-50/50">
+                <td class="p-4 font-bold text-slate-700">${c.nome}</td>
+                <td class="p-4 text-center text-slate-500">${c.pedidos.length} pedido(s)</td>
+                <td class="p-4 text-right font-black text-red-500">R$ ${c.total.toFixed(2)}</td>
+                <td class="p-4 text-center">
+                    <button type="button" onclick="document.getElementById('dev-${cliId}').classList.toggle('hidden')" class="text-indigo-500 font-bold text-[10px] uppercase hover:underline">Ver Pedidos</button>
+                </td>
+            </tr>
+            <tr id="dev-${cliId}" class="hidden">
+                <td colspan="4" class="p-4 bg-white border-b border-slate-200">
+                    <table class="w-full text-xs">
+        `;
+        c.pedidos.forEach(p => {
+            const dataObj = p.data && p.data.toDate ? p.data.toDate() : new Date(p.data);
+            html += `
+                <tr class="border-b border-slate-50">
+                    <td class="py-2 text-slate-500">${dataObj.toLocaleDateString('pt-BR')} <br><span class="text-[9px] uppercase">ID: ${p.id.substring(0,6)}</span></td>
+                    <td class="py-2 text-right font-bold text-red-400">Falta: R$ ${p.saldoDevedor.toFixed(2)}</td>
+                    <td class="py-2 text-right">
+                        <button type="button" onclick="abrirModalReceber('${p.id}', ${p.saldoDevedor})" class="bg-emerald-500 text-white px-3 py-1.5 rounded text-[9px] font-bold uppercase hover:bg-emerald-600 shadow-sm">Receber</button>
+                        <button type="button" onclick="cobrarWhatsApp('${p.id}', ${p.saldoDevedor})" class="bg-green-500 text-white px-3 py-1.5 rounded text-[9px] font-bold uppercase hover:bg-green-600 shadow-sm ml-1"><i class="fab fa-whatsapp"></i> Cobrar</button>
+                    </td>
+                </tr>
+            `;
+        });
+        html += `</table></td></tr>`;
+    }
+    tab.innerHTML = html;
+}
+
+function abrirModalReceber(idPedido, saldo) {
+    document.getElementById('recSaldoIdPedido').value = idPedido;
+    document.getElementById('recSaldoValor').value = saldo.toFixed(2);
+    document.getElementById('modalReceberSaldo').classList.remove('hidden');
+}
+
+async function confirmarRecebimentoSaldo() {
+    const idPedido = document.getElementById('recSaldoIdPedido').value;
+    const valorRecebido = parseFloat(document.getElementById('recSaldoValor').value);
+    const formaPagto = document.getElementById('recSaldoForma').value;
+    
+    if(!valorRecebido || valorRecebido <= 0) return alert("Informe um valor válido.");
+    
+    const p = bdPedidos.find(x => x.id === idPedido);
+    if(!p) return;
+    
+    const novoValorPago = (p.valorPago || 0) + valorRecebido;
+    const novoSaldo = p.total - p.desconto - novoValorPago;
+    
+    try {
+        await db.collection("pedidos").doc(idPedido).update({
+            valorPago: novoValorPago,
+            saldoDevedor: novoSaldo < 0 ? 0 : novoSaldo,
+            status: (novoSaldo <= 0 && p.status === 'Aguardando pagamento') ? 'Em produção' : p.status
+        });
+        
+        await db.collection("transacoes").add({
+            tipo: 'entrada',
+            descricao: `Recebimento Faturado - Pedido ${idPedido.substring(0,6).toUpperCase()} (${p.clienteNome})`,
+            valor: valorRecebido,
+            formaPagamento: formaPagto,
+            data: new Date()
+        });
+        
+        alert("Pagamento recebido com sucesso!");
+        document.getElementById('modalReceberSaldo').classList.add('hidden');
+        renderAReceber();
+    } catch(e) {
+        alert("Erro ao processar recebimento.");
+    }
+}
+
+function cobrarWhatsApp(idPedido, saldo) {
+    const p = bdPedidos.find(x => x.id === idPedido);
+    if (!p) return;
+    let telefone = ""; 
+    if (p.clienteId && p.clienteId !== "Consumidor Final") { 
+        const cli = bdClientes.find(c => c.id === p.clienteId); 
+        if (cli && cli.telefone) telefone = cli.telefone.replace(/\D/g, ''); 
+    }
+    
+    const texto = `Olá *${p.clienteNome}*! Tudo bem?\n\nConsta em nosso sistema um saldo pendente no valor de *R$ ${saldo.toFixed(2)}* referente ao pedido *${idPedido.substring(0,6).toUpperCase()}*.\n\nPodemos confirmar a previsão de pagamento? Qualquer dúvida, estamos à disposição!`;
+    
+    if (!telefone || telefone.length < 10) return alert("Cliente sem telefone cadastrado. Atualize o cadastro primeiro.");
+    if (telefone.length === 10 || telefone.length === 11) telefone = "55" + telefone;
+    window.open(`https://wa.me/${telefone}?text=${encodeURIComponent(texto)}`, '_blank'); 
 }
