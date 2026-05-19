@@ -124,34 +124,44 @@ function aplicarPermissoes() {
 function iniciarLeitura() {
     db.collection("categorias").onSnapshot(s => { 
         bdCategorias = s.docs.map(d => ({id: d.id, ...d.data()}));
-        renderCat(); renderFiltrosVitrine();
+        if(typeof renderCat === 'function') renderCat(); 
+        if(typeof renderFiltrosVitrine === 'function') renderFiltrosVitrine();
     });
     db.collection("produtos").onSnapshot(s => { 
         bdProdutos = s.docs.map(d => ({id: d.id, ...d.data()}));
-        renderVitrine(); renderProdTable();
+        if(typeof renderVitrine === 'function') renderVitrine(); 
+        if(typeof renderProdTable === 'function') renderProdTable();
     });
     db.collection("clientes").orderBy("nome").onSnapshot(s => { 
         bdClientes = s.docs.map(d => ({id: d.id, ...d.data()}));
-        renderCliTable(); renderCliSelectCart(); renderDashboard();
+        if(typeof renderCliTable === 'function') renderCliTable(); 
+        if(typeof renderCliSelectCart === 'function') renderCliSelectCart(); 
+        if(typeof renderDashboard === 'function') renderDashboard();
     });
     db.collection("acabamentos").onSnapshot(s => {
         bdAcabamentos = s.docs.map(d => ({id: d.id, ...d.data()}));
-        renderAcabTable(); atualizarListaAcabamentosProduto();
+        if(typeof renderAcabTable === 'function') renderAcabTable(); 
+        if(typeof atualizarListaAcabamentosProduto === 'function') atualizarListaAcabamentosProduto();
     });
     db.collection("pedidos").orderBy("data", "desc").limit(500).onSnapshot(s => {
         bdPedidos = s.docs.map(d => ({id: d.id, ...d.data()}));
-        renderPedidosFinanceiro(); renderKanbanProducao(); renderDashboard(); renderOrcamentos(); renderAReceber();
+        if(typeof renderPedidosFinanceiro === 'function') renderPedidosFinanceiro(); 
+        if(typeof renderKanbanProducao === 'function') renderKanbanProducao(); 
+        if(typeof renderDashboard === 'function') renderDashboard(); 
+        if(typeof renderOrcamentos === 'function') renderOrcamentos(); 
+        if(typeof renderAReceber === 'function') renderAReceber();
         if(document.getElementById('modalHistoricoGeral') && !document.getElementById('modalHistoricoGeral').classList.contains('hidden')) {
-            renderHistoricoGeral();
+            if(typeof renderHistoricoGeral === 'function') renderHistoricoGeral();
         }
     });
     db.collection("transacoes").orderBy("data", "desc").limit(500).onSnapshot(s => {
         bdTransacoes = s.docs.map(d => ({id: d.id, ...d.data()}));
-        renderPedidosFinanceiro(); renderDashboard();
+        if(typeof renderPedidosFinanceiro === 'function') renderPedidosFinanceiro(); 
+        if(typeof renderDashboard === 'function') renderDashboard();
     });
     db.collection("usuarios").onSnapshot(s => { 
         bdUsuarios = s.docs.map(d => ({id: d.id, ...d.data()})); 
-        renderUsuariosTab(); 
+        if(typeof renderUsuariosTab === 'function') renderUsuariosTab(); 
     });
     db.collection("empresa").doc("dados").onSnapshot(s => { 
         if(s.exists) bdEmpresa = s.data(); else bdEmpresa = {}; 
@@ -176,7 +186,6 @@ function mudarSubAba(sub, btn) {
 
 function fecharModal() { document.getElementById('modalW2P')?.classList.add('hidden'); }
 function fecharModalFora(event) { if (event.target.id === 'modalW2P') fecharModal(); }
-
 // --- DASHBOARD ---
 function renderDashboard() {
     const dashMesInput = document.getElementById('dashMesFiltro'); 
@@ -244,7 +253,7 @@ function renderDashboard() {
 function imprimirDashboard() {
     const mes = document.getElementById('dashMesFiltro')?.value; if(!mes) return;
     const [ano, mesNum] = mes.split('-'); 
-    const meses =["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+    const meses = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
     const mesFormatado = `${meses[parseInt(mesNum)-1]} de ${ano}`;
     
     const fat = document.getElementById('dashFaturamento')?.innerText || 'R$ 0.00';
@@ -257,6 +266,7 @@ function imprimirDashboard() {
     janela.document.write(`<html><head><title>Relatório Mensal - ${mesFormatado}</title><style>body{font-family:sans-serif;padding:40px;color:#334155}.header{text-align:center;margin-bottom:40px;border-bottom:2px solid #e2e8f0;padding-bottom:20px}h1{color:#3E4095;margin:0 0 10px 0;font-size:28px;text-transform:uppercase}.cards{display:flex;gap:20px;margin-bottom:40px}.card{border:1px solid #e2e8f0;padding:20px;border-radius:8px;flex:1;background:#f8fafc;text-align:center}.card h3{margin:0 0 10px 0;font-size:12px;text-transform:uppercase;color:#64748b}.card p{margin:0;font-size:24px;font-weight:bold;color:#0f172a}.card.lucro p{color:#10b981}.card.desp p{color:#ef4444}h2{color:#3E4095;font-size:16px;text-transform:uppercase;border-bottom:1px solid #e2e8f0;padding-bottom:10px;margin-top:40px}table{width:100%;border-collapse:collapse;margin-bottom:30px;font-size:14px}th,td{border-bottom:1px solid #e2e8f0;padding:12px 8px;text-align:left}th{background:#f1f5f9;color:#475569;font-size:12px;text-transform:uppercase}.text-right{text-align:right}.text-center{text-align:center}@media print{body{padding:0}}</style></head><body><div class="header"><h1>Relatório de Desempenho</h1><p style="margin:0;color:#64748b;font-weight:bold;">Período: ${mesFormatado}</p></div><div class="cards"><div class="card"><h3>Faturamento Bruto</h3><p>${fat}</p></div><div class="card desp"><h3>Total de Despesas</h3><p>${desp}</p></div><div class="card lucro"><h3>Saldo / Lucro</h3><p>${lucro}</p></div></div><h2>Produtos Mais Vendidos</h2><table><thead><tr><th>Produto</th><th class="text-center">Qtd Vendida</th><th class="text-right">Receita Bruta (S/ Desc)</th></tr></thead><tbody>${tabProd}</tbody></table><h2>Melhores Clientes</h2><table><thead><tr><th>Cliente</th><th class="text-right">Volume Comprado</th></tr></thead><tbody>${tabCli}</tbody></table><div style="text-align:center;margin-top:50px;font-size:12px;color:#94a3b8;">Gerado pelo sistema GVAsist em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}</div><script>setTimeout(()=>{window.print();window.close();},800);</script></body></html>`);
     janela.document.close();
 }
+
 // --- ORÇAMENTOS (FOLLOW-UP) ---
 function renderOrcamentos() {
     const tbody = document.getElementById('listaOrcamentosTab');
@@ -330,7 +340,7 @@ function renderCliTable() {
             <td class="p-4 text-center space-x-3">
                 <button type="button" onclick="verHistoricoCliente('${c.id}')" class="text-indigo-400 text-[10px] font-black uppercase hover:text-indigo-500">Histórico</button>
                 <button type="button" onclick="editCli('${c.id}')" class="text-slate-400 text-[10px] font-black uppercase hover:text-indigo-500">Editar</button>
-                <button type="button" onclick="db.collection('clientes').doc('${c.id}').delete()" class="text-red-300 hover:text-red-500">✕</button>
+                <button type="button" onclick="if(confirm('Excluir cliente?')) db.collection('clientes').doc('${c.id}').delete()" class="text-red-300 hover:text-red-500">✕</button>
             </td>
         </tr>
     `).join(''); 
@@ -356,7 +366,7 @@ function editCat(id) {
 
 function renderCat() { 
     const tab = document.getElementById('listaCategoriasTab'); 
-    if(tab) tab.innerHTML = bdCategorias.map(c => `<tr class="border-b border-slate-50"><td class="p-4 font-bold text-slate-600">${c.nome}</td><td class="p-4 text-right"><button type="button" onclick="editCat('${c.id}')" class="text-indigo-500 mr-3">Editar</button><button type="button" onclick="db.collection('categorias').doc('${c.id}').delete()" class="text-red-300">✕</button></td></tr>`).join(''); 
+    if(tab) tab.innerHTML = bdCategorias.map(c => `<tr class="border-b border-slate-50"><td class="p-4 font-bold text-slate-600">${c.nome}</td><td class="p-4 text-right"><button type="button" onclick="editCat('${c.id}')" class="text-indigo-500 mr-3">Editar</button><button type="button" onclick="if(confirm('Excluir categoria?')) db.collection('categorias').doc('${c.id}').delete()" class="text-red-300">✕</button></td></tr>`).join(''); 
     const catSelect = document.getElementById('prodCategoria'); 
     if(catSelect) catSelect.innerHTML = bdCategorias.map(c => `<option value="${c.nome}">${c.nome}</option>`).join(''); 
     const acabCat = document.getElementById('acabCategoria'); 
@@ -399,9 +409,8 @@ function limparFormAcab() {
 
 function renderAcabTable() { 
     const tab = document.getElementById('listaAcabamentosTab'); 
-    if(tab) tab.innerHTML = bdAcabamentos.map(a => `<tr class="border-b border-slate-50"><td class="p-4 font-bold text-slate-600">${a.nome} <span class="text-[9px] text-slate-400 uppercase">(${a.grupo})</span></td><td class="p-4 text-center"><button type="button" onclick="editAcab('${a.id}')" class="text-indigo-500 mr-3 font-bold text-[10px] uppercase">Editar</button><button type="button" onclick="db.collection('acabamentos').doc('${a.id}').delete()" class="text-red-300 font-bold text-[10px]">X</button></td></tr>`).join(''); 
+    if(tab) tab.innerHTML = bdAcabamentos.map(a => `<tr class="border-b border-slate-50"><td class="p-4 font-bold text-slate-600">${a.nome} <span class="text-[9px] text-slate-400 uppercase">(${a.grupo})</span></td><td class="p-4 text-center"><button type="button" onclick="editAcab('${a.id}')" class="text-indigo-500 mr-3 font-bold text-[10px] uppercase">Editar</button><button type="button" onclick="if(confirm('Excluir acabamento?')) db.collection('acabamentos').doc('${a.id}').delete()" class="text-red-300 font-bold text-[10px]">X</button></td></tr>`).join(''); 
 }
-
 // --- PRODUTOS E ATRIBUTOS ---
 function ajustarCamposProduto() {
     const r = document.getElementById('prodRegraPreco')?.value;
@@ -500,7 +509,7 @@ function atualizarListaAcabamentosProduto(salvos = []) {
         `;
     }).join('');
 }
-// --- PRODUTOS E ATRIBUTOS ---
+
 async function salvarProduto() {
     const id = document.getElementById('prodId')?.value;
     
@@ -612,7 +621,7 @@ function editProd(id) {
 
     ajustarCamposProduto();
     atualizarListaAcabamentosProduto(p.acabamentos || []);
-    mudarSubAba('sub-prod', document.querySelectorAll('.sub-aba-btn')[1]);
+    mudarSubAba('sub-prod', document.querySelectorAll('.sub-aba-btn')[2]);
 }
 
 function limparFormProd() {
@@ -1077,6 +1086,7 @@ function gerarCardPedido(p) {
                 </select>
                 ${btnArquivar}
                 ${btnZAP}
+                <button type="button" onclick="imprimirRecibo('${p.id}')" class="bg-slate-200 text-slate-600 px-3 rounded hover:bg-slate-300 transition" title="Imprimir Recibo Térmico"><i class="fa fa-print"></i></button>
                 <button type="button" onclick="imprimirOSA4('${p.id}')" class="bg-slate-800 text-white px-3 rounded hover:bg-slate-700 transition" title="Imprimir OS (A4)"><i class="fa fa-file-pdf"></i></button>
             </div>
         </div>
@@ -1279,158 +1289,6 @@ function confirmarEnvioWhatsApp() {
     if (telefone.length === 10 || telefone.length === 11) telefone = "55" + telefone;
     window.open(`https://wa.me/${telefone}?text=${encodeURIComponent(texto)}`, '_blank'); 
     document.getElementById('modalWhatsApp').classList.add('hidden');
-}
-
-// --- FINANCEIRO ---
-async function salvarMovimentacao() {
-    const tipo = document.getElementById('finTipo').value;
-    const desc = document.getElementById('finDesc').value;
-    const valor = parseFloat(document.getElementById('finValor').value);
-
-    if(!desc || !valor) return alert("Preencha descrição e valor!");
-
-    await db.collection("transacoes").add({
-        tipo: tipo,
-        descricao: desc,
-        valor: valor,
-        data: new Date()
-    });
-
-    document.getElementById('finDesc').value = '';
-    document.getElementById('finValor').value = '';
-    alert("Movimentação lançada com sucesso!");
-}
-
-function renderPedidosFinanceiro() {
-    const tabPedidos = document.getElementById('listaPedidosTab');
-    if(tabPedidos) {
-        tabPedidos.innerHTML = bdPedidos.map(p => {
-            const dataObj = p.data && p.data.toDate ? p.data.toDate() : new Date(p.data);
-            return `
-            <tr class="border-b border-slate-50 hover:bg-slate-50 transition">
-                <td class="p-4 text-slate-400 font-medium">${dataObj.toLocaleDateString('pt-BR')}</td>
-                <td class="p-4 font-bold text-slate-700">${p.clienteNome}</td>
-                <td class="p-4 font-black text-indigo-600">R$ ${(p.total || 0).toFixed(2)}</td>
-                <td class="p-4 text-center"><span class="bg-indigo-50 text-indigo-500 px-3 py-1 rounded text-[10px] font-black uppercase">${p.status}</span></td>
-                <td class="p-4 text-center"><button type="button" onclick="imprimirRecibo('${p.id}')" class="text-slate-400 hover:text-indigo-600" title="Imprimir Recibo"><i class="fa fa-print"></i></button></td>
-            </tr>
-            `;
-        }).join('');
-    }
-
-    const tabExtrato = document.getElementById('listaExtratoTab');
-    if(tabExtrato) {
-        const hoje = new Date(); 
-        hoje.setHours(0,0,0,0);
-        const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
-        
-        let vHoje = 0;
-        let eMes = 0;
-        let sMes = 0; 
-        let extrato = [];
-
-        bdPedidos.forEach(p => {
-            const d = p.data && p.data.toDate ? p.data.toDate() : new Date(p.data);
-            const v = p.valorPago || 0; 
-            const t = p.total || 0;
-            if(d >= hoje) vHoje += t;
-            if(d >= inicioMes) eMes += v;
-            if(v > 0) extrato.push({ data: d, desc: `Venda: ${p.clienteNome}`, valor: v, tipo: 'entrada' });
-        });
-
-        bdTransacoes.forEach(t => {
-            const d = t.data && t.data.toDate ? t.data.toDate() : new Date(t.data);
-            if(d >= inicioMes) { 
-                if(t.tipo === 'entrada') eMes += t.valor; 
-                else sMes += t.valor; 
-            }
-            extrato.push({ data: d, desc: t.descricao, valor: t.valor, tipo: t.tipo });
-        });
-
-        document.getElementById('finVendasHoje').innerText = "R$ " + vHoje.toFixed(2);
-        document.getElementById('finEntradasMes').innerText = "R$ " + eMes.toFixed(2);
-        document.getElementById('finSaidasMes').innerText = "R$ " + sMes.toFixed(2);
-        document.getElementById('finSaldoMes').innerText = "R$ " + (eMes - sMes).toFixed(2);
-
-        extrato.sort((a,b) => b.data - a.data);
-        tabExtrato.innerHTML = extrato.map(i => {
-            const corValor = i.tipo === 'entrada' ? 'text-emerald-600' : 'text-red-500';
-            const sinal = i.tipo === 'entrada' ? '+' : '-';
-            return `
-                <tr class="border-b border-slate-50 hover:bg-slate-50 transition">
-                    <td class="p-4 text-slate-400 font-medium">${i.data.toLocaleDateString('pt-BR')}</td>
-                    <td class="p-4 font-bold text-slate-700">${i.desc}</td>
-                    <td class="p-4 text-right font-black ${corValor}">${sinal} R$ ${i.valor.toFixed(2)}</td>
-                </tr>
-            `;
-        }).join('');
-    }
-}
-
-// --- USUÁRIOS ---
-async function salvarUsuario() { 
-    const email = document.getElementById('userEmail').value.trim();
-    const nome = document.getElementById('userNome').value.trim();
-    const role = document.getElementById('userRole').value;
-    const senha = document.getElementById('userSenha').value; 
-    
-    if(!email || !nome) return alert("Preencha Nome e E-mail."); 
-    
-    try { 
-        if (senha) { 
-            if (senha.length < 6) return alert("A senha precisa ter no mínimo 6 caracteres."); 
-            let secondaryApp; 
-            try { secondaryApp = firebase.app("Secondary"); } 
-            catch(e) { secondaryApp = firebase.initializeApp(firebaseConfig, "Secondary"); } 
-            await secondaryApp.auth().createUserWithEmailAndPassword(email, senha); 
-            await secondaryApp.auth().signOut(); 
-        } 
-        await db.collection("usuarios").doc(email).set({ nome: nome, email: email, role: role }); 
-        alert("Conta salva com sucesso!"); 
-        document.getElementById('userEmail').value = ''; 
-        document.getElementById('userNome').value = ''; 
-        document.getElementById('userSenha').value = ''; 
-    } catch (e) { 
-        alert("Erro ao salvar usuário: " + e.message); 
-    } 
-}
-
-function renderUsuariosTab() { 
-    const tab = document.getElementById('listaUsuariosTab'); 
-    if(!tab) return; 
-    tab.innerHTML = bdUsuarios.map(u => `
-        <tr class="border-b border-slate-50">
-            <td class="p-4 text-slate-700 font-bold">${u.nome} <br/><span class="text-[10px] font-normal text-slate-400">${u.email}</span></td>
-            <td class="p-4 font-bold text-indigo-600 uppercase text-[10px]">${u.role}</td>
-            <td class="p-4 text-right">
-                <button type="button" onclick="if(confirm('Excluir acesso?')) db.collection('usuarios').doc('${u.email}').delete()" class="text-red-300 hover:text-red-500"><i class="fa fa-trash"></i></button>
-            </td>
-        </tr>
-    `).join(''); 
-}
-
-// --- DADOS DA EMPRESA ---
-async function salvarDadosEmpresa() {
-    const pix = document.getElementById('empresaPix').value.trim();
-    const banco = document.getElementById('empresaBanco').value.trim();
-    const agencia = document.getElementById('empresaAgencia').value.trim();
-    const conta = document.getElementById('empresaConta').value.trim();
-    
-    try {
-        await db.collection("empresa").doc("dados").set({
-            pix: pix, banco: banco, agencia: agencia, conta: conta
-        });
-        alert("Dados bancários salvos com sucesso!");
-    } catch(e) {
-        alert("Erro ao salvar dados da empresa.");
-    }
-}
-
-function editEmpresa() {
-    if(document.getElementById('empresaPix')) document.getElementById('empresaPix').value = bdEmpresa.pix || '';
-    if(document.getElementById('empresaBanco')) document.getElementById('empresaBanco').value = bdEmpresa.banco || '';
-    if(document.getElementById('empresaAgencia')) document.getElementById('empresaAgencia').value = bdEmpresa.agencia || '';
-    if(document.getElementById('empresaConta')) document.getElementById('empresaConta').value = bdEmpresa.conta || '';
 }
 
 // --- IMPRESSÃO DE RECIBO (TÉRMICA 80MM) ---
