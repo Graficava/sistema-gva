@@ -198,12 +198,20 @@
                         <div class="flex-1">
                             <!-- BUSCA E CATEGORIAS -->
                             <div class="flex flex-col gap-3 mb-6">
-                                <div class="relative w-full">
-                                    <i class="fa fa-search absolute left-4 top-3.5 text-slate-400"></i>
-                                    <input type="text" id="buscaProduto" onkeypress="if(event.key === 'Enter') renderVitrine()" placeholder="Buscar produto por nome ou categoria (Aperte Enter)..." class="w-full pl-10 p-3 border border-slate-200 rounded-lg text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm" />
+                                <div class="flex flex-col md:flex-row gap-4">
+                                    <div class="w-full md:w-1/3 relative">
+                                        <i class="fa fa-search absolute left-4 top-3.5 text-slate-400"></i>
+                                        <input type="text" id="buscaProduto" onkeypress="if(event.key === 'Enter') renderVitrine()" placeholder="Buscar produto (Enter)..." class="w-full pl-10 p-3 border border-slate-200 rounded-lg text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm" />
+                                    </div>
+                                    <div class="flex gap-2 overflow-x-auto pb-1 flex-1 custom-scrollbar">
+                                        <button type="button" onclick="setFiltroSetor('Todos')" class="btn-setor data-setor-Todos px-5 py-2 bg-white border border-slate-200 rounded-lg font-bold text-xs transition shadow-sm whitespace-nowrap">Todos</button>
+                                        <button type="button" onclick="setFiltroSetor('Gráfico')" class="btn-setor data-setor-Gráfico px-5 py-2 bg-yellow-100 text-yellow-800 border border-yellow-200 rounded-lg font-bold text-xs transition shadow-sm whitespace-nowrap">Gráfico</button>
+                                        <button type="button" onclick="setFiltroSetor('Com. Visual')" class="btn-setor data-setor-ComVisual px-5 py-2 bg-blue-100 text-blue-800 border border-blue-200 rounded-lg font-bold text-xs transition shadow-sm whitespace-nowrap">Com. Visual</button>
+                                        <button type="button" onclick="setFiltroSetor('Outros')" class="btn-setor data-setor-Outros px-5 py-2 bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-lg font-bold text-xs transition shadow-sm whitespace-nowrap">Outros</button>
+                                    </div>
                                 </div>
-                                <!-- Botões de Categoria Rápidos -->
-                                <div id="menuFiltroCat" class="flex gap-2 overflow-x-auto pb-2 custom-scrollbar"></div>
+                                <div id="menuFiltroCat" class="flex gap-2 overflow-x-auto pb-2 custom-scrollbar hidden"></div>
+                                <div id="menuFiltroSubCat" class="flex gap-2 overflow-x-auto pb-2 custom-scrollbar hidden"></div>
                             </div>
                             <div id="gradeProdutos" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6"></div>
                         </div>
