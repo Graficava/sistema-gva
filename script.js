@@ -1,4 +1,3 @@
-```javascript
 const firebaseConfig = {
     apiKey: "AIzaSyC4pkjSYpuz4iF0ijF50VxaZ2npsYCi7II",
     authDomain: "app-graficava.firebaseapp.com",
@@ -12,10 +11,10 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-let bdCategorias = [], bdProdutos = [], bdClientes = [], bdPedidos = [], bdAcabamentos =[], bdTransacoes = [], carrinho = [];
+let bdCategorias = [], bdProdutos = [], bdClientes = [], bdPedidos = [], bdAcabamentos = [], bdTransacoes = [], carrinho = [];
 let bdEmpresa = {};
 let usuarioAtual = null;
-const STATUSES =["Aguardando pagamento", "Em produção", "Acabamento", "Pronto para Retirada", "Entregue", "Cancelado / Estorno"];
+const STATUSES = ["Aguardando pagamento", "Em produção", "Acabamento", "Pronto para Retirada", "Entregue", "Cancelado / Estorno"];
 
 // --- AUTENTICAÇÃO E AUTO-LOGOUT ---
 auth.onAuthStateChanged(async user => {
@@ -174,7 +173,6 @@ function mudarSubAba(sub, btn) {
 
 function fecharModal() { document.getElementById('modalW2P')?.classList.add('hidden'); }
 function fecharModalFora(event) { if (event.target.id === 'modalW2P') fecharModal(); }
-
 // --- DASHBOARD ---
 function renderDashboard() {
     const dashMesInput = document.getElementById('dashMesFiltro'); 
@@ -400,7 +398,6 @@ function renderAcabTable() {
     const tab = document.getElementById('listaAcabamentosTab'); 
     if(tab) tab.innerHTML = bdAcabamentos.map(a => `<tr class="border-b border-slate-50"><td class="p-4 font-bold text-slate-600">${a.nome} <span class="text-[9px] text-slate-400 uppercase">(${a.grupo})</span></td><td class="p-4 text-center"><button type="button" onclick="editAcab('${a.id}')" class="text-indigo-500 mr-3 font-bold text-[10px] uppercase">Editar</button><button type="button" onclick="db.collection('acabamentos').doc('${a.id}').delete()" class="text-red-300 font-bold text-[10px]">X</button></td></tr>`).join(''); 
 }
-
 // --- PRODUTOS E ATRIBUTOS ---
 function ajustarCamposProduto() {
     const r = document.getElementById('prodRegraPreco')?.value;
@@ -845,7 +842,6 @@ function calcularPrecoAoVivo() {
 
     document.getElementById('modalSubtotal').innerText = "R$ " + (totalBase + extraVar + totalAcab).toFixed(2);
 }
-
 function confirmarAdicaoCarrinho() {
     const p = bdProdutos.find(x => x.id === document.getElementById('modalProdId').value);
     const totalItem = parseFloat(document.getElementById('modalSubtotal').innerText.replace("R$ ",""));
@@ -858,7 +854,7 @@ function confirmarAdicaoCarrinho() {
         qtdModal = document.getElementById('w2pQtd')?.value || 1;
     }
     
-    let varsEscolhidas =[];
+    let varsEscolhidas = [];
     document.querySelectorAll('.sel-var').forEach(s => {
         varsEscolhidas.push(s.options[s.selectedIndex].text.split(" (+")[0].split(" (G")[0]);
     });
@@ -991,7 +987,7 @@ async function enviarPedido(imprimir = false) {
         await db.collection("clientes").doc(idCli).update({ credito: (clienteObj.credito || 0) - pago });
     }
     
-    carrinho =[]; 
+    carrinho = []; 
     document.getElementById('cartValorPago').value = 0; 
     document.getElementById('cartDesconto').value = 0; 
     document.getElementById('cartCliente').value = '';
@@ -1037,7 +1033,7 @@ function gerarCardPedido(p) {
     if(p.status === 'Entregue') corBorda = 'border-l-emerald-600';
     if(p.status === 'Cancelado / Estorno') corBorda = 'border-l-red-500';
 
-    const itensHtml = (p.itens ||[]).map(i => `<p>• ${i.qtdCarrinho || 1}x (${i.qtdModal || 1} un.) ${i.nome} <span class="opacity-70">(${i.desc})</span></p>`).join('');
+    const itensHtml = (p.itens || []).map(i => `<p>• ${i.qtdCarrinho || 1}x (${i.qtdModal || 1} un.) ${i.nome} <span class="opacity-70">(${i.desc})</span></p>`).join('');
 
     return `
         <div class="bg-white p-4 rounded-lg shadow-sm border border-slate-200 border-l-4 ${corBorda}">
@@ -1112,7 +1108,7 @@ function renderPedidosFinanceiro() {
         let vHoje = 0;
         let eMes = 0;
         let sMes = 0; 
-        let extrato =[];
+        let extrato = [];
 
         bdPedidos.forEach(p => {
             const d = p.data && p.data.toDate ? p.data.toDate() : new Date(p.data);
