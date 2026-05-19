@@ -1,3 +1,4 @@
+```javascript
 const firebaseConfig = {
     apiKey: "AIzaSyC4pkjSYpuz4iF0ijF50VxaZ2npsYCi7II",
     authDomain: "app-graficava.firebaseapp.com",
@@ -12,32 +13,113 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 
 let bdCategorias = [], bdProdutos = [], bdClientes = [], bdPedidos = [], bdAcabamentos =[], bdTransacoes = [], carrinho = [];
+let bdEmpresa = {};
+let usuarioAtual = null;
 const STATUSES =["Aguardando pagamento", "Em produção", "Acabamento", "Pronto para Retirada", "Entregue", "Cancelado / Estorno"];
 
-// --- AUTENTICAÇÃO ---
-auth.onAuthStateChanged(user => {
+// --- AUTENTICAÇÃO E AUTO-LOGOUT ---
+auth.onAuthStateChanged(async user => {
     const telaLogin = document.getElementById('telaLogin');
     const appInterface = document.getElementById('appInterface');
+    const btnEntrar = document.getElementById('btnEntrar');
+    
     if (user) {
-        telaLogin?.classList.add('hidden');
-        appInterface?.classList.remove('hidden');
+        // VERIFICAÇÃO DE VIRADA DE DIA (AUTO-LOGOUT)
+        const hoje = new Date().toDateString();
+        const ultimoAcesso = localStorage.getItem('dataUltimoAcesso');
+        if (ultimoAcesso && ultimoAcesso !== hoje) {
+            auth.signOut();
+            localStorage.removeItem('dataUltimoAcesso');
+            return; 
+        }
+        localStorage.setItem('dataUltimoAcesso', hoje);
+
+        if(telaLogin) telaLogin.classList.add('hidden'); 
+        if(appInterface) appInterface.classList.remove('hidden');
+        if (btnEntrar) { btnEntrar.innerText = "Entrar no Sistema"; btnEntrar.disabled = false; }
+        
+        try {
+            const doc = await db.collection("usuarios").doc(user.email).get();
+            if (doc.exists) usuarioAtual = doc.data();
+            else { 
+                usuarioAtual = { nome: user.email.split('@')[0], email: user.email, role: "admin" }; 
+                await db.collection("usuarios").doc(user.email).set(usuarioAtual); 
+            }
+        } catch (error) { 
+            usuarioAtual = { nome: user.email.split('@')[0], email: user.email, role: "admin" }; 
+        }
+        
+        aplicarPermissoes();
+        
+        const dashMes = document.getElementById('dashMesFiltro'); 
+        if(dashMes && !dashMes.value) dashMes.value = new Date().toISOString().slice(0,7);
+        
         iniciarLeitura();
     } else {
-        telaLogin?.classList.remove('hidden');
-        appInterface?.classList.add('hidden');
+        if(telaLogin) telaLogin.classList.remove('hidden'); 
+        if(appInterface) appInterface.classList.add('hidden'); 
+        usuarioAtual = null;
+        if (btnEntrar) { btnEntrar.innerText = "Entrar no Sistema"; btnEntrar.disabled = false; }
     }
 });
 
 function entrar() {
     const e = document.getElementById('email')?.value;
     const s = document.getElementById('senha')?.value;
-    if (!e || !s) return;
-    auth.signInWithEmailAndPassword(e, s).catch(() => {
-        document.getElementById('msgErro')?.classList.remove('hidden');
+    const msgErro = document.getElementById('msgErro');
+    const btnEntrar = document.getElementById('btnEntrar');
+    
+    if (!e || !s) { 
+        if(msgErro) { msgErro.innerText = "Preencha os dados."; msgErro.classList.remove('hidden'); }
+        return; 
+    }
+    
+    if(msgErro) msgErro.classList.add('hidden'); 
+    if(btnEntrar) { btnEntrar.innerText = "Verificando..."; btnEntrar.disabled = true; }
+    
+    auth.signInWithEmailAndPassword(e, s).catch(() => { 
+        if(msgErro) { msgErro.innerText = "Acesso negado. Verifique e-mail e senha."; msgErro.classList.remove('hidden'); }
+        if(btnEntrar) { btnEntrar.innerText = "Entrar no Sistema"; btnEntrar.disabled = false; }
     });
 }
 
-function sair() { auth.signOut(); }
+function sair() { 
+    localStorage.removeItem('dataUltimoAcesso');
+    auth.signOut(); 
+}
+
+// --- PERMISSÕES DE USUÁRIO ---
+function aplicarPermissoes() {
+    if(!usuarioAtual) return;
+    const role = usuarioAtual.role || 'vendedor';
+    
+    const elNome = document.getElementById('nomeUsuarioLogado');
+    const elRole = document.getElementById('roleUsuarioLogado');
+    if(elNome) elNome.innerText = usuarioAtual.nome || usuarioAtual.email.split('@')[0];
+    if(elRole) elRole.innerText = role;
+    
+    const btnLoja = document.querySelectorAll('.btn-menu-loja');
+    const btnProducao = document.querySelectorAll('.btn-menu-producao');
+    const btnFinanceiro = document.querySelectorAll('.btn-menu-financeiro');
+    const btnConfig = document.querySelectorAll('.btn-menu-config');
+    const btnDashboard = document.querySelectorAll('.btn-menu-dashboard');
+    
+    [...btnLoja, ...btnProducao, ...btnFinanceiro, ...btnConfig, ...btnDashboard].forEach(b => b.classList.add('hidden'));
+
+    if (role === 'admin') {
+        [...btnLoja, ...btnProducao, ...btnFinanceiro, ...btnConfig, ...btnDashboard].forEach(b => b.classList.remove('hidden'));
+        mudarAba('dashboard'); 
+    } 
+    else if (role === 'vendedor') {
+        [...btnLoja, ...btnProducao, ...btnFinanceiro, ...btnConfig].forEach(b => b.classList.remove('hidden')); 
+        mudarAba('loja'); 
+        mudarSubAba('sub-cli'); 
+    } 
+    else if (role === 'producao') {
+        [...btnProducao].forEach(b => b.classList.remove('hidden')); 
+        mudarAba('producao'); 
+    }
+}
 
 // --- LEITURA DE DADOS ---
 function iniciarLeitura() {
@@ -51,19 +133,27 @@ function iniciarLeitura() {
     });
     db.collection("clientes").orderBy("nome").onSnapshot(s => { 
         bdClientes = s.docs.map(d => ({id: d.id, ...d.data()}));
-        renderCliTable(); renderCliSelectCart();
+        renderCliTable(); renderCliSelectCart(); renderDashboard();
     });
     db.collection("acabamentos").onSnapshot(s => {
         bdAcabamentos = s.docs.map(d => ({id: d.id, ...d.data()}));
         renderAcabTable(); atualizarListaAcabamentosProduto();
     });
-    db.collection("pedidos").orderBy("data", "desc").limit(100).onSnapshot(s => {
+    db.collection("pedidos").orderBy("data", "desc").limit(500).onSnapshot(s => {
         bdPedidos = s.docs.map(d => ({id: d.id, ...d.data()}));
-        renderPedidosFinanceiro(); renderKanbanProducao();
+        renderPedidosFinanceiro(); renderKanbanProducao(); renderDashboard(); renderOrcamentos();
     });
-    db.collection("transacoes").orderBy("data", "desc").limit(100).onSnapshot(s => {
+    db.collection("transacoes").orderBy("data", "desc").limit(500).onSnapshot(s => {
         bdTransacoes = s.docs.map(d => ({id: d.id, ...d.data()}));
-        renderPedidosFinanceiro();
+        renderPedidosFinanceiro(); renderDashboard();
+    });
+    db.collection("usuarios").onSnapshot(s => { 
+        bdUsuarios = s.docs.map(d => ({id: d.id, ...d.data()})); 
+        renderUsuariosTab(); 
+    });
+    db.collection("empresa").doc("dados").onSnapshot(s => { 
+        if(s.exists) bdEmpresa = s.data(); else bdEmpresa = {}; 
+        if(typeof editEmpresa === 'function') editEmpresa(); 
     });
 }
 
@@ -84,6 +174,112 @@ function mudarSubAba(sub, btn) {
 
 function fecharModal() { document.getElementById('modalW2P')?.classList.add('hidden'); }
 function fecharModalFora(event) { if (event.target.id === 'modalW2P') fecharModal(); }
+
+// --- DASHBOARD ---
+function renderDashboard() {
+    const dashMesInput = document.getElementById('dashMesFiltro'); 
+    if (!dashMesInput || !dashMesInput.value) return;
+    
+    const mesSelecionado = dashMesInput.value; 
+    let faturamento = 0, despesas = 0, produtosVendidos = {}, clientesCompras = {}, despesasCat = {};
+    
+    bdPedidos.forEach(p => {
+        if (!p.data) return; 
+        const dataStr = (p.data.toDate ? p.data.toDate() : new Date(p.data)).toISOString().slice(0, 7);
+        if (dataStr === mesSelecionado && p.status !== 'Cancelado / Estorno' && p.status !== 'Orçamento') {
+            faturamento += p.total; 
+            const cliNome = p.clienteNome || "Consumidor Final";
+            if (!clientesCompras[cliNome]) clientesCompras[cliNome] = 0; 
+            clientesCompras[cliNome] += p.total;
+            
+            if(p.itens) {
+                p.itens.forEach(item => {
+                    const nomeProd = item.nome.split(' (')[0]; 
+                    if (!produtosVendidos[nomeProd]) produtosVendidos[nomeProd] = { qtd: 0, valor: 0 };
+                    let qtdNum = parseInt(item.qtdCarrinho); if (isNaN(qtdNum)) qtdNum = 1; 
+                    let valNum = parseFloat(item.valorModal * item.qtdCarrinho); if (isNaN(valNum)) valNum = 0;
+                    produtosVendidos[nomeProd].qtd += qtdNum; 
+                    produtosVendidos[nomeProd].valor += valNum;
+                });
+            }
+        }
+    });
+    
+    bdTransacoes.forEach(t => { 
+        if (!t.data || t.tipo !== 'saida') return; 
+        const dataStr = (t.data.toDate ? t.data.toDate() : new Date(t.data)).toISOString().slice(0, 7); 
+        if (dataStr === mesSelecionado) {
+            despesas += t.valor;
+            let cat = 'Outros'; 
+            if(!despesasCat[cat]) despesasCat[cat] = 0;
+            despesasCat[cat] += t.valor;
+        } 
+    });
+    
+    const elFat = document.getElementById('dashFaturamento'); if(elFat) elFat.innerText = `R$ ${faturamento.toFixed(2)}`; 
+    const elDesp = document.getElementById('dashDespesas'); if(elDesp) elDesp.innerText = `R$ ${despesas.toFixed(2)}`; 
+    const elLucro = document.getElementById('dashLucro'); if(elLucro) elLucro.innerText = `R$ ${(faturamento - despesas).toFixed(2)}`;
+    
+    const arrayProdutos = Object.keys(produtosVendidos).map(nome => ({ nome: nome, qtd: produtosVendidos[nome].qtd, valor: produtosVendidos[nome].valor })).sort((a, b) => b.valor - a.valor).slice(0, 5);
+    const tabProd = document.getElementById('listaTopProdutosTab');
+    if(tabProd) {
+        tabProd.innerHTML = arrayProdutos.length === 0 ? `<tr><td colspan="3" class="p-4 text-center text-slate-400 text-xs">Nenhuma venda no período.</td></tr>` : arrayProdutos.map(p => `<tr class="border-b border-slate-50"><td class="p-3 text-slate-700 font-bold">${p.nome}</td><td class="p-3 text-center text-slate-500">${p.qtd}</td><td class="p-3 text-right text-emerald-600 font-black">R$ ${p.valor.toFixed(2)}</td></tr>`).join('');
+    }
+
+    const arrayClientes = Object.keys(clientesCompras).map(nome => ({ nome: nome, valor: clientesCompras[nome] })).sort((a, b) => b.valor - a.valor).slice(0, 5);
+    const tabCli = document.getElementById('listaTopClientesTab');
+    if(tabCli) {
+        tabCli.innerHTML = arrayClientes.length === 0 ? `<tr><td colspan="2" class="p-4 text-center text-slate-400 text-xs">Nenhuma venda no período.</td></tr>` : arrayClientes.map(c => `<tr class="border-b border-slate-50"><td class="p-3 text-slate-700 font-bold">${c.nome}</td><td class="p-3 text-right text-indigo-600 font-black">R$ ${c.valor.toFixed(2)}</td></tr>`).join('');
+    }
+
+    const arrayDespCat = Object.keys(despesasCat).map(c => ({ cat: c, val: despesasCat[c] })).sort((a,b) => b.val - a.val);
+    const tabDespCat = document.getElementById('listaDespesasCatTab');
+    if(tabDespCat) {
+        tabDespCat.innerHTML = arrayDespCat.length === 0 ? `<tr><td colspan="2" class="p-4 text-center text-slate-400 text-xs">Nenhuma despesa no período.</td></tr>` : arrayDespCat.map(d => `<tr class="border-b border-slate-50"><td class="p-3 text-slate-700 font-bold">${d.cat}</td><td class="p-3 text-right text-red-500 font-black">R$ ${d.val.toFixed(2)}</td></tr>`).join('');
+    }
+}
+
+function imprimirDashboard() {
+    const mes = document.getElementById('dashMesFiltro')?.value; if(!mes) return;
+    const [ano, mesNum] = mes.split('-'); 
+    const meses =["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+    const mesFormatado = `${meses[parseInt(mesNum)-1]} de ${ano}`;
+    
+    const fat = document.getElementById('dashFaturamento')?.innerText || 'R$ 0.00';
+    const desp = document.getElementById('dashDespesas')?.innerText || 'R$ 0.00';
+    const lucro = document.getElementById('dashLucro')?.innerText || 'R$ 0.00';
+    const tabProd = document.getElementById('listaTopProdutosTab')?.innerHTML || '';
+    const tabCli = document.getElementById('listaTopClientesTab')?.innerHTML || '';
+    
+    const janela = window.open('', '', 'width=800,height=900');
+    janela.document.write(`<html><head><title>Relatório Mensal - ${mesFormatado}</title><style>body{font-family:sans-serif;padding:40px;color:#334155}.header{text-align:center;margin-bottom:40px;border-bottom:2px solid #e2e8f0;padding-bottom:20px}h1{color:#3E4095;margin:0 0 10px 0;font-size:28px;text-transform:uppercase}.cards{display:flex;gap:20px;margin-bottom:40px}.card{border:1px solid #e2e8f0;padding:20px;border-radius:8px;flex:1;background:#f8fafc;text-align:center}.card h3{margin:0 0 10px 0;font-size:12px;text-transform:uppercase;color:#64748b}.card p{margin:0;font-size:24px;font-weight:bold;color:#0f172a}.card.lucro p{color:#10b981}.card.desp p{color:#ef4444}h2{color:#3E4095;font-size:16px;text-transform:uppercase;border-bottom:1px solid #e2e8f0;padding-bottom:10px;margin-top:40px}table{width:100%;border-collapse:collapse;margin-bottom:30px;font-size:14px}th,td{border-bottom:1px solid #e2e8f0;padding:12px 8px;text-align:left}th{background:#f1f5f9;color:#475569;font-size:12px;text-transform:uppercase}.text-right{text-align:right}.text-center{text-align:center}@media print{body{padding:0}}</style></head><body><div class="header"><h1>Relatório de Desempenho</h1><p style="margin:0;color:#64748b;font-weight:bold;">Período: ${mesFormatado}</p></div><div class="cards"><div class="card"><h3>Faturamento Bruto</h3><p>${fat}</p></div><div class="card desp"><h3>Total de Despesas</h3><p>${desp}</p></div><div class="card lucro"><h3>Saldo / Lucro</h3><p>${lucro}</p></div></div><h2>Produtos Mais Vendidos</h2><table><thead><tr><th>Produto</th><th class="text-center">Qtd Vendida</th><th class="text-right">Receita Bruta (S/ Desc)</th></tr></thead><tbody>${tabProd}</tbody></table><h2>Melhores Clientes</h2><table><thead><tr><th>Cliente</th><th class="text-right">Volume Comprado</th></tr></thead><tbody>${tabCli}</tbody></table><div style="text-align:center;margin-top:50px;font-size:12px;color:#94a3b8;">Gerado pelo sistema GVAsist em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}</div><script>setTimeout(()=>{window.print();window.close();},800);</script></body></html>`);
+    janela.document.close();
+}
+
+// --- ORÇAMENTOS (FOLLOW-UP) ---
+function renderOrcamentos() {
+    const tbody = document.getElementById('listaOrcamentosTab');
+    if(!tbody) return;
+    const orcamentos = bdPedidos.filter(p => p.status === 'Orçamento' && !p.arquivado).sort((a,b) => b.data.toDate() - a.data.toDate());
+    
+    tbody.innerHTML = orcamentos.length === 0 ? `<tr><td colspan="4" class="p-6 text-center text-slate-400">Nenhum orçamento pendente.</td></tr>` : orcamentos.map(p => {
+        const dataObj = p.data.toDate ? p.data.toDate() : new Date(p.data);
+        const dataFormatada = dataObj.toLocaleDateString('pt-BR');
+        const dias = Math.floor((new Date() - dataObj) / (1000 * 60 * 60 * 24));
+        let badgeDias = dias > 2 ? `<span class="bg-red-100 text-red-600 px-2 py-0.5 rounded text-[9px] uppercase ml-2 font-black">${dias} dias pendente</span>` : `<span class="bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded text-[9px] uppercase ml-2 font-black">Novo</span>`;
+        
+        return `
+        <tr class="border-b border-slate-50 hover:bg-slate-50">
+            <td class="p-3 text-slate-500 font-medium">${dataFormatada} <br/><span class="text-[9px] text-slate-400 uppercase">${p.id.substring(0,6)}</span></td>
+            <td class="p-3 font-bold text-slate-700">${p.clienteNome} ${badgeDias}</td>
+            <td class="p-3 text-right font-black text-slate-800">R$ ${p.total.toFixed(2)}</td>
+            <td class="p-3 text-center">
+                <button type="button" onclick="imprimirOrcamento('${p.id}')" class="text-indigo-400 hover:text-indigo-600 mx-2" title="Imprimir PDF"><i class="fa fa-print"></i></button>
+            </td>
+        </tr>
+        `;
+    }).join('');
+}
 
 // --- CLIENTES ---
 async function salvarCliente() { 
@@ -137,19 +333,6 @@ function renderCliTable() {
             </td>
         </tr>
     `).join(''); 
-}
-
-function verHistoricoCliente(idCli) { 
-    const cliente = bdClientes.find(x => x.id === idCli); 
-    const pedidosCli = bdPedidos.filter(p => p.clienteId === idCli); 
-    document.getElementById('histNomeCli').innerText = `Pedidos de: ${cliente.nome}`; 
-    const corpo = document.getElementById('corpoHistoricoCli'); 
-    corpo.innerHTML = pedidosCli.length === 0 ? "<p class='text-center text-slate-400 py-10'>Nenhum pedido.</p>" : 
-    pedidosCli.map(p => {
-        const dataObj = p.data && p.data.toDate ? p.data.toDate() : new Date(p.data);
-        return `<div class="bg-slate-50 p-4 rounded border border-slate-100"><div class="flex justify-between font-bold text-indigo-900 mb-2"><span>${dataObj.toLocaleDateString('pt-BR')}</span><span>R$ ${(p.total || 0).toFixed(2)}</span></div><div class="text-xs text-slate-500 mb-2">${(p.itens ||[]).map(i => `• ${i.qtdCarrinho || 1}x ${i.nome}`).join('<br>')}</div><button type="button" onclick="imprimirRecibo('${p.id}')" class="text-[10px] font-bold text-indigo-500 uppercase hover:underline"><i class="fa fa-print"></i> Imprimir Recibo</button></div>`;
-    }).join(''); 
-    document.getElementById('modalHistoricoCli').classList.remove('hidden'); 
 }
 
 // --- CATEGORIAS ---
@@ -217,6 +400,7 @@ function renderAcabTable() {
     const tab = document.getElementById('listaAcabamentosTab'); 
     if(tab) tab.innerHTML = bdAcabamentos.map(a => `<tr class="border-b border-slate-50"><td class="p-4 font-bold text-slate-600">${a.nome} <span class="text-[9px] text-slate-400 uppercase">(${a.grupo})</span></td><td class="p-4 text-center"><button type="button" onclick="editAcab('${a.id}')" class="text-indigo-500 mr-3 font-bold text-[10px] uppercase">Editar</button><button type="button" onclick="db.collection('acabamentos').doc('${a.id}').delete()" class="text-red-300 font-bold text-[10px]">X</button></td></tr>`).join(''); 
 }
+
 // --- PRODUTOS E ATRIBUTOS ---
 function ajustarCamposProduto() {
     const r = document.getElementById('prodRegraPreco')?.value;
@@ -561,7 +745,7 @@ function abrirConfigurador(id) {
             const a = bdAcabamentos.find(x => x.id === (obj.id || obj));
             if(a) {
                 const g = a.grupo || 'Geral';
-                if(!gruposAcab[g]) gruposAcab[g] =[];
+                if(!gruposAcab[g]) gruposAcab[g] = [];
                 gruposAcab[g].push({...a, padrao: obj.padrao});
             }
         });
@@ -661,6 +845,7 @@ function calcularPrecoAoVivo() {
 
     document.getElementById('modalSubtotal').innerText = "R$ " + (totalBase + extraVar + totalAcab).toFixed(2);
 }
+
 function confirmarAdicaoCarrinho() {
     const p = bdProdutos.find(x => x.id === document.getElementById('modalProdId').value);
     const totalItem = parseFloat(document.getElementById('modalSubtotal').innerText.replace("R$ ",""));
@@ -740,6 +925,38 @@ function atualizarTotalFinal() {
     
     document.getElementById('totalCarrinho').innerText = "R$ " + totalPedido.toFixed(2);
     document.getElementById('cartSaldoDevedor').innerText = "R$ " + saldo.toFixed(2);
+}
+
+function renderCliSelectCart() { 
+    const datalist = document.getElementById('listaClientesData'); 
+    if(datalist) {
+        datalist.innerHTML = bdClientes.map(c => `<option value="${c.nome}"></option>`).join(''); 
+    }
+}
+
+function atualizarInfoCreditoCarrinho() { 
+    const nomeCli = document.getElementById('cartCliente').value; 
+    const label = document.getElementById('labelCreditoCli'); 
+    const c = bdClientes.find(x => x.nome === nomeCli);
+
+    if(!c) { 
+        label.innerText = "Saldo: R$ 0.00"; 
+        label.className = "text-emerald-500 font-bold"; 
+        return; 
+    } 
+    const credito = c.credito || 0; 
+    label.innerText = `Saldo: R$ ${credito.toFixed(2)}`; 
+    label.className = credito >= 0 ? "text-emerald-500 font-bold" : "text-red-500 font-bold"; 
+}
+
+function toggleOpcoesPagamento() { 
+    document.getElementById('divParcelas').style.display = (document.getElementById('cartPagamento').value === 'Credito_Parcelado') ? 'block' : 'none'; 
+}
+
+function toggleOpcoesEntrega() { 
+    const v = document.getElementById('cartEntrega').value; 
+    document.getElementById('divFrete').style.display = (v === 'Retirada') ? 'none' : 'block'; 
+    atualizarTotalFinal(); 
 }
 
 async function enviarPedido(imprimir = false) {
@@ -934,7 +1151,74 @@ function renderPedidosFinanceiro() {
         }).join('');
     }
 }
-// --- IMPRESSÃO DE RECIBO (2 VIAS - TÉRMICA 80MM) ---
+
+// --- USUÁRIOS ---
+async function salvarUsuario() { 
+    const email = document.getElementById('userEmail').value.trim();
+    const nome = document.getElementById('userNome').value.trim();
+    const role = document.getElementById('userRole').value;
+    const senha = document.getElementById('userSenha').value; 
+    
+    if(!email || !nome) return alert("Preencha Nome e E-mail."); 
+    
+    try { 
+        if (senha) { 
+            if (senha.length < 6) return alert("A senha precisa ter no mínimo 6 caracteres."); 
+            let secondaryApp; 
+            try { secondaryApp = firebase.app("Secondary"); } 
+            catch(e) { secondaryApp = firebase.initializeApp(firebaseConfig, "Secondary"); } 
+            await secondaryApp.auth().createUserWithEmailAndPassword(email, senha); 
+            await secondaryApp.auth().signOut(); 
+        } 
+        await db.collection("usuarios").doc(email).set({ nome: nome, email: email, role: role }); 
+        alert("Conta salva com sucesso!"); 
+        document.getElementById('userEmail').value = ''; 
+        document.getElementById('userNome').value = ''; 
+        document.getElementById('userSenha').value = ''; 
+    } catch (e) { 
+        alert("Erro ao salvar usuário: " + e.message); 
+    } 
+}
+
+function renderUsuariosTab() { 
+    const tab = document.getElementById('listaUsuariosTab'); 
+    if(!tab) return; 
+    tab.innerHTML = bdUsuarios.map(u => `
+        <tr class="border-b border-slate-50">
+            <td class="p-4 text-slate-700 font-bold">${u.nome} <br/><span class="text-[10px] font-normal text-slate-400">${u.email}</span></td>
+            <td class="p-4 font-bold text-indigo-600 uppercase text-[10px]">${u.role}</td>
+            <td class="p-4 text-right">
+                <button type="button" onclick="if(confirm('Excluir acesso?')) db.collection('usuarios').doc('${u.email}').delete()" class="text-red-300 hover:text-red-500"><i class="fa fa-trash"></i></button>
+            </td>
+        </tr>
+    `).join(''); 
+}
+
+// --- DADOS DA EMPRESA ---
+async function salvarDadosEmpresa() {
+    const pix = document.getElementById('empresaPix').value.trim();
+    const banco = document.getElementById('empresaBanco').value.trim();
+    const agencia = document.getElementById('empresaAgencia').value.trim();
+    const conta = document.getElementById('empresaConta').value.trim();
+    
+    try {
+        await db.collection("empresa").doc("dados").set({
+            pix: pix, banco: banco, agencia: agencia, conta: conta
+        });
+        alert("Dados bancários salvos com sucesso!");
+    } catch(e) {
+        alert("Erro ao salvar dados da empresa.");
+    }
+}
+
+function editEmpresa() {
+    if(document.getElementById('empresaPix')) document.getElementById('empresaPix').value = bdEmpresa.pix || '';
+    if(document.getElementById('empresaBanco')) document.getElementById('empresaBanco').value = bdEmpresa.banco || '';
+    if(document.getElementById('empresaAgencia')) document.getElementById('empresaAgencia').value = bdEmpresa.agencia || '';
+    if(document.getElementById('empresaConta')) document.getElementById('empresaConta').value = bdEmpresa.conta || '';
+}
+
+// --- IMPRESSÃO DE RECIBO E OS ---
 function imprimirReciboDireto(idPedido, objPedido) {
     const p = objPedido || bdPedidos.find(x => x.id === idPedido);
     if(!p) return;
@@ -943,6 +1227,10 @@ function imprimirReciboDireto(idPedido, objPedido) {
     const dataObj = p.data && p.data.toDate ? p.data.toDate() : new Date(p.data);
     const dataStr = dataObj.toLocaleDateString('pt-BR') + ' ' + dataObj.toLocaleTimeString('pt-BR');
     
+    let dadosEmpresaHtml = `CNPJ: 17.184.159/0001-06<br/> WhatsApp: 21 99993-0190`;
+    if(bdEmpresa.pix) dadosEmpresaHtml += `<br/><br/><b>PIX:</b> ${bdEmpresa.pix}`;
+    if(bdEmpresa.banco) dadosEmpresaHtml += `<br/><b>Banco:</b> ${bdEmpresa.banco} | <b>Ag:</b> ${bdEmpresa.agencia} | <b>CC:</b> ${bdEmpresa.conta}`;
+
     let html = `
         <html><head><style>
             body { font-family: monospace; width: 80mm; margin: 0; padding: 10px; color: #000; font-size: 12px; }
@@ -955,10 +1243,10 @@ function imprimirReciboDireto(idPedido, objPedido) {
         </style></head><body>
 
         <!-- VIA DO CLIENTE -->
-        <img src="https://i.postimg.cc/GtwRkLBF/gva-pr-ERP-26.png" class="logo" alt="GVA Gráfica" />
+        <img src="https://i.postimg.cc/1RCc58qN/gva-br-1-ERP-26.png" class="logo" alt="GVA Gráfica" style="filter: grayscale(100%);" />
         <div class="center bold" style="font-size: 14px;">Gráfica Venom Arts LTDA</div>
         <div class="center" style="font-size: 10px; margin-bottom: 10px;">
-            CNPJ: 17.184.159/0001-06<br>IM: 2231694 | IE: 14.623.58-2<br>Rua Lopes Trovão nº 474 Lojas 202 e 201<br>Icaraí, Niterói - RJ 24220-071<br>www.graficava.com.br<br>WhatsApp: 21 99993-0190<br>Insta: @grafica.venomarts
+            ${dadosEmpresaHtml}
         </div>
         <div class="linha"></div>
         <div class="center bold" style="font-size: 14px;">Pedido: ${idPedido.substring(0,6).toUpperCase()}</div>
@@ -979,7 +1267,6 @@ function imprimirReciboDireto(idPedido, objPedido) {
         <div class="linha"></div>
         <div class="center">Obrigado pela preferência!</div>
 
-        <!-- QUEBRA DE PÁGINA PARA A VIA DA PRODUÇÃO -->
         <div class="page-break"></div>
 
         <!-- VIA DA PRODUÇÃO -->
@@ -1007,7 +1294,6 @@ function imprimirRecibo(idPedido) {
     imprimirReciboDireto(idPedido, null); 
 }
 
-// --- IMPRESSÃO DE ORDEM DE SERVIÇO (A4) ---
 function imprimirOSA4(idPedido) {
     const p = bdPedidos.find(x => x.id === idPedido);
     if(!p) return;
@@ -1020,7 +1306,7 @@ function imprimirOSA4(idPedido) {
         <html><head><style>
             @page { size: A4; margin: 15mm; } body { font-family: Arial, sans-serif; color: #333; line-height: 1.4; }
             .header { display: flex; justify-content: space-between; border-bottom: 2px solid #0f172a; padding-bottom: 10px; margin-bottom: 20px; }
-            .logo { max-height: 50px; } .title { font-size: 24px; font-weight: bold; color: #0f172a; text-transform: uppercase; }
+            .logo { max-height: 50px; filter: grayscale(100%); } .title { font-size: 24px; font-weight: bold; color: #0f172a; text-transform: uppercase; }
             .info-box { border: 1px solid #ccc; padding: 15px; border-radius: 8px; margin-bottom: 20px; background: #f9fafb; }
             .item-box { border: 2px solid #e2e8f0; padding: 15px; border-radius: 8px; margin-bottom: 15px; page-break-inside: avoid; }
             .item-title { font-size: 18px; font-weight: bold; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px; margin-bottom: 10px; }
@@ -1028,7 +1314,7 @@ function imprimirOSA4(idPedido) {
             .task-list { margin-top: 10px; font-size: 14px; } .task-item { margin-bottom: 8px; }
         </style></head><body>
         <div class="header">
-            <img src="https://i.postimg.cc/GtwRkLBF/gva-pr-ERP-26.png" class="logo" alt="GVA Gráfica" />
+            <img src="https://i.postimg.cc/1RCc58qN/gva-br-1-ERP-26.png" class="logo" alt="GVA Gráfica" />
             <div style="text-align: right;">
                 <div class="title">ORDEM DE SERVIÇO</div>
                 <div style="font-size: 18px; font-weight: bold;">#${p.id.substring(0,6).toUpperCase()}</div>
@@ -1059,6 +1345,46 @@ function imprimirOSA4(idPedido) {
     janela.document.close();
 }
 
+function imprimirOrcamento(idPedido) {
+    const p = bdPedidos.find(x => x.id === idPedido); 
+    if(!p) return;
+    
+    const janela = window.open('', '', 'width=800,height=900');
+    const dataPedido = p.data.toDate ? p.data.toDate() : new Date(p.data);
+    const dataValidade = new Date(dataPedido); 
+    dataValidade.setDate(dataValidade.getDate() + 7);
+    
+    let dadosEmpresaHtml = `CNPJ: 17.184.159/0001-06<br/>WhatsApp: (21) 99993-0190`;
+    if(bdEmpresa.pix) dadosEmpresaHtml += `<br/>PIX: ${bdEmpresa.pix}`;
+    if(bdEmpresa.banco) dadosEmpresaHtml += `<br/>Banco: ${bdEmpresa.banco} | Ag: ${bdEmpresa.agencia} | CC: ${bdEmpresa.conta}`;
+
+    janela.document.write(`
+        <html><head><title>Orçamento - ${idPedido.substring(0,6).toUpperCase()}</title><style>body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; color: #334155; } .header { background-color: #3E4095; color: #ffffff; padding: 30px 40px; display: flex; justify-content: space-between; align-items: center; } .logo { max-width: 180px; filter: brightness(0) invert(1); } .company-info { text-align: right; font-size: 13px; line-height: 1.6; } .company-info strong { font-size: 16px; letter-spacing: 1px; } .content { padding: 40px; } .info-section { display: flex; justify-content: space-between; margin-bottom: 30px; background: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0; } .info-block { flex: 1; } .info-label { font-size: 10px; font-weight: bold; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; } .info-value { font-size: 16px; font-weight: bold; color: #0f172a; margin: 0; } table { width: 100%; border-collapse: collapse; margin-bottom: 30px; } th { background: #3E4095; color: #ffffff; text-align: left; padding: 12px; font-size: 12px; text-transform: uppercase; } td { padding: 15px 12px; border-bottom: 1px solid #e2e8f0; font-size: 14px; vertical-align: top; } .text-right { text-align: right; } .totals { width: 320px; margin-left: auto; background: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0; } .total-line { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px; color: #475569; } .total-line.grand-total { font-size: 22px; font-weight: 900; color: #3E4095; border-top: 2px solid #cbd5e1; padding-top: 15px; margin-top: 15px; } .footer { margin-top: 50px; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 20px; } .validade { display: inline-block; background: #eff6ff; color: #3E4095; padding: 10px 20px; border-radius: 6px; font-weight: bold; font-size: 13px; margin-top: 20px; border: 1px solid #bfdbfe; } @media print { body { padding: 0; } .validade { border: 1px solid #000; color: #000; background: transparent; } .header { background-color: #3E4095 !important; color: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; } th { background-color: #3E4095 !important; color: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; } }</style></head><body>
+        <div class="header"><div><img src="https://i.postimg.cc/1RCc58qN/gva-br-1-ERP-26.png" class="logo" alt="GVA Gráfica" /></div><div class="company-info"><strong>GRÁFICA VENOM ARTS LTDA</strong><br/>${dadosEmpresaHtml}</div></div>
+        <div class="content">
+            <div class="info-section">
+                <div class="info-block"><div class="info-label">Orçamento preparado para:</div><div class="info-value">${p.clienteNome}</div></div>
+                <div class="info-block text-right"><div class="info-label">Nº do Orçamento</div><div class="info-value" style="color: #3E4095;">#${idPedido.substring(0,6).toUpperCase()}</div><div class="info-label" style="margin-top: 15px;">Data de Emissão</div><div class="info-value" style="font-size: 14px;">${dataPedido.toLocaleDateString('pt-BR')}</div></div>
+            </div>
+            <table>
+                <thead><tr><th>Item / Descrição</th><th class="text-right" style="width: 80px;">Qtd</th><th class="text-right" style="width: 120px;">Total</th></tr></thead>
+                <tbody>${p.itens.map(i => `<tr><td><strong style="color: #0f172a;">${i.nome}</strong><br/><span style="color: #64748b; font-size: 12px; line-height: 1.4; display: inline-block; margin-top: 4px;">${i.desc.replace(/\|/g, '<br/>')}</span></td><td class="text-right font-bold">${i.qtdCarrinho}</td><td class="text-right font-bold">R$ ${((i.valorModal || 0) * (i.qtdCarrinho || 1)).toFixed(2)}</td></tr>`).join('')}</tbody>
+            </table>
+            <div class="totals">
+                <div class="total-line"><span>Subtotal:</span><span>R$ ${(p.total - (p.taxaPagto || 0) - (p.frete || 0) + (p.desconto || 0)).toFixed(2)}</span></div>
+                ${p.taxaPagto ? `<div class="total-line" style="color: ${p.taxaPagto > 0 ? '#ef4444' : '#10b981'}"><span>Taxa/Desc. Pgto:</span><span>${p.taxaPagto > 0 ? '+' : ''} R$ ${p.taxaPagto.toFixed(2)}</span></div>` : ''}
+                ${p.frete > 0 ? `<div class="total-line"><span>Frete:</span><span>+ R$ ${p.frete.toFixed(2)}</span></div>` : ''}
+                ${p.desconto > 0 ? `<div class="total-line" style="color: #ef4444"><span>Desconto:</span><span>- R$ ${p.desconto.toFixed(2)}</span></div>` : ''}
+                <div class="total-line grand-total"><span>Total Final:</span><span>R$ ${p.total.toFixed(2)}</span></div>
+            </div>
+            <div style="text-align: center;"><div class="validade"><i class="fa fa-clock"></i> Este orçamento é válido até ${dataValidade.toLocaleDateString('pt-BR')} (7 dias).</div></div>
+            <div class="footer">Agradecemos a oportunidade de apresentar nossa proposta.<br/>Para aprovar este orçamento, por favor entre em contato conosco via WhatsApp.</div>
+        </div>
+        <script>setTimeout(() => { window.print(); window.close(); }, 800);</script></body></html>
+    `);
+    janela.document.close();
+}
+
 // --- HISTÓRICO DO CLIENTE ---
 function verHistoricoCliente(idCli) { 
     const cliente = bdClientes.find(x => x.id === idCli); 
@@ -1085,5 +1411,3 @@ function verHistoricoCliente(idCli) {
     
     document.getElementById('modalHistoricoCli').classList.remove('hidden'); 
 }
-
-// FIM DO ARQUIVO
