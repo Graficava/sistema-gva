@@ -11,10 +11,10 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-let bdCategorias = [], bdProdutos = [], bdClientes = [], bdPedidos = [], bdAcabamentos = [], bdTransacoes = [], carrinho = [];
+let bdCategorias = [], bdProdutos = [], bdClientes = [], bdPedidos = [], bdAcabamentos = [], bdTransacoes = [], bdUsuarios = [], carrinho = [];
 let bdEmpresa = {};
 let usuarioAtual = null;
-const STATUSES = ["Aguardando pagamento", "Em produção", "Acabamento", "Pronto para Retirada", "Entregue", "Cancelado / Estorno"];
+const STATUSES = ["Orçamento", "Aguardando pagamento", "Em produção", "Acabamento", "Pronto para Retirada", "Entregue", "Cancelado / Estorno"];
 
 // --- AUTENTICAÇÃO E AUTO-LOGOUT ---
 auth.onAuthStateChanged(async user => {
@@ -141,6 +141,9 @@ function iniciarLeitura() {
     db.collection("pedidos").orderBy("data", "desc").limit(500).onSnapshot(s => {
         bdPedidos = s.docs.map(d => ({id: d.id, ...d.data()}));
         renderPedidosFinanceiro(); renderKanbanProducao(); renderDashboard(); renderOrcamentos(); renderAReceber();
+        if(document.getElementById('modalHistoricoGeral') && !document.getElementById('modalHistoricoGeral').classList.contains('hidden')) {
+            renderHistoricoGeral();
+        }
     });
     db.collection("transacoes").orderBy("data", "desc").limit(500).onSnapshot(s => {
         bdTransacoes = s.docs.map(d => ({id: d.id, ...d.data()}));
@@ -173,6 +176,7 @@ function mudarSubAba(sub, btn) {
 
 function fecharModal() { document.getElementById('modalW2P')?.classList.add('hidden'); }
 function fecharModalFora(event) { if (event.target.id === 'modalW2P') fecharModal(); }
+
 // --- DASHBOARD ---
 function renderDashboard() {
     const dashMesInput = document.getElementById('dashMesFiltro'); 
@@ -253,7 +257,6 @@ function imprimirDashboard() {
     janela.document.write(`<html><head><title>Relatório Mensal - ${mesFormatado}</title><style>body{font-family:sans-serif;padding:40px;color:#334155}.header{text-align:center;margin-bottom:40px;border-bottom:2px solid #e2e8f0;padding-bottom:20px}h1{color:#3E4095;margin:0 0 10px 0;font-size:28px;text-transform:uppercase}.cards{display:flex;gap:20px;margin-bottom:40px}.card{border:1px solid #e2e8f0;padding:20px;border-radius:8px;flex:1;background:#f8fafc;text-align:center}.card h3{margin:0 0 10px 0;font-size:12px;text-transform:uppercase;color:#64748b}.card p{margin:0;font-size:24px;font-weight:bold;color:#0f172a}.card.lucro p{color:#10b981}.card.desp p{color:#ef4444}h2{color:#3E4095;font-size:16px;text-transform:uppercase;border-bottom:1px solid #e2e8f0;padding-bottom:10px;margin-top:40px}table{width:100%;border-collapse:collapse;margin-bottom:30px;font-size:14px}th,td{border-bottom:1px solid #e2e8f0;padding:12px 8px;text-align:left}th{background:#f1f5f9;color:#475569;font-size:12px;text-transform:uppercase}.text-right{text-align:right}.text-center{text-align:center}@media print{body{padding:0}}</style></head><body><div class="header"><h1>Relatório de Desempenho</h1><p style="margin:0;color:#64748b;font-weight:bold;">Período: ${mesFormatado}</p></div><div class="cards"><div class="card"><h3>Faturamento Bruto</h3><p>${fat}</p></div><div class="card desp"><h3>Total de Despesas</h3><p>${desp}</p></div><div class="card lucro"><h3>Saldo / Lucro</h3><p>${lucro}</p></div></div><h2>Produtos Mais Vendidos</h2><table><thead><tr><th>Produto</th><th class="text-center">Qtd Vendida</th><th class="text-right">Receita Bruta (S/ Desc)</th></tr></thead><tbody>${tabProd}</tbody></table><h2>Melhores Clientes</h2><table><thead><tr><th>Cliente</th><th class="text-right">Volume Comprado</th></tr></thead><tbody>${tabCli}</tbody></table><div style="text-align:center;margin-top:50px;font-size:12px;color:#94a3b8;">Gerado pelo sistema GVAsist em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}</div><script>setTimeout(()=>{window.print();window.close();},800);</script></body></html>`);
     janela.document.close();
 }
-
 // --- ORÇAMENTOS (FOLLOW-UP) ---
 function renderOrcamentos() {
     const tbody = document.getElementById('listaOrcamentosTab');
@@ -398,6 +401,7 @@ function renderAcabTable() {
     const tab = document.getElementById('listaAcabamentosTab'); 
     if(tab) tab.innerHTML = bdAcabamentos.map(a => `<tr class="border-b border-slate-50"><td class="p-4 font-bold text-slate-600">${a.nome} <span class="text-[9px] text-slate-400 uppercase">(${a.grupo})</span></td><td class="p-4 text-center"><button type="button" onclick="editAcab('${a.id}')" class="text-indigo-500 mr-3 font-bold text-[10px] uppercase">Editar</button><button type="button" onclick="db.collection('acabamentos').doc('${a.id}').delete()" class="text-red-300 font-bold text-[10px]">X</button></td></tr>`).join(''); 
 }
+
 // --- PRODUTOS E ATRIBUTOS ---
 function ajustarCamposProduto() {
     const r = document.getElementById('prodRegraPreco')?.value;
@@ -447,7 +451,7 @@ function addOpcaoAtrib(container, n = '', p = '', fixo = false) {
     container.appendChild(div);
 }
 
-function addAtributo(nome = '', opcoes =[]) {
+function addAtributo(nome = '', opcoes = []) {
     const div = document.createElement('div');
     div.className = "bg-white p-4 rounded border border-slate-100 shadow-sm item-atrib";
     div.innerHTML = `
@@ -471,10 +475,10 @@ function addAtributo(nome = '', opcoes =[]) {
 }
 
 function addAtributoManual() { 
-    addAtributo('',[]); 
+    addAtributo('', []); 
 }
 
-function atualizarListaAcabamentosProduto(salvos =[]) {
+function atualizarListaAcabamentosProduto(salvos = []) {
     const container = document.getElementById('listaCheckAcabamentos');
     const catSelect = document.getElementById('prodCategoria');
     if(!container || !catSelect) return;
@@ -496,13 +500,13 @@ function atualizarListaAcabamentosProduto(salvos =[]) {
         `;
     }).join('');
 }
-
+// --- PRODUTOS E ATRIBUTOS ---
 async function salvarProduto() {
     const id = document.getElementById('prodId')?.value;
     
-    let atributos =[];
+    let atributos = [];
     document.querySelectorAll('.item-atrib').forEach(caixa => {
-        let ops =[];
+        let ops = [];
         caixa.querySelectorAll('.item-opcao').forEach(l => {
             const n = l.querySelector('.op-nome')?.value;
             const p = parseFloat(l.querySelector('.op-preco')?.value) || 0;
@@ -513,20 +517,20 @@ async function salvarProduto() {
         if (nomeAtrib) atributos.push({ nome: nomeAtrib, opcoes: ops });
     });
 
-    let acabList =[];
+    let acabList = [];
     document.querySelectorAll('.check-acab-prod:checked').forEach(chk => {
         const star = chk.closest('div').querySelector('.star-padrao');
         acabList.push({ id: chk.value, padrao: star?.classList.contains('text-amber-400') || false });
     });
 
-    let pacotes =[];
+    let pacotes = [];
     document.querySelectorAll('#listaGradePacotes > div').forEach(d => {
         const q = d.querySelector('.q')?.value; 
         const p = parseFloat(d.querySelector('.p')?.value);
         if (q && p) pacotes.push({ qtd: q, preco: p });
     });
 
-    let progressivo =[];
+    let progressivo = [];
     document.querySelectorAll('#listaGradeProgressivo > div').forEach(d => {
         const q = parseInt(d.querySelector('.q')?.value); 
         const p = parseFloat(d.querySelector('.p')?.value);
@@ -607,7 +611,7 @@ function editProd(id) {
     }
 
     ajustarCamposProduto();
-    atualizarListaAcabamentosProduto(p.acabamentos ||[]);
+    atualizarListaAcabamentosProduto(p.acabamentos || []);
     mudarSubAba('sub-prod', document.querySelectorAll('.sub-aba-btn')[1]);
 }
 
@@ -629,7 +633,7 @@ function renderProdTable() {
             <td class="p-4 text-slate-400 text-[10px] uppercase">${p.regraPreco}</td>
             <td class="p-4 text-center">
                 <button type="button" onclick="editProd('${p.id}')" class="text-indigo-500 mr-3 font-bold text-[10px] uppercase hover:text-indigo-700">Editar</button>
-                <button type="button" onclick="db.collection('produtos').doc('${p.id}').delete()" class="text-red-300 font-bold text-[10px] hover:text-red-500">X</button>
+                <button type="button" onclick="if(confirm('Excluir produto?')) db.collection('produtos').doc('${p.id}').delete()" class="text-red-300 font-bold text-[10px] hover:text-red-500">X</button>
             </td>
         </tr>
     `).join('');
@@ -707,7 +711,7 @@ function abrirConfigurador(id) {
             <div class="space-y-1 col-span-2"><label class="text-[10px] font-bold text-slate-400 uppercase">Quantidade</label><input type="number" id="w2pQtd" value="1" min="1" oninput="calcularPrecoAoVivo()" class="w-full p-3 border border-slate-200 rounded bg-slate-50 font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500"></div>
         `;
     } else if (regra === 'pacote') {
-        let opts = (p.pacotes ||[]).map(pct => `<option value="${pct.qtd}" data-preco="${pct.preco}">${pct.qtd} - R$ ${pct.preco.toFixed(2)}</option>`).join('');
+        let opts = (p.pacotes || []).map(pct => `<option value="${pct.qtd}" data-preco="${pct.preco}">${pct.qtd} - R$ ${pct.preco.toFixed(2)}</option>`).join('');
         divMedidas.innerHTML = `<div class="col-span-2 space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">Escolha o Pacote</label><select id="w2pPacote" onchange="calcularPrecoAoVivo()" class="w-full p-3 border border-slate-200 rounded bg-slate-50 font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500">${opts}</select></div>`;
     } else {
         divMedidas.innerHTML = `<div class="col-span-2 space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">Quantidade</label><input type="number" id="w2pQtd" value="1" min="1" oninput="calcularPrecoAoVivo()" class="w-full p-3 border border-slate-200 rounded bg-slate-50 font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500"></div>`;
@@ -732,7 +736,7 @@ function abrirConfigurador(id) {
 
     const divAcabamentos = document.getElementById('modalCorpoAcabamentos');
     const tituloAcabamentos = document.getElementById('tituloAcabamentos');
-    const acabPermitidos = p.acabamentos ||[];
+    const acabPermitidos = p.acabamentos || [];
     
     if (acabPermitidos.length > 0) {
         tituloAcabamentos.classList.remove('hidden');
@@ -924,14 +928,14 @@ function atualizarTotalFinal() {
 }
 
 function renderCliSelectCart() { 
-    const datalist = document.getElementById('listaClientesData'); 
+    const datalist = document.getElementById('listaClientesDatalist'); 
     if(datalist) {
         datalist.innerHTML = bdClientes.map(c => `<option value="${c.nome}"></option>`).join(''); 
     }
 }
 
 function atualizarInfoCreditoCarrinho() { 
-    const nomeCli = document.getElementById('cartCliente').value; 
+    const nomeCli = document.getElementById('cartClienteInput').value; 
     const label = document.getElementById('labelCreditoCli'); 
     const c = bdClientes.find(x => x.nome === nomeCli);
 
@@ -955,19 +959,28 @@ function toggleOpcoesEntrega() {
     atualizarTotalFinal(); 
 }
 
-async function enviarPedido(imprimir = false) {
+async function enviarPedido(imprimir = false, isOrcamento = false) {
     if (carrinho.length === 0) return alert("Carrinho vazio!");
     
-    const nomeCli = document.getElementById('cartCliente').value;
+    const nomeCli = document.getElementById('cartClienteInput').value;
     const clienteObj = bdClientes.find(c => c.nome === nomeCli);
     const idCli = clienteObj ? clienteObj.id : null;
 
     const total = parseFloat(document.getElementById('totalCarrinho').innerText.replace("R$ ",""));
-    const pago = parseFloat(document.getElementById('cartValorPago').value) || 0;
+    let pago = parseFloat(document.getElementById('cartValorPago').value) || 0;
     const desc = parseFloat(document.getElementById('cartDesconto').value) || 0;
+    const frete = parseFloat(document.getElementById('cartFreteValor').value) || 0;
+    
+    if(isOrcamento) pago = 0; // Orçamento não tem valor pago inicial
+    
     const saldo = total - pago;
     
-    const statusInicial = saldo > 0 ? "Aguardando pagamento" : "Em produção";
+    let statusInicial = "Em produção";
+    if (isOrcamento) {
+        statusInicial = "Orçamento";
+    } else if (saldo > 0) {
+        statusInicial = "Aguardando pagamento";
+    }
 
     const pedido = {
         clienteId: idCli || "Consumidor Final",
@@ -975,26 +988,34 @@ async function enviarPedido(imprimir = false) {
         itens: carrinho,
         total: total,
         desconto: desc,
+        frete: frete,
         valorPago: pago,
         saldoDevedor: saldo,
         data: new Date(),
-        status: statusInicial
+        status: statusInicial,
+        arquivado: false
     };
     
     const docRef = await db.collection("pedidos").add(pedido);
     
-    if (idCli && document.getElementById('cartPagamento').value === "Saldo_Cliente") {
+    if (!isOrcamento && idCli && document.getElementById('cartPagamento').value === "Saldo_Cliente") {
         await db.collection("clientes").doc(idCli).update({ credito: (clienteObj.credito || 0) - pago });
     }
     
     carrinho = []; 
     document.getElementById('cartValorPago').value = 0; 
     document.getElementById('cartDesconto').value = 0; 
-    document.getElementById('cartCliente').value = '';
+    document.getElementById('cartFreteValor').value = 0;
+    document.getElementById('cartClienteInput').value = '';
     renderCarrinho();
     
-    if(imprimir) imprimirReciboDireto(docRef.id, pedido);
-    else alert("PEDIDO SALVO!");
+    if(isOrcamento) {
+        alert("ORÇAMENTO GERADO COM SUCESSO!");
+        imprimirOrcamento(docRef.id, pedido);
+    } else {
+        alert("PEDIDO SALVO!");
+        if(imprimir) imprimirReciboDireto(docRef.id, pedido);
+    }
 }
 
 // --- KANBAN DE PRODUÇÃO ---
@@ -1003,8 +1024,12 @@ function renderKanbanProducao() {
     if(!container) return;
 
     let html = '';
+    const pedidosAtivos = bdPedidos.filter(p => !p.arquivado);
+
     STATUSES.forEach(status => {
-        const pedidosDoStatus = bdPedidos.filter(p => p.status === status);
+        if(status === 'Orçamento') return; // Orçamentos não entram no Kanban
+        
+        const pedidosDoStatus = pedidosAtivos.filter(p => p.status === status);
         html += `
             <div class="bg-slate-100 rounded-xl p-4 w-80 flex-shrink-0 flex flex-col kanban-col border border-slate-200">
                 <div class="flex justify-between items-center mb-4">
@@ -1023,7 +1048,7 @@ function renderKanbanProducao() {
 function gerarCardPedido(p) {
     const dataObj = p.data && p.data.toDate ? p.data.toDate() : new Date(p.data);
     const dataF = dataObj.toLocaleDateString('pt-BR') + ' ' + dataObj.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
-    let options = STATUSES.map(s => `<option value="${s}" ${p.status === s ? 'selected' : ''}>${s}</option>`).join('');
+    let options = STATUSES.filter(s => s !== 'Orçamento').map(s => `<option value="${s}" ${p.status === s ? 'selected' : ''}>${s}</option>`).join('');
 
     let corBorda = 'border-l-slate-400';
     if(p.status === 'Aguardando pagamento') corBorda = 'border-l-amber-400';
@@ -1032,6 +1057,9 @@ function gerarCardPedido(p) {
     if(p.status === 'Pronto para Retirada') corBorda = 'border-l-emerald-400';
     if(p.status === 'Entregue') corBorda = 'border-l-emerald-600';
     if(p.status === 'Cancelado / Estorno') corBorda = 'border-l-red-500';
+
+    let btnArquivar = (p.status === 'Entregue' || p.status === 'Cancelado / Estorno') ? `<button type="button" onclick="arquivarPedido('${p.id}')" class="bg-slate-200 text-slate-600 px-3 rounded hover:bg-slate-300 transition" title="Arquivar Pedido"><i class="fa fa-archive"></i></button>` : '';
+    let btnZAP = `<button type="button" onclick="enviarWhatsApp('${p.id}', '${p.status === 'Pronto para Retirada' ? 'retirada' : 'recibo'}')" class="bg-green-500 text-white px-3 rounded hover:bg-green-600 transition" title="Enviar WhatsApp"><i class="fab fa-whatsapp"></i></button>`;
 
     const itensHtml = (p.itens || []).map(i => `<p>• ${i.qtdCarrinho || 1}x (${i.qtdModal || 1} un.) ${i.nome} <span class="opacity-70">(${i.desc})</span></p>`).join('');
 
@@ -1043,10 +1071,12 @@ function gerarCardPedido(p) {
             </div>
             <h4 class="font-bold text-slate-800 text-xs mb-2">${p.clienteNome}</h4>
             <div class="text-[9px] text-slate-500 mb-3 space-y-1">${itensHtml}</div>
-            <div class="mt-3 pt-3 border-t border-slate-100 flex gap-2">
-                <select onchange="mudarStatusPedido('${p.id}', this.value)" class="flex-1 p-2 bg-slate-50 border border-slate-200 rounded text-[10px] font-bold outline-none focus:ring-2 focus:ring-indigo-500">
+            <div class="mt-3 pt-3 border-t border-slate-100 flex gap-2 flex-wrap">
+                <select onchange="mudarStatusPedido('${p.id}', this.value)" class="flex-1 p-2 bg-slate-50 border border-slate-200 rounded text-[10px] font-bold outline-none focus:ring-2 focus:ring-indigo-500 min-w-[100px]">
                     ${options}
                 </select>
+                ${btnArquivar}
+                ${btnZAP}
                 <button type="button" onclick="imprimirOSA4('${p.id}')" class="bg-slate-800 text-white px-3 rounded hover:bg-slate-700 transition" title="Imprimir OS (A4)"><i class="fa fa-file-pdf"></i></button>
             </div>
         </div>
@@ -1060,6 +1090,195 @@ async function mudarStatusPedido(id, novoStatus) {
         console.error(e); 
         alert("Erro ao atualizar status."); 
     }
+}
+
+async function arquivarPedido(id) { 
+    if(confirm("Deseja remover este pedido do painel de produção? Ele continuará salvo no histórico e financeiro.")) { 
+        try { await db.collection("pedidos").doc(id).update({ arquivado: true }); } 
+        catch(e) { alert("Erro ao arquivar pedido."); } 
+    } 
+}
+
+// --- HISTÓRICO GERAL ---
+function abrirHistoricoGeral() { 
+    document.getElementById('buscaHistoricoGeral').value = ''; 
+    renderHistoricoGeral(); 
+    document.getElementById('modalHistoricoGeral').classList.remove('hidden'); 
+}
+
+function renderHistoricoGeral() {
+    const termo = document.getElementById('buscaHistoricoGeral').value.toLowerCase(); 
+    const tbody = document.getElementById('listaHistoricoGeral');
+    if(!tbody) return;
+    
+    let filtrados = bdPedidos; 
+    if (termo) filtrados = bdPedidos.filter(p => p.clienteNome.toLowerCase().includes(termo) || p.status.toLowerCase().includes(termo) || p.id.toLowerCase().includes(termo));
+    
+    tbody.innerHTML = filtrados.length === 0 ? `<tr><td colspan="5" class="p-6 text-center text-slate-400">Nenhum pedido encontrado.</td></tr>` : filtrados.map(p => {
+        const dataFormatada = p.data.toDate ? p.data.toDate().toLocaleDateString('pt-BR') : new Date(p.data).toLocaleDateString('pt-BR');
+        const isArquivado = p.arquivado ? `<span class="bg-slate-200 text-slate-500 px-2 py-0.5 rounded text-[9px] uppercase ml-2">Arquivado</span>` : '';
+        let btnDesarquivar = p.arquivado ? `<button type="button" onclick="desarquivarPedido('${p.id}')" class="text-amber-500 hover:text-amber-700 mx-1" title="Voltar para Produção"><i class="fa fa-box-open"></i></button>` : '';
+        let btnExcluir = (usuarioAtual && usuarioAtual.role === 'admin') ? `<button type="button" onclick="excluirPedido('${p.id}')" class="text-red-400 hover:text-red-600 mx-1" title="Excluir Pedido Permanentemente"><i class="fa fa-trash"></i></button>` : '';
+        
+        return `<tr class="border-b border-slate-50 hover:bg-slate-50"><td class="p-3 text-slate-500 font-medium">${dataFormatada} <br/><span class="text-[9px] text-slate-400 uppercase">${p.id.substring(0,6)}</span></td><td class="p-3 font-bold text-slate-700">${p.clienteNome} ${isArquivado}</td><td class="p-3"><span class="bg-indigo-50 text-indigo-600 px-2 py-1 rounded text-[9px] font-black uppercase">${p.status}</span></td><td class="p-3 text-right font-black text-slate-800">R$ ${p.total.toFixed(2)}</td><td class="p-3 text-center">${btnDesarquivar}<button type="button" onclick="${p.status === 'Orçamento' ? `imprimirOrcamento('${p.id}')` : `imprimirRecibo('${p.id}')`}" class="text-slate-400 hover:text-slate-600 mx-1" title="Imprimir Recibo/PDF"><i class="fa fa-print"></i></button>${btnExcluir}</td></tr>`;
+    }).join('');
+}
+
+async function desarquivarPedido(id) { 
+    if(confirm("Deseja voltar este pedido para o painel de Produção?")) { 
+        try { await db.collection("pedidos").doc(id).update({ arquivado: false }); renderHistoricoGeral(); } 
+        catch(e) { alert("Erro ao desarquivar pedido."); } 
+    } 
+}
+
+async function excluirPedido(id) { 
+    if(usuarioAtual.role !== 'admin') return alert("Sem permissão."); 
+    if(confirm("ATENÇÃO: Tem certeza que deseja EXCLUIR PERMANENTEMENTE este pedido? Esta ação não pode ser desfeita.")) { 
+        try { await db.collection("pedidos").doc(id).delete(); renderHistoricoGeral(); } 
+        catch(e) { alert("Erro ao excluir pedido."); } 
+    } 
+}
+
+// --- A RECEBER (FATURADOS) ---
+function renderAReceber() {
+    const tab = document.getElementById('listaAReceberTab');
+    if(!tab) return;
+    
+    const devedores = bdPedidos.filter(p => p.saldoDevedor > 0 && p.status !== 'Cancelado / Estorno');
+    let html = '';
+    
+    const clientesDev = {};
+    devedores.forEach(p => {
+        if(!clientesDev[p.clienteId]) clientesDev[p.clienteId] = { nome: p.clienteNome, pedidos: [], total: 0 };
+        clientesDev[p.clienteId].pedidos.push(p);
+        clientesDev[p.clienteId].total += p.saldoDevedor;
+    });
+    
+    if(Object.keys(clientesDev).length === 0) {
+        tab.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-slate-400">Nenhum cliente com saldo devedor.</td></tr>`;
+        return;
+    }
+    
+    for(let cliId in clientesDev) {
+        const c = clientesDev[cliId];
+        html += `
+            <tr class="border-b border-slate-50 bg-slate-50/50">
+                <td class="p-4 font-bold text-slate-700">${c.nome}</td>
+                <td class="p-4 text-center text-slate-500">${c.pedidos.length} pedido(s)</td>
+                <td class="p-4 text-right font-black text-red-500">R$ ${c.total.toFixed(2)}</td>
+                <td class="p-4 text-center">
+                    <button type="button" onclick="document.getElementById('dev-${cliId}').classList.toggle('hidden')" class="text-indigo-500 font-bold text-[10px] uppercase hover:underline">Ver Pedidos</button>
+                </td>
+            </tr>
+            <tr id="dev-${cliId}" class="hidden">
+                <td colspan="4" class="p-4 bg-white border-b border-slate-200">
+                    <table class="w-full text-xs">
+        `;
+        c.pedidos.forEach(p => {
+            const dataObj = p.data && p.data.toDate ? p.data.toDate() : new Date(p.data);
+            html += `
+                <tr class="border-b border-slate-50">
+                    <td class="py-2 text-slate-500">${dataObj.toLocaleDateString('pt-BR')} <br><span class="text-[9px] uppercase">ID: ${p.id.substring(0,6)}</span></td>
+                    <td class="py-2 text-right font-bold text-red-400">Falta: R$ ${p.saldoDevedor.toFixed(2)}</td>
+                    <td class="py-2 text-right">
+                        <button type="button" onclick="abrirModalReceber('${p.id}', ${p.saldoDevedor})" class="bg-emerald-500 text-white px-3 py-1.5 rounded text-[9px] font-bold uppercase hover:bg-emerald-600 shadow-sm">Receber</button>
+                        <button type="button" onclick="cobrarWhatsApp('${p.id}', ${p.saldoDevedor})" class="bg-green-500 text-white px-3 py-1.5 rounded text-[9px] font-bold uppercase hover:bg-green-600 shadow-sm ml-1"><i class="fab fa-whatsapp"></i> Cobrar</button>
+                    </td>
+                </tr>
+            `;
+        });
+        html += `</table></td></tr>`;
+    }
+    tab.innerHTML = html;
+}
+
+function abrirModalReceber(idPedido, saldo) {
+    document.getElementById('recSaldoIdPedido').value = idPedido;
+    document.getElementById('recSaldoValor').value = saldo.toFixed(2);
+    document.getElementById('modalReceberSaldo').classList.remove('hidden');
+}
+
+async function confirmarRecebimentoSaldo() {
+    const idPedido = document.getElementById('recSaldoIdPedido').value;
+    const valorRecebido = parseFloat(document.getElementById('recSaldoValor').value);
+    const formaPagto = document.getElementById('recSaldoForma').value;
+    
+    if(!valorRecebido || valorRecebido <= 0) return alert("Informe um valor válido.");
+    
+    const p = bdPedidos.find(x => x.id === idPedido);
+    if(!p) return;
+    
+    const novoValorPago = (p.valorPago || 0) + valorRecebido;
+    const novoSaldo = p.total - p.desconto - novoValorPago;
+    
+    try {
+        await db.collection("pedidos").doc(idPedido).update({
+            valorPago: novoValorPago,
+            saldoDevedor: novoSaldo < 0 ? 0 : novoSaldo,
+            status: (novoSaldo <= 0 && p.status === 'Aguardando pagamento') ? 'Em produção' : p.status
+        });
+        
+        await db.collection("transacoes").add({
+            tipo: 'entrada',
+            descricao: `Recebimento Faturado - Pedido ${idPedido.substring(0,6).toUpperCase()} (${p.clienteNome})`,
+            valor: valorRecebido,
+            formaPagamento: formaPagto,
+            data: new Date()
+        });
+        
+        alert("Pagamento recebido com sucesso!");
+        document.getElementById('modalReceberSaldo').classList.add('hidden');
+        renderAReceber();
+    } catch(e) {
+        alert("Erro ao processar recebimento.");
+    }
+}
+
+function cobrarWhatsApp(idPedido, saldo) {
+    const p = bdPedidos.find(x => x.id === idPedido);
+    if (!p) return;
+    let telefone = ""; 
+    if (p.clienteId && p.clienteId !== "Consumidor Final") { 
+        const cli = bdClientes.find(c => c.id === p.clienteId); 
+        if (cli && cli.telefone) telefone = cli.telefone.replace(/\D/g, ''); 
+    }
+    
+    const texto = `Olá *${p.clienteNome}*! Tudo bem?\n\nConsta em nosso sistema um saldo pendente no valor de *R$ ${saldo.toFixed(2)}* referente ao pedido *${idPedido.substring(0,6).toUpperCase()}*.\n\nPodemos confirmar a previsão de pagamento? Qualquer dúvida, estamos à disposição!`;
+    
+    if (!telefone || telefone.length < 10) return alert("Cliente sem telefone cadastrado. Atualize o cadastro primeiro.");
+    if (telefone.length === 10 || telefone.length === 11) telefone = "55" + telefone;
+    window.open(`https://wa.me/${telefone}?text=${encodeURIComponent(texto)}`, '_blank'); 
+}
+
+// --- WHATSAPP (GENÉRICO) ---
+function enviarWhatsApp(idPedido, tipo, objPedido = null) {
+    const p = objPedido || bdPedidos.find(x => x.id === idPedido); if (!p) return;
+    let telefone = ""; 
+    if (p.clienteId && p.clienteId !== "Consumidor Final") { 
+        const cli = bdClientes.find(c => c.id === p.clienteId); 
+        if (cli && cli.telefone) telefone = cli.telefone.replace(/\D/g, ''); 
+    }
+    
+    const itensTexto = p.itens.map(i => `▫️ ${i.qtdCarrinho || 1}x ${i.nome} - R$ ${((i.valorModal || 0) * (i.qtdCarrinho || 1)).toFixed(2)}`).join('\n'); 
+    const totalStr = p.total.toFixed(2);
+    let texto = "";
+    
+    if (tipo === 'orcamento') texto = `Olá *${p.clienteNome}*! Tudo bem?\n\nSegue o seu orçamento da *GVA Gráfica*:\n\n${itensTexto}\n\n*Total: R$ ${totalStr}*\n\nQualquer dúvida, estamos à disposição! Para aprovar, é só responder esta mensagem.`;
+    else if (tipo === 'retirada') texto = `Olá *${p.clienteNome}*!\n\nSó passando para avisar que o seu pedido (Ref: ${idPedido.substring(0,6).toUpperCase()}) já está *PRONTO PARA RETIRADA* aqui na GVA Gráfica! 🚀\n\nTotal do pedido: R$ ${totalStr}\n${p.saldoDevedor > 0 ? `Saldo a pagar na retirada: *R$ ${p.saldoDevedor.toFixed(2)}*\n` : ''}Te esperamos!`;
+    else if (tipo === 'recibo') texto = `Olá *${p.clienteNome}*!\n\nSeu pedido foi registrado com sucesso na *GVA Gráfica*! (Ref: ${idPedido.substring(0,6).toUpperCase()})\n\n*Resumo:*\n${itensTexto}\n\n*Total: R$ ${totalStr}*\nValor Pago: R$ ${(p.valorPago || 0).toFixed(2)}\n${p.saldoDevedor > 0 ? `Saldo a pagar: R$ ${p.saldoDevedor.toFixed(2)}\n` : ''}Acompanharemos a produção e avisaremos quando estiver pronto!`;
+    
+    document.getElementById('zapTelefone').value = telefone; 
+    document.getElementById('zapMensagem').value = texto; 
+    document.getElementById('modalWhatsApp').classList.remove('hidden');
+}
+
+function confirmarEnvioWhatsApp() {
+    let telefone = document.getElementById('zapTelefone').value.replace(/\D/g, ''); 
+    let texto = document.getElementById('zapMensagem').value;
+    if (!telefone || telefone.length < 10) return alert("Por favor, insira um número de telefone válido com DDD.");
+    if (telefone.length === 10 || telefone.length === 11) telefone = "55" + telefone;
+    window.open(`https://wa.me/${telefone}?text=${encodeURIComponent(texto)}`, '_blank'); 
+    document.getElementById('modalWhatsApp').classList.add('hidden');
 }
 
 // --- FINANCEIRO ---
@@ -1214,7 +1433,7 @@ function editEmpresa() {
     if(document.getElementById('empresaConta')) document.getElementById('empresaConta').value = bdEmpresa.conta || '';
 }
 
-// --- IMPRESSÃO DE RECIBO E OS ---
+// --- IMPRESSÃO DE RECIBO (TÉRMICA 80MM) ---
 function imprimirReciboDireto(idPedido, objPedido) {
     const p = objPedido || bdPedidos.find(x => x.id === idPedido);
     if(!p) return;
@@ -1232,14 +1451,14 @@ function imprimirReciboDireto(idPedido, objPedido) {
             body { font-family: monospace; width: 80mm; margin: 0; padding: 10px; color: #000; font-size: 12px; }
             .center { text-align: center; } .bold { font-weight: bold; } .linha { border-bottom: 1px dashed #000; margin: 8px 0; }
             table { width: 100%; font-size: 12px; border-collapse: collapse; } th, td { text-align: left; padding: 2px 0; vertical-align: top; } .right { text-align: right; }
-            img.logo { max-width: 150px; margin: 0 auto 10px auto; display: block; }
+            img.logo { max-width: 150px; margin: 0 auto 10px auto; display: block; filter: grayscale(100%); }
             @media print { .page-break { page-break-before: always; } }
             .prod-item { font-size: 14px; font-weight: bold; margin-bottom: 4px; }
             .prod-desc { font-size: 12px; margin-bottom: 10px; padding-left: 10px; }
         </style></head><body>
 
         <!-- VIA DO CLIENTE -->
-        <img src="https://i.postimg.cc/1RCc58qN/gva-br-1-ERP-26.png" class="logo" alt="GVA Gráfica" style="filter: grayscale(100%);" />
+        <img src="https://i.postimg.cc/1RCc58qN/gva-br-1-ERP-26.png" class="logo" alt="GVA Gráfica" />
         <div class="center bold" style="font-size: 14px;">Gráfica Venom Arts LTDA</div>
         <div class="center" style="font-size: 10px; margin-bottom: 10px;">
             ${dadosEmpresaHtml}
@@ -1290,6 +1509,7 @@ function imprimirRecibo(idPedido) {
     imprimirReciboDireto(idPedido, null); 
 }
 
+// --- IMPRESSÃO DE ORDEM DE SERVIÇO (A4) ---
 function imprimirOSA4(idPedido) {
     const p = bdPedidos.find(x => x.id === idPedido);
     if(!p) return;
@@ -1367,9 +1587,7 @@ function imprimirOrcamento(idPedido) {
                 <tbody>${p.itens.map(i => `<tr><td><strong style="color: #0f172a;">${i.nome}</strong><br/><span style="color: #64748b; font-size: 12px; line-height: 1.4; display: inline-block; margin-top: 4px;">${i.desc.replace(/\|/g, '<br/>')}</span></td><td class="text-right font-bold">${i.qtdCarrinho}</td><td class="text-right font-bold">R$ ${((i.valorModal || 0) * (i.qtdCarrinho || 1)).toFixed(2)}</td></tr>`).join('')}</tbody>
             </table>
             <div class="totals">
-                <div class="total-line"><span>Subtotal:</span><span>R$ ${(p.total - (p.taxaPagto || 0) - (p.frete || 0) + (p.desconto || 0)).toFixed(2)}</span></div>
-                ${p.taxaPagto ? `<div class="total-line" style="color: ${p.taxaPagto > 0 ? '#ef4444' : '#10b981'}"><span>Taxa/Desc. Pgto:</span><span>${p.taxaPagto > 0 ? '+' : ''} R$ ${p.taxaPagto.toFixed(2)}</span></div>` : ''}
-                ${p.frete > 0 ? `<div class="total-line"><span>Frete:</span><span>+ R$ ${p.frete.toFixed(2)}</span></div>` : ''}
+                <div class="total-line"><span>Subtotal:</span><span>R$ ${(p.total - (p.desconto || 0)).toFixed(2)}</span></div>
                 ${p.desconto > 0 ? `<div class="total-line" style="color: #ef4444"><span>Desconto:</span><span>- R$ ${p.desconto.toFixed(2)}</span></div>` : ''}
                 <div class="total-line grand-total"><span>Total Final:</span><span>R$ ${p.total.toFixed(2)}</span></div>
             </div>
@@ -1406,114 +1624,4 @@ function verHistoricoCliente(idCli) {
     }).join(''); 
     
     document.getElementById('modalHistoricoCli').classList.remove('hidden'); 
-}
-// --- A RECEBER (FATURADOS) ---
-function renderAReceber() {
-    const tab = document.getElementById('listaAReceberTab');
-    if(!tab) return;
-    
-    const devedores = bdPedidos.filter(p => p.saldoDevedor > 0 && p.status !== 'Cancelado / Estorno');
-    let html = '';
-    
-    const clientesDev = {};
-    devedores.forEach(p => {
-        if(!clientesDev[p.clienteId]) clientesDev[p.clienteId] = { nome: p.clienteNome, pedidos: [], total: 0 };
-        clientesDev[p.clienteId].pedidos.push(p);
-        clientesDev[p.clienteId].total += p.saldoDevedor;
-    });
-    
-    if(Object.keys(clientesDev).length === 0) {
-        tab.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-slate-400">Nenhum cliente com saldo devedor.</td></tr>`;
-        return;
-    }
-    
-    for(let cliId in clientesDev) {
-        const c = clientesDev[cliId];
-        html += `
-            <tr class="border-b border-slate-50 bg-slate-50/50">
-                <td class="p-4 font-bold text-slate-700">${c.nome}</td>
-                <td class="p-4 text-center text-slate-500">${c.pedidos.length} pedido(s)</td>
-                <td class="p-4 text-right font-black text-red-500">R$ ${c.total.toFixed(2)}</td>
-                <td class="p-4 text-center">
-                    <button type="button" onclick="document.getElementById('dev-${cliId}').classList.toggle('hidden')" class="text-indigo-500 font-bold text-[10px] uppercase hover:underline">Ver Pedidos</button>
-                </td>
-            </tr>
-            <tr id="dev-${cliId}" class="hidden">
-                <td colspan="4" class="p-4 bg-white border-b border-slate-200">
-                    <table class="w-full text-xs">
-        `;
-        c.pedidos.forEach(p => {
-            const dataObj = p.data && p.data.toDate ? p.data.toDate() : new Date(p.data);
-            html += `
-                <tr class="border-b border-slate-50">
-                    <td class="py-2 text-slate-500">${dataObj.toLocaleDateString('pt-BR')} <br><span class="text-[9px] uppercase">ID: ${p.id.substring(0,6)}</span></td>
-                    <td class="py-2 text-right font-bold text-red-400">Falta: R$ ${p.saldoDevedor.toFixed(2)}</td>
-                    <td class="py-2 text-right">
-                        <button type="button" onclick="abrirModalReceber('${p.id}', ${p.saldoDevedor})" class="bg-emerald-500 text-white px-3 py-1.5 rounded text-[9px] font-bold uppercase hover:bg-emerald-600 shadow-sm">Receber</button>
-                        <button type="button" onclick="cobrarWhatsApp('${p.id}', ${p.saldoDevedor})" class="bg-green-500 text-white px-3 py-1.5 rounded text-[9px] font-bold uppercase hover:bg-green-600 shadow-sm ml-1"><i class="fab fa-whatsapp"></i> Cobrar</button>
-                    </td>
-                </tr>
-            `;
-        });
-        html += `</table></td></tr>`;
-    }
-    tab.innerHTML = html;
-}
-
-function abrirModalReceber(idPedido, saldo) {
-    document.getElementById('recSaldoIdPedido').value = idPedido;
-    document.getElementById('recSaldoValor').value = saldo.toFixed(2);
-    document.getElementById('modalReceberSaldo').classList.remove('hidden');
-}
-
-async function confirmarRecebimentoSaldo() {
-    const idPedido = document.getElementById('recSaldoIdPedido').value;
-    const valorRecebido = parseFloat(document.getElementById('recSaldoValor').value);
-    const formaPagto = document.getElementById('recSaldoForma').value;
-    
-    if(!valorRecebido || valorRecebido <= 0) return alert("Informe um valor válido.");
-    
-    const p = bdPedidos.find(x => x.id === idPedido);
-    if(!p) return;
-    
-    const novoValorPago = (p.valorPago || 0) + valorRecebido;
-    const novoSaldo = p.total - p.desconto - novoValorPago;
-    
-    try {
-        await db.collection("pedidos").doc(idPedido).update({
-            valorPago: novoValorPago,
-            saldoDevedor: novoSaldo < 0 ? 0 : novoSaldo,
-            status: (novoSaldo <= 0 && p.status === 'Aguardando pagamento') ? 'Em produção' : p.status
-        });
-        
-        await db.collection("transacoes").add({
-            tipo: 'entrada',
-            descricao: `Recebimento Faturado - Pedido ${idPedido.substring(0,6).toUpperCase()} (${p.clienteNome})`,
-            valor: valorRecebido,
-            formaPagamento: formaPagto,
-            data: new Date()
-        });
-        
-        alert("Pagamento recebido com sucesso!");
-        document.getElementById('modalReceberSaldo').classList.add('hidden');
-        renderAReceber();
-    } catch(e) {
-        alert("Erro ao processar recebimento.");
-    }
-}
-
-function cobrarWhatsApp(idPedido, saldo) {
-    const p = bdPedidos.find(x => x.id === idPedido);
-    if (!p) return;
-    let telefone = ""; 
-    if (p.clienteId && p.clienteId !== "Consumidor Final") { 
-        const cli = bdClientes.find(c => c.id === p.clienteId); 
-        if (cli && cli.telefone) telefone = cli.telefone.replace(/\D/g, ''); 
-    }
-    
-    const texto = `Olá *${p.clienteNome}*! Tudo bem?\n\nConsta em nosso sistema um saldo pendente no valor de *R$ ${saldo.toFixed(2)}* referente ao pedido *${idPedido.substring(0,6).toUpperCase()}*.\n\nPodemos confirmar a previsão de pagamento? Qualquer dúvida, estamos à disposição!`;
-    
-    if (!telefone || telefone.length < 10) return alert("Cliente sem telefone cadastrado. Atualize o cadastro primeiro.");
-    if (telefone.length === 10 || telefone.length === 11) telefone = "55" + telefone;
-    window.open(`https://wa.me/${telefone}?text=${encodeURIComponent(texto)}`, '_blank'); 
 }
