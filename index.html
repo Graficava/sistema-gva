@@ -221,7 +221,7 @@
                                 <div class="grid grid-cols-2 gap-2">
                                     <div class="space-y-1">
                                         <label class="text-[10px] font-bold text-slate-400 uppercase">Pagamento</label>
-                                        <select id="cartPagamento" onchange="toggleOpcoesPagamento()" class="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs font-bold outline-none">
+                                        <select id="cartPagamento" onchange="toggleOpcoesPagamento(); atualizarTotalFinal();" class="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs font-bold outline-none">
                                             <option value="Pix">Pix</option>
                                             <option value="Dinheiro">Dinheiro</option>
                                             <option value="Debito">Débito</option>
@@ -275,6 +275,10 @@
                                     <div class="flex justify-between text-slate-400 font-bold text-xs">
                                         <span>Subtotal:</span>
                                         <span id="subtotalCart">R$ 0.00</span>
+                                    </div>
+                                    <div class="flex justify-between text-slate-400 font-bold text-xs">
+                                        <span>Taxa/Desc. Pgto:</span>
+                                        <span id="cartTaxaPagto">R$ 0.00</span>
                                     </div>
                                     <div class="flex justify-between text-xl font-black text-slate-900 mt-2 pt-2 border-t border-slate-100">
                                         <span>A Pagar:</span>
