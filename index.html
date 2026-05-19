@@ -376,6 +376,7 @@
                 <section id="aba-cadastros" class="aba-content hidden h-full overflow-y-auto pr-2 custom-scrollbar">
                     <div class="flex gap-8 border-b border-slate-200 mb-8 overflow-x-auto shrink-0 custom-scrollbar pb-2">
                         <button type="button" onclick="mudarSubAba('sub-cli', this)" class="sub-aba-btn pb-4 font-bold text-slate-400 active-sub text-indigo-600">Clientes</button>
+                        <button type="button" onclick="mudarSubAba('sub-areceber', this)" class="sub-aba-btn pb-4 font-bold text-slate-400">A Receber</button>
                         <button type="button" onclick="mudarSubAba('sub-prod', this)" class="sub-aba-btn pb-4 font-bold text-slate-400">Produtos</button>
                         <button type="button" onclick="mudarSubAba('sub-cat', this)" class="sub-aba-btn pb-4 font-bold text-slate-400">Categorias</button>
                         <button type="button" onclick="mudarSubAba('sub-acab', this)" class="sub-aba-btn pb-4 font-bold text-slate-400">Acabamentos</button>
@@ -415,7 +416,29 @@
                             </table>
                         </div>
                     </div>
-
+                    
+<!-- A RECEBER -->
+<div id="sub-areceber" class="sub-aba-content hidden">
+    <div class="bg-white p-6 rounded shadow-sm border border-slate-200 mb-6">
+        <h3 class="font-bold text-slate-800 uppercase text-xs tracking-widest mb-2"><i class="fa fa-file-invoice-dollar text-red-500 mr-2"></i> Clientes com Saldo Devedor (Faturados)</h3>
+        <p class="text-[10px] text-slate-500">Abaixo estão listados todos os clientes que possuem pedidos com saldo a pagar ou faturados no sistema.</p>
+    </div>
+    
+    <div class="bg-white rounded shadow-sm border border-slate-200 overflow-hidden">
+        <table class="w-full text-left text-xs font-bold">
+            <thead class="bg-slate-50 text-slate-400 uppercase tracking-wider">
+                <tr>
+                    <th class="p-4">Cliente</th>
+                    <th class="p-4 text-center">Qtd. Pedidos Pendentes</th>
+                    <th class="p-4 text-right">Total Devido</th>
+                    <th class="p-4 text-center">Ações</th>
+                </tr>
+            </thead>
+            <tbody id="listaAReceberTab"></tbody>
+        </table>
+    </div>
+</div>
+                    
                     <!-- PRODUTOS -->
                     <div id="sub-prod" class="sub-aba-content hidden">
                         <div class="bg-white p-6 rounded shadow-sm border border-slate-200 mb-8">
@@ -667,6 +690,35 @@
                     </div>
                 </div>
 
+                <!-- MODAL RECEBER SALDO -->
+<div id="modalReceberSaldo" class="fixed inset-0 bg-slate-900/60 hidden z-50 flex items-center justify-center p-4 backdrop-blur-md">
+    <div class="bg-white w-full max-w-sm rounded-lg shadow-2xl flex flex-col p-6 overflow-hidden">
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="text-lg font-black text-slate-900 uppercase tracking-tighter">Receber Pagamento</h3>
+            <button type="button" onclick="document.getElementById('modalReceberSaldo').classList.add('hidden')" class="text-slate-400 hover:text-red-500 text-xl leading-none">&times;</button>
+        </div>
+        <div class="space-y-4">
+            <input type="hidden" id="recSaldoIdPedido" />
+            <div class="space-y-1">
+                <label class="text-[10px] font-bold text-slate-400 uppercase">Valor a Receber R$</label>
+                <input type="number" id="recSaldoValor" class="w-full p-3 bg-slate-50 border border-slate-200 rounded text-sm font-bold outline-none focus:ring-2 focus:ring-emerald-500" />
+            </div>
+            <div class="space-y-1">
+                <label class="text-[10px] font-bold text-slate-400 uppercase">Forma de Pagamento</label>
+                <select id="recSaldoForma" class="w-full p-3 bg-slate-50 border border-slate-200 rounded text-sm font-bold outline-none focus:ring-2 focus:ring-emerald-500">
+                    <option value="Pix">Pix</option>
+                    <option value="Dinheiro">Dinheiro</option>
+                    <option value="Debito">Débito</option>
+                    <option value="Credito_Vista">Crédito à Vista</option>
+                    <option value="Credito_Parcelado">Crédito Parcelado</option>
+                    <option value="Saldo_Cliente">Saldo de Crédito</option>
+                </select>
+            </div>
+            <button type="button" onclick="confirmarRecebimentoSaldo()" class="w-full bg-emerald-600 text-white py-3 rounded font-bold text-xs hover:bg-emerald-700 transition uppercase tracking-widest shadow-md mt-2">Confirmar Pagamento</button>
+        </div>
+    </div>
+</div>
+                
             </main>
         </div>
     </div>
