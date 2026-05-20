@@ -14,6 +14,7 @@ const db = firebase.firestore();
 let bdCategorias = [], bdProdutos = [], bdClientes = [], bdPedidos = [], bdAcabamentos = [], bdTransacoes = [], bdUsuarios = [], carrinho = [];
 let bdEmpresa = {};
 let usuarioAtual = null;
+let filtroSetor = 'Todos', filtroCategoria = 'Todas', filtroSubcategoria = 'Todas';
 const STATUSES = ["Orçamento", "Aguardando pagamento", "Em produção", "Acabamento", "Pronto para Retirada", "Entregue", "Cancelado / Estorno"];
 
 // --- UX: FECHAR MODAIS CLICANDO FORA ---
@@ -299,517 +300,124 @@ function renderOrcamentos() {
     }).join('');
 }
 
-// --- KANBAN DE PRODUÇÃO (INTELIGENTE) ---
-function renderKanbanProducao() {
-    const container = document.getElementById('kanbanContainer');
-    if(!container) return;
-
-    let html = '';
-    const pedidosAtivos = bdPedidos.filter(p => !p.arquivado);
-
-    STATUSES.forEach(status => {
-        if(status === 'Orçamento') return; 
-        
-        const pedidosDoStatus = pedidosAtivos.filter(p => p.status === status);
-        const isVazio = pedidosDoStatus.length === 0;
-        
-        // Classes para minimizar a coluna se estiver vazia
-        const minClass = isVazio ? 'minimized items-center' : '';
-        const headerClass = isVazio ? 'flex-col-reverse justify-center' : 'justify-between items-center';
-        const titleClass = isVazio ? 'vertical-text mt-6' : '';
-        const badgeClass = isVazio ? 'mb-4' : '';
-
-        html += `
-            <div onclick="if(this.classList.contains('minimized')) { this.classList.remove('minimized', 'items-center'); this.querySelector('.k-header').classList.remove('flex-col-reverse', 'justify-center'); this.querySelector('.k-header').classList.add('justify-between', 'items-center'); this.querySelector('h3').classList.remove('vertical-text', 'mt-6'); this.querySelector('.k-badge').classList.remove('mb-4'); }" class="bg-slate-100 rounded-xl p-4 w-80 flex-shrink-0 flex flex-col kanban-col border border-slate-200 ${minClass}">
-                <div class="k-header flex ${headerClass} w-full mb-4 shrink-0 transition-all">
-                    <h3 class="font-bold text-slate-700 uppercase text-[10px] tracking-widest ${titleClass}">${status}</h3>
-                    <span class="k-badge bg-slate-200 text-slate-600 text-[10px] font-black px-2 py-1 rounded-full ${badgeClass}">${pedidosDoStatus.length}</span>
-                </div>
-                <div class="kanban-cards flex-1 overflow-y-auto space-y-3 pr-1 custom-scrollbar">
-                    ${pedidosDoStatus.map(p => gerarCardPedido(p)).join('')}
-                </div>
-            </div>
-        `;
-    });
-    container.innerHTML = html;
+// --- CLIENTES ---
+async function salvarCliente() { 
+    const id = document.getElementById('cliId')?.value; 
+    const d = { 
+        nome: document.getElementById('cliNome')?.value || '', 
+        documento: document.getElementById('cliDoc')?.value || '', 
+        telefone: document.getElementById('cliTel')?.value || '', 
+        endereco: document.getElementById('cliEnd')?.value || '', 
+        credito: parseFloat(document.getElementById('cliCredito')?.value) || 0 
+    }; 
+    if(!d.nome) return alert("Nome obrigatório"); 
+    if(id) await db.collection("clientes").doc(id).update(d); 
+    else await db.collection("clientes").add(d); 
+    limparFormCli(); 
 }
 
-function gerarCardPedido(p) {
-    const dataObj = p.data && p.data.toDate ? p.data.toDate() : new Date(p.data);
-    const dataF = dataObj.toLocaleDateString('pt-BR') + ' ' + dataObj.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
-    let options = STATUSES.filter(s => s !== 'Orçamento').map(s => `<option value="${s}" ${p.status === s ? 'selected' : ''}>${s}</option>`).join('');
-
-    let corBorda = 'border-l-slate-400';
-    if(p.status === 'Aguardando pagamento') corBorda = 'border-l-amber-400';
-    if(p.status === 'Em produção') corBorda = 'border-l-blue-500';
-    if(p.status === 'Acabamento') corBorda = 'border-l-indigo-500';
-    if(p.status === 'Pronto para Retirada') corBorda = 'border-l-emerald-400';
-    if(p.status === 'Entregue') corBorda = 'border-l-emerald-600';
-    if(p.status === 'Cancelado / Estorno') corBorda = 'border-l-red-500';
-
-    let btnArquivar = (p.status === 'Entregue' || p.status === 'Cancelado / Estorno') ? `<button type="button" onclick="arquivarPedido('${p.id}')" class="bg-slate-200 text-slate-600 px-3 rounded hover:bg-slate-300 transition" title="Arquivar Pedido"><i class="fa fa-archive"></i></button>` : '';
-    let btnZAP = `<button type="button" onclick="enviarWhatsApp('${p.id}', '${p.status === 'Pronto para Retirada' ? 'retirada' : 'recibo'}')" class="bg-green-500 text-white px-3 rounded hover:bg-green-600 transition" title="Enviar WhatsApp"><i class="fab fa-whatsapp"></i></button>`;
-
-    const itensHtml = (p.itens || []).map(i => `<p>• ${i.qtdCarrinho || 1}x (${i.qtdModal || 1} un.) ${i.nome} <span class="opacity-70">(${i.desc})</span></p>`).join('');
-
-    return `
-        <div class="bg-white p-4 rounded-lg shadow-sm border border-slate-200 border-l-4 ${corBorda}">
-            <div class="flex justify-between items-start mb-2">
-                <span class="text-[9px] font-bold text-slate-400">${dataF}</span>
-                <span class="text-[10px] font-black text-indigo-600">R$ ${(p.total || 0).toFixed(2)}</span>
-            </div>
-            <h4 class="font-bold text-slate-800 text-xs mb-2">${p.clienteNome}</h4>
-            <div class="text-[9px] text-slate-500 mb-3 space-y-1">${itensHtml}</div>
-            <div class="mt-3 pt-3 border-t border-slate-100 flex gap-2 flex-wrap">
-                <select onchange="mudarStatusPedido('${p.id}', this.value)" class="flex-1 p-2 bg-slate-50 border border-slate-200 rounded text-[10px] font-bold outline-none focus:ring-2 focus:ring-indigo-500 min-w-[100px]">
-                    ${options}
-                </select>
-                ${btnArquivar}
-                ${btnZAP}
-                <button type="button" onclick="imprimirRecibo('${p.id}')" class="bg-slate-200 text-slate-600 px-3 rounded hover:bg-slate-300 transition" title="Imprimir Recibo Térmico"><i class="fa fa-print"></i></button>
-                <button type="button" onclick="imprimirOSA4('${p.id}')" class="bg-slate-800 text-white px-3 rounded hover:bg-slate-700 transition" title="Imprimir OS (A4)"><i class="fa fa-file-pdf"></i></button>
-            </div>
-        </div>
-    `;
+function editCli(id) { 
+    const c = bdClientes.find(x => x.id === id); 
+    if(!c) return;
+    document.getElementById('cliId').value = c.id; 
+    document.getElementById('cliNome').value = c.nome; 
+    document.getElementById('cliDoc').value = c.documento || ''; 
+    document.getElementById('cliTel').value = c.telefone || ''; 
+    document.getElementById('cliEnd').value = c.endereco || ''; 
+    document.getElementById('cliCredito').value = c.credito || 0; 
+    document.getElementById('tituloCliForm').innerText = "Editar Cadastro"; 
 }
 
-async function mudarStatusPedido(id, novoStatus) {
-    try { 
-        await db.collection("pedidos").doc(id).update({ status: novoStatus }); 
-    } catch(e) { 
-        console.error(e); 
-        alert("Erro ao atualizar status."); 
-    }
+function limparFormCli() { 
+    document.querySelectorAll('#sub-cli input').forEach(i => i.value = ''); 
+    document.getElementById('cliId').value = ''; 
+    document.getElementById('cliCredito').value = '0'; 
+    document.getElementById('tituloCliForm').innerText = "Novo Cliente"; 
 }
 
-async function arquivarPedido(id) { 
-    if(confirm("Deseja remover este pedido do painel de produção? Ele continuará salvo no histórico e financeiro.")) { 
-        try { await db.collection("pedidos").doc(id).update({ arquivado: true }); } 
-        catch(e) { alert("Erro ao arquivar pedido."); } 
-    } 
-}
-
-// --- HISTÓRICO GERAL ---
-function abrirHistoricoGeral() { 
-    document.getElementById('buscaHistoricoGeral').value = ''; 
-    renderHistoricoGeral(); 
-    document.getElementById('modalHistoricoGeral').classList.remove('hidden'); 
-}
-
-function renderHistoricoGeral() {
-    const termo = document.getElementById('buscaHistoricoGeral').value.toLowerCase(); 
-    const tbody = document.getElementById('listaHistoricoGeral');
-    if(!tbody) return;
-    
-    let filtrados = bdPedidos; 
-    if (termo) filtrados = bdPedidos.filter(p => p.clienteNome.toLowerCase().includes(termo) || p.status.toLowerCase().includes(termo) || p.id.toLowerCase().includes(termo));
-    
-    tbody.innerHTML = filtrados.length === 0 ? `<tr><td colspan="5" class="p-6 text-center text-slate-400">Nenhum pedido encontrado.</td></tr>` : filtrados.map(p => {
-        const dataFormatada = p.data.toDate ? p.data.toDate().toLocaleDateString('pt-BR') : new Date(p.data).toLocaleDateString('pt-BR');
-        const isArquivado = p.arquivado ? `<span class="bg-slate-200 text-slate-500 px-2 py-0.5 rounded text-[9px] uppercase ml-2">Arquivado</span>` : '';
-        let btnDesarquivar = p.arquivado ? `<button type="button" onclick="desarquivarPedido('${p.id}')" class="text-amber-500 hover:text-amber-700 mx-1" title="Voltar para Produção"><i class="fa fa-box-open"></i></button>` : '';
-        let btnExcluir = (usuarioAtual && usuarioAtual.role === 'admin') ? `<button type="button" onclick="excluirPedido('${p.id}')" class="text-red-400 hover:text-red-600 mx-1" title="Excluir Pedido Permanentemente"><i class="fa fa-trash"></i></button>` : '';
-        
-        return `<tr class="border-b border-slate-50 hover:bg-slate-50"><td class="p-3 text-slate-500 font-medium">${dataFormatada} <br/><span class="text-[9px] text-slate-400 uppercase">${p.id.substring(0,6)}</span></td><td class="p-3 font-bold text-slate-700">${p.clienteNome} ${isArquivado}</td><td class="p-3"><span class="bg-indigo-50 text-indigo-600 px-2 py-1 rounded text-[9px] font-black uppercase">${p.status}</span></td><td class="p-3 text-right font-black text-slate-800">R$ ${p.total.toFixed(2)}</td><td class="p-3 text-center">${btnDesarquivar}<button type="button" onclick="${p.status === 'Orçamento' ? `imprimirOrcamento('${p.id}')` : `imprimirRecibo('${p.id}')`}" class="text-slate-400 hover:text-slate-600 mx-1" title="Imprimir Recibo/PDF"><i class="fa fa-print"></i></button>${btnExcluir}</td></tr>`;
-    }).join('');
-}
-
-async function desarquivarPedido(id) { 
-    if(confirm("Deseja voltar este pedido para o painel de Produção?")) { 
-        try { await db.collection("pedidos").doc(id).update({ arquivado: false }); renderHistoricoGeral(); } 
-        catch(e) { alert("Erro ao desarquivar pedido."); } 
-    } 
-}
-
-async function excluirPedido(id) { 
-    if(usuarioAtual.role !== 'admin') return alert("Sem permissão."); 
-    if(confirm("ATENÇÃO: Tem certeza que deseja EXCLUIR PERMANENTEMENTE este pedido? Esta ação não pode ser desfeita.")) { 
-        try { await db.collection("pedidos").doc(id).delete(); renderHistoricoGeral(); } 
-        catch(e) { alert("Erro ao excluir pedido."); } 
-    } 
-}
-// --- A RECEBER (FATURADOS) ---
-function renderAReceber() {
-    const tab = document.getElementById('listaAReceberTab');
-    if(!tab) return;
-    
-    const devedores = bdPedidos.filter(p => p.saldoDevedor > 0 && p.status !== 'Cancelado / Estorno');
-    let html = '';
-    
-    const clientesDev = {};
-    devedores.forEach(p => {
-        if(!clientesDev[p.clienteId]) clientesDev[p.clienteId] = { nome: p.clienteNome, pedidos: [], total: 0 };
-        clientesDev[p.clienteId].pedidos.push(p);
-        clientesDev[p.clienteId].total += p.saldoDevedor;
-    });
-    
-    if(Object.keys(clientesDev).length === 0) {
-        tab.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-slate-400">Nenhum cliente com saldo devedor.</td></tr>`;
-        return;
-    }
-    
-    for(let cliId in clientesDev) {
-        const c = clientesDev[cliId];
-        html += `
-            <tr class="border-b border-slate-50 bg-slate-50/50">
-                <td class="p-4 font-bold text-slate-700">${c.nome}</td>
-                <td class="p-4 text-center text-slate-500">${c.pedidos.length} pedido(s)</td>
-                <td class="p-4 text-right font-black text-red-500">R$ ${c.total.toFixed(2)}</td>
-                <td class="p-4 text-center">
-                    <button type="button" onclick="document.getElementById('dev-${cliId}').classList.toggle('hidden')" class="text-indigo-500 font-bold text-[10px] uppercase hover:underline">Ver Pedidos</button>
-                </td>
-            </tr>
-            <tr id="dev-${cliId}" class="hidden">
-                <td colspan="4" class="p-4 bg-white border-b border-slate-200">
-                    <table class="w-full text-xs">
-        `;
-        c.pedidos.forEach(p => {
-            const dataObj = p.data && p.data.toDate ? p.data.toDate() : new Date(p.data);
-            html += `
-                <tr class="border-b border-slate-50">
-                    <td class="py-2 text-slate-500">${dataObj.toLocaleDateString('pt-BR')} <br><span class="text-[9px] uppercase">ID: ${p.id.substring(0,6)}</span></td>
-                    <td class="py-2 text-right font-bold text-red-400">Falta: R$ ${p.saldoDevedor.toFixed(2)}</td>
-                    <td class="py-2 text-right">
-                        <button type="button" onclick="abrirModalReceber('${p.id}', ${p.saldoDevedor})" class="bg-emerald-500 text-white px-3 py-1.5 rounded text-[9px] font-bold uppercase hover:bg-emerald-600 shadow-sm">Receber</button>
-                        <button type="button" onclick="cobrarWhatsApp('${p.id}', ${p.saldoDevedor})" class="bg-green-500 text-white px-3 py-1.5 rounded text-[9px] font-bold uppercase hover:bg-green-600 shadow-sm ml-1"><i class="fab fa-whatsapp"></i> Cobrar</button>
-                    </td>
-                </tr>
-            `;
-        });
-        html += `</table></td></tr>`;
-    }
-    tab.innerHTML = html;
-}
-
-function abrirModalReceber(idPedido, saldo) {
-    document.getElementById('recSaldoIdPedido').value = idPedido;
-    document.getElementById('recSaldoValor').value = saldo.toFixed(2);
-    document.getElementById('modalReceberSaldo').classList.remove('hidden');
-}
-
-async function confirmarRecebimentoSaldo() {
-    const idPedido = document.getElementById('recSaldoIdPedido').value;
-    const valorRecebido = parseFloat(document.getElementById('recSaldoValor').value);
-    const formaPagto = document.getElementById('recSaldoForma').value;
-    
-    if(!valorRecebido || valorRecebido <= 0) return alert("Informe um valor válido.");
-    
-    const p = bdPedidos.find(x => x.id === idPedido);
-    if(!p) return;
-    
-    const novoValorPago = (p.valorPago || 0) + valorRecebido;
-    const novoSaldo = p.total - p.desconto - novoValorPago;
-    
-    try {
-        await db.collection("pedidos").doc(idPedido).update({
-            valorPago: novoValorPago,
-            saldoDevedor: novoSaldo < 0 ? 0 : novoSaldo,
-            status: (novoSaldo <= 0 && p.status === 'Aguardando pagamento') ? 'Em produção' : p.status
-        });
-        
-        await db.collection("transacoes").add({
-            tipo: 'entrada',
-            descricao: `Recebimento Faturado - Pedido ${idPedido.substring(0,6).toUpperCase()} (${p.clienteNome})`,
-            valor: valorRecebido,
-            formaPagamento: formaPagto,
-            data: new Date()
-        });
-        
-        alert("Pagamento recebido com sucesso!");
-        document.getElementById('modalReceberSaldo').classList.add('hidden');
-        renderAReceber();
-    } catch(e) {
-        alert("Erro ao processar recebimento.");
-    }
-}
-
-function cobrarWhatsApp(idPedido, saldo) {
-    const p = bdPedidos.find(x => x.id === idPedido);
-    if (!p) return;
-    let telefone = ""; 
-    if (p.clienteId && p.clienteId !== "Consumidor Final") { 
-        const cli = bdClientes.find(c => c.id === p.clienteId); 
-        if (cli && cli.telefone) telefone = cli.telefone.replace(/\D/g, ''); 
-    }
-    
-    const texto = `Olá *${p.clienteNome}*! Tudo bem?\n\nConsta em nosso sistema um saldo pendente no valor de *R$ ${saldo.toFixed(2)}* referente ao pedido *${idPedido.substring(0,6).toUpperCase()}*.\n\nPodemos confirmar a previsão de pagamento? Qualquer dúvida, estamos à disposição!`;
-    
-    if (!telefone || telefone.length < 10) return alert("Cliente sem telefone cadastrado. Atualize o cadastro primeiro.");
-    if (telefone.length === 10 || telefone.length === 11) telefone = "55" + telefone;
-    window.open(`https://wa.me/${telefone}?text=${encodeURIComponent(texto)}`, '_blank'); 
-}
-
-// --- WHATSAPP (GENÉRICO) ---
-function enviarWhatsApp(idPedido, tipo, objPedido = null) {
-    const p = objPedido || bdPedidos.find(x => x.id === idPedido); if (!p) return;
-    let telefone = ""; 
-    if (p.clienteId && p.clienteId !== "Consumidor Final") { 
-        const cli = bdClientes.find(c => c.id === p.clienteId); 
-        if (cli && cli.telefone) telefone = cli.telefone.replace(/\D/g, ''); 
-    }
-    
-    const itensTexto = p.itens.map(i => `▫️ ${i.qtdCarrinho || 1}x ${i.nome} - R$ ${((i.valorModal || 0) * (i.qtdCarrinho || 1)).toFixed(2)}`).join('\n'); 
-    const totalStr = p.total.toFixed(2);
-    let texto = "";
-    
-    if (tipo === 'orcamento') texto = `Olá *${p.clienteNome}*! Tudo bem?\n\nSegue o seu orçamento da *GVA Gráfica*:\n\n${itensTexto}\n\n*Total: R$ ${totalStr}*\n\nQualquer dúvida, estamos à disposição! Para aprovar, é só responder esta mensagem.`;
-    else if (tipo === 'retirada') texto = `Olá *${p.clienteNome}*!\n\nSó passando para avisar que o seu pedido (Ref: ${idPedido.substring(0,6).toUpperCase()}) já está *PRONTO PARA RETIRADA* aqui na GVA Gráfica! 🚀\n\nTotal do pedido: R$ ${totalStr}\n${p.saldoDevedor > 0 ? `Saldo a pagar na retirada: *R$ ${p.saldoDevedor.toFixed(2)}*\n` : ''}Te esperamos!`;
-    else if (tipo === 'recibo') texto = `Olá *${p.clienteNome}*!\n\nSeu pedido foi registrado com sucesso na *GVA Gráfica*! (Ref: ${idPedido.substring(0,6).toUpperCase()})\n\n*Resumo:*\n${itensTexto}\n\n*Total: R$ ${totalStr}*\nValor Pago: R$ ${(p.valorPago || 0).toFixed(2)}\n${p.saldoDevedor > 0 ? `Saldo a pagar: R$ ${p.saldoDevedor.toFixed(2)}\n` : ''}Acompanharemos a produção e avisaremos quando estiver pronto!`;
-    
-    document.getElementById('zapTelefone').value = telefone; 
-    document.getElementById('zapMensagem').value = texto; 
-    document.getElementById('modalWhatsApp').classList.remove('hidden');
-}
-
-function confirmarEnvioWhatsApp() {
-    let telefone = document.getElementById('zapTelefone').value.replace(/\D/g, ''); 
-    let texto = document.getElementById('zapMensagem').value;
-    if (!telefone || telefone.length < 10) return alert("Por favor, insira um número de telefone válido com DDD.");
-    if (telefone.length === 10 || telefone.length === 11) telefone = "55" + telefone;
-    window.open(`https://wa.me/${telefone}?text=${encodeURIComponent(texto)}`, '_blank'); 
-    document.getElementById('modalWhatsApp').classList.add('hidden');
-}
-
-// --- FINANCEIRO ---
-async function salvarMovimentacao() {
-    const tipo = document.getElementById('finTipo').value;
-    const desc = document.getElementById('finDesc').value;
-    const valor = parseFloat(document.getElementById('finValor').value);
-
-    if(!desc || !valor) return alert("Preencha descrição e valor!");
-
-    await db.collection("transacoes").add({
-        tipo: tipo,
-        descricao: desc,
-        valor: valor,
-        data: new Date()
-    });
-
-    document.getElementById('finDesc').value = '';
-    document.getElementById('finValor').value = '';
-    alert("Movimentação lançada com sucesso!");
-}
-
-function renderPedidosFinanceiro() {
-    const tabPedidos = document.getElementById('listaPedidosTab');
-    const tabExtrato = document.getElementById('listaExtratoTab');
-    
-    const hoje = new Date(); 
-    hoje.setHours(0,0,0,0);
-    const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
-    
-    let vHoje = 0;
-    let eMes = 0;
-    let sMes = 0; 
-    let extrato = [];
-
-    // Processa Pedidos (Ignora Cancelados/Estornos no fluxo)
-    const pedidosValidos = bdPedidos.filter(p => p.status !== 'Cancelado / Estorno' && p.status !== 'Orçamento');
-    
-    pedidosValidos.forEach(p => {
-        const d = p.data && p.data.toDate ? p.data.toDate() : new Date(p.data);
-        const v = p.valorPago || 0; 
-        const t = p.total || 0;
-        if(d >= hoje) vHoje += t;
-        if(d >= inicioMes) eMes += v;
-        if(v > 0) extrato.push({ data: d, desc: `Venda: ${p.clienteNome}`, valor: v, tipo: 'entrada' });
-    });
-
-    // Processa Transações Manuais
-    bdTransacoes.forEach(t => {
-        const d = t.data && t.data.toDate ? t.data.toDate() : new Date(t.data);
-        if(d >= inicioMes) { 
-            if(t.tipo === 'entrada') eMes += t.valor; 
-            else sMes += t.valor; 
-        }
-        extrato.push({ data: d, desc: t.descricao, valor: t.valor, tipo: t.tipo });
-    });
-
-    // Atualiza Cards
-    if(document.getElementById('finVendasHoje')) document.getElementById('finVendasHoje').innerText = "R$ " + vHoje.toFixed(2);
-    if(document.getElementById('finEntradasMes')) document.getElementById('finEntradasMes').innerText = "R$ " + eMes.toFixed(2);
-    if(document.getElementById('finSaidasMes')) document.getElementById('finSaidasMes').innerText = "R$ " + sMes.toFixed(2);
-    if(document.getElementById('finSaldoMes')) document.getElementById('finSaldoMes').innerText = "R$ " + (eMes - sMes).toFixed(2);
-
-    // Renderiza Tabela de Pedidos (Limitado a 10)
-    if(tabPedidos) {
-        const ultimosPedidos = pedidosValidos.slice(0, 10);
-        tabPedidos.innerHTML = ultimosPedidos.map(p => {
-            const dataObj = p.data && p.data.toDate ? p.data.toDate() : new Date(p.data);
-            return `
-            <tr class="border-b border-slate-50 hover:bg-slate-50 transition">
-                <td class="p-4 text-slate-400 font-medium">${dataObj.toLocaleDateString('pt-BR')}</td>
-                <td class="p-4 font-bold text-slate-700">${p.clienteNome}</td>
-                <td class="p-4 font-black text-indigo-600">R$ ${(p.total || 0).toFixed(2)}</td>
-                <td class="p-4 text-center"><span class="bg-indigo-50 text-indigo-500 px-3 py-1 rounded text-[10px] font-black uppercase">${p.status}</span></td>
-                <td class="p-4 text-center"><button type="button" onclick="imprimirRecibo('${p.id}')" class="text-slate-400 hover:text-indigo-600" title="Imprimir Recibo"><i class="fa fa-print"></i></button></td>
-            </tr>
-            `;
-        }).join('');
-    }
-
-    // Renderiza Tabela de Extrato (Limitado a 10)
-    if(tabExtrato) {
-        extrato.sort((a,b) => b.data - a.data);
-        const ultimoExtrato = extrato.slice(0, 10);
-        tabExtrato.innerHTML = ultimoExtrato.map(i => {
-            const corValor = i.tipo === 'entrada' ? 'text-emerald-600' : 'text-red-500';
-            const sinal = i.tipo === 'entrada' ? '+' : '-';
-            return `
-                <tr class="border-b border-slate-50 hover:bg-slate-50 transition">
-                    <td class="p-4 text-slate-400 font-medium">${i.data.toLocaleDateString('pt-BR')}</td>
-                    <td class="p-4 font-bold text-slate-700">${i.desc}</td>
-                    <td class="p-4 text-right font-black ${corValor}">${sinal} R$ ${i.valor.toFixed(2)}</td>
-                </tr>
-            `;
-        }).join('');
-    }
-}
-
-function imprimirFechamento(tipo) {
-    const hoje = new Date();
-    hoje.setHours(0,0,0,0);
-    
-    let dataInicio = new Date(hoje);
-    let titulo = "Fechamento Diário";
-    
-    if(tipo === 'semanal') {
-        dataInicio.setDate(hoje.getDate() - 7);
-        titulo = "Fechamento Semanal (Últimos 7 dias)";
-    }
-
-    let extrato = [];
-    let totalEntradas = 0;
-    let totalSaidas = 0;
-
-    // Pega pagamentos de pedidos
-    bdPedidos.forEach(p => {
-        if(p.status === 'Cancelado / Estorno' || p.status === 'Orçamento') return;
-        const d = p.data && p.data.toDate ? p.data.toDate() : new Date(p.data);
-        const v = p.valorPago || 0;
-        if(d >= dataInicio && v > 0) {
-            extrato.push({ data: d, desc: `Venda: ${p.clienteNome}`, valor: v, tipo: 'entrada' });
-            totalEntradas += v;
-        }
-    });
-
-    // Pega transações manuais
-    bdTransacoes.forEach(t => {
-        const d = t.data && t.data.toDate ? t.data.toDate() : new Date(t.data);
-        if(d >= dataInicio) {
-            extrato.push({ data: d, desc: t.descricao, valor: t.valor, tipo: t.tipo });
-            if(t.tipo === 'entrada') totalEntradas += t.valor;
-            else totalSaidas += t.valor;
-        }
-    });
-
-    extrato.sort((a,b) => b.data - a.data);
-
-    let htmlLinhas = extrato.map(i => {
-        const cor = i.tipo === 'entrada' ? 'color: #10b981;' : 'color: #ef4444;';
-        const sinal = i.tipo === 'entrada' ? '+' : '-';
-        return `<tr>
-            <td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">${i.data.toLocaleDateString('pt-BR')} ${i.data.toLocaleTimeString('pt-BR')}</td>
-            <td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">${i.desc}</td>
-            <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; text-align: right; font-weight: bold; ${cor}">${sinal} R$ ${i.valor.toFixed(2)}</td>
-        </tr>`;
-    }).join('');
-
-    if(extrato.length === 0) htmlLinhas = `<tr><td colspan="3" style="text-align:center; padding: 20px;">Nenhuma movimentação no período.</td></tr>`;
-
-    const janela = window.open('', '', 'width=800,height=900');
-    janela.document.write(`
-        <html><head><title>${titulo}</title><style>
-            body { font-family: sans-serif; padding: 40px; color: #334155; }
-            h1 { color: #0f172a; text-transform: uppercase; font-size: 24px; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; }
-            .resumo { display: flex; gap: 20px; margin-bottom: 30px; }
-            .box { flex: 1; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0; text-align: center; background: #f8fafc; }
-            .box h3 { margin: 0 0 10px 0; font-size: 12px; text-transform: uppercase; color: #64748b; }
-            .box p { margin: 0; font-size: 24px; font-weight: bold; }
-            table { width: 100%; border-collapse: collapse; font-size: 14px; }
-            th { background: #f1f5f9; padding: 10px 8px; text-align: left; text-transform: uppercase; font-size: 12px; }
-        </style></head><body>
-            <h1>${titulo}</h1>
-            <p>Gerado em: ${new Date().toLocaleString('pt-BR')}</p>
-            <div class="resumo">
-                <div class="box"><h3 style="color: #10b981;">Total Entradas</h3><p style="color: #10b981;">R$ ${totalEntradas.toFixed(2)}</p></div>
-                <div class="box"><h3 style="color: #ef4444;">Total Saídas</h3><p style="color: #ef4444;">R$ ${totalSaidas.toFixed(2)}</p></div>
-                <div class="box"><h3 style="color: #0f172a;">Saldo Líquido</h3><p style="color: #0f172a;">R$ ${(totalEntradas - totalSaidas).toFixed(2)}</p></div>
-            </div>
-            <table>
-                <thead><tr><th>Data/Hora</th><th>Descrição</th><th style="text-align: right;">Valor</th></tr></thead>
-                <tbody>${htmlLinhas}</tbody>
-            </table>
-            <script>setTimeout(() => { window.print(); window.close(); }, 800);</script>
-        </body></html>
-    `);
-    janela.document.close();
-}
-
-// --- USUÁRIOS ---
-async function salvarUsuario() { 
-    const email = document.getElementById('userEmail').value.trim();
-    const nome = document.getElementById('userNome').value.trim();
-    const role = document.getElementById('userRole').value;
-    const senha = document.getElementById('userSenha').value; 
-    
-    if(!email || !nome) return alert("Preencha Nome e E-mail."); 
-    
-    try { 
-        if (senha) { 
-            if (senha.length < 6) return alert("A senha precisa ter no mínimo 6 caracteres."); 
-            let secondaryApp; 
-            try { secondaryApp = firebase.app("Secondary"); } 
-            catch(e) { secondaryApp = firebase.initializeApp(firebaseConfig, "Secondary"); } 
-            await secondaryApp.auth().createUserWithEmailAndPassword(email, senha); 
-            await secondaryApp.auth().signOut(); 
-        } 
-        await db.collection("usuarios").doc(email).set({ nome: nome, email: email, role: role }); 
-        alert("Conta salva com sucesso!"); 
-        document.getElementById('userEmail').value = ''; 
-        document.getElementById('userNome').value = ''; 
-        document.getElementById('userSenha').value = ''; 
-    } catch (e) { 
-        alert("Erro ao salvar usuário: " + e.message); 
-    } 
-}
-
-function renderUsuariosTab() { 
-    const tab = document.getElementById('listaUsuariosTab'); 
+function renderCliTable() { 
+    const tab = document.getElementById('listaClientesTab'); 
+    const termo = document.getElementById('buscaCliente')?.value.toLowerCase() || '';
     if(!tab) return; 
-    tab.innerHTML = bdUsuarios.map(u => `
-        <tr class="border-b border-slate-50">
-            <td class="p-4 text-slate-700 font-bold">${u.nome} <br/><span class="text-[10px] font-normal text-slate-400">${u.email}</span></td>
-            <td class="p-4 font-bold text-indigo-600 uppercase text-[10px]">${u.role}</td>
-            <td class="p-4 text-right">
-                <button type="button" onclick="if(confirm('Excluir acesso?')) db.collection('usuarios').doc('${u.email}').delete()" class="text-red-300 hover:text-red-500"><i class="fa fa-trash"></i></button>
+    let filtrados = bdClientes;
+    if(termo) filtrados = filtrados.filter(c => c.nome.toLowerCase().includes(termo) || (c.documento && c.documento.includes(termo)));
+    tab.innerHTML = filtrados.map(c => `
+        <tr class="border-b border-slate-50 hover:bg-slate-50">
+            <td class="p-4 font-bold text-slate-700">${c.nome}</td>
+            <td class="p-4 font-bold ${c.credito >= 0 ? 'text-emerald-500' : 'text-red-500'}">R$ ${(c.credito || 0).toFixed(2)}</td>
+            <td class="p-4 text-center space-x-3">
+                <button type="button" onclick="verHistoricoCliente('${c.id}')" class="text-indigo-400 text-[10px] font-black uppercase hover:text-indigo-500">Histórico</button>
+                <button type="button" onclick="editCli('${c.id}')" class="text-slate-400 text-[10px] font-black uppercase hover:text-indigo-500">Editar</button>
+                <button type="button" onclick="if(confirm('Excluir cliente?')) db.collection('clientes').doc('${c.id}').delete()" class="text-red-300 hover:text-red-500">✕</button>
             </td>
         </tr>
     `).join(''); 
 }
 
-// --- DADOS DA EMPRESA ---
-async function salvarDadosEmpresa() {
-    const pix = document.getElementById('empresaPix').value.trim();
-    const banco = document.getElementById('empresaBanco').value.trim();
-    const agencia = document.getElementById('empresaAgencia').value.trim();
-    const conta = document.getElementById('empresaConta').value.trim();
-    
-    try {
-        await db.collection("empresa").doc("dados").set({
-            pix: pix, banco: banco, agencia: agencia, conta: conta
-        });
-        alert("Dados bancários salvos com sucesso!");
-    } catch(e) {
-        alert("Erro ao salvar dados da empresa: " + e.message);
-    }
+// --- CATEGORIAS ---
+async function salvarCategoria() { 
+    const id = document.getElementById('catId')?.value; 
+    const nome = document.getElementById('catNome')?.value; 
+    if(!nome) return; 
+    if(id) await db.collection("categorias").doc(id).update({nome: nome}); 
+    else await db.collection("categorias").add({nome: nome}); 
+    document.getElementById('catId').value = ''; 
+    document.getElementById('catNome').value = ''; 
 }
 
-function editEmpresa() {
-    if(document.getElementById('empresaPix')) document.getElementById('empresaPix').value = bdEmpresa.pix || '';
-    if(document.getElementById('empresaBanco')) document.getElementById('empresaBanco').value = bdEmpresa.banco || '';
-    if(document.getElementById('empresaAgencia')) document.getElementById('empresaAgencia').value = bdEmpresa.agencia || '';
-    if(document.getElementById('empresaConta')) document.getElementById('empresaConta').value = bdEmpresa.conta || '';
+function editCat(id) { 
+    const c = bdCategorias.find(x => x.id === id); 
+    if(!c) return;
+    document.getElementById('catId').value = c.id; 
+    document.getElementById('catNome').value = c.nome; 
+}
+
+function renderCat() { 
+    const tab = document.getElementById('listaCategoriasTab'); 
+    if(tab) tab.innerHTML = bdCategorias.map(c => `<tr class="border-b border-slate-50"><td class="p-4 font-bold text-slate-600">${c.nome}</td><td class="p-4 text-right"><button type="button" onclick="editCat('${c.id}')" class="text-indigo-500 mr-3">Editar</button><button type="button" onclick="if(confirm('Excluir categoria?')) db.collection('categorias').doc('${c.id}').delete()" class="text-red-300">✕</button></td></tr>`).join(''); 
+    const catSelect = document.getElementById('prodCategoria'); 
+    if(catSelect) catSelect.innerHTML = bdCategorias.map(c => `<option value="${c.nome}">${c.nome}</option>`).join(''); 
+    const acabCat = document.getElementById('acabCategoria'); 
+    if(acabCat) acabCat.innerHTML = catSelect?.innerHTML || ''; 
+}
+
+// --- ACABAMENTOS ---
+async function salvarAcabamento() { 
+    const id = document.getElementById('acabId')?.value;
+    const d = { 
+        nome: document.getElementById('acabNome')?.value || '', 
+        grupo: document.getElementById('acabGrupo')?.value || '', 
+        categoria: document.getElementById('acabCategoria')?.value || '', 
+        regra: document.getElementById('acabRegra')?.value || 'unidade', 
+        venda: parseFloat(document.getElementById('acabPrecoVenda')?.value) || 0, 
+        custo: parseFloat(document.getElementById('acabCusto')?.value) || 0 
+    }; 
+    if(!d.nome) return alert("Nome obrigatório");
+    if(id) await db.collection("acabamentos").doc(id).update(d); 
+    else await db.collection("acabamentos").add(d); 
+    limparFormAcab();
+}
+
+function editAcab(id) {
+    const a = bdAcabamentos.find(x => x.id === id);
+    if(!a) return;
+    document.getElementById('acabId').value = a.id;
+    document.getElementById('acabNome').value = a.nome;
+    document.getElementById('acabGrupo').value = a.grupo || '';
+    document.getElementById('acabCategoria').value = a.categoria || '';
+    document.getElementById('acabRegra').value = a.regra || 'unidade';
+    document.getElementById('acabPrecoVenda').value = a.venda || 0;
+    document.getElementById('acabCusto').value = a.custo || 0;
+}
+
+function limparFormAcab() {
+    document.querySelectorAll('#sub-acab input').forEach(i => i.value = '');
+    document.getElementById('acabId').value = '';
+}
+
+function renderAcabTable() { 
+    const tab = document.getElementById('listaAcabamentosTab'); 
+    if(tab) tab.innerHTML = bdAcabamentos.map(a => `<tr class="border-b border-slate-50"><td class="p-4 font-bold text-slate-600">${a.nome} <span class="text-[9px] text-slate-400 uppercase">(${a.grupo})</span></td><td class="p-4 text-center"><button type="button" onclick="editAcab('${a.id}')" class="text-indigo-500 mr-3 font-bold text-[10px] uppercase">Editar</button><button type="button" onclick="if(confirm('Excluir acabamento?')) db.collection('acabamentos').doc('${a.id}').delete()" class="text-red-300 font-bold text-[10px]">X</button></td></tr>`).join(''); 
 }
 // --- LÓGICA DO MOCKUP 2D (ARRASTAR E BAIXAR) ---
 const overlay = document.getElementById('mockupOverlay');
@@ -1070,7 +678,6 @@ async function enviarPedido(imprimir = false, isOrcamento = false) {
         if(imprimir) imprimirReciboDireto(docRef.id, pedido);
     }
 }
-
 // --- KANBAN DE PRODUÇÃO ---
 function renderKanbanProducao() {
     const container = document.getElementById('kanbanContainer');
@@ -1310,6 +917,7 @@ function cobrarWhatsApp(idPedido, saldo) {
     if (telefone.length === 10 || telefone.length === 11) telefone = "55" + telefone;
     window.open(`https://wa.me/${telefone}?text=${encodeURIComponent(texto)}`, '_blank'); 
 }
+
 // --- WHATSAPP (GENÉRICO) ---
 function enviarWhatsApp(idPedido, tipo, objPedido = null) {
     const p = objPedido || bdPedidos.find(x => x.id === idPedido); if (!p) return;
